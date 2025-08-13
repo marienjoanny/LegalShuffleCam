@@ -1,0 +1,12 @@
+node_modules/
+cert/
+.env
+npm-debug.log*
+.DS_Store
+coverage/
+dist/
+*.pem
+*.crt
+*.key
+video/
+video/

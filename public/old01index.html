@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LegalShuffleCam – DEV</title>
+  <style>
+    :root{--bg:#0b0e13;--text:#fff;--accent:#ff7a1a;--ring:#38e18b}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    header{padding:14px 16px;border-bottom:1px solid #171b23;font-weight:700;
+      font-size:clamp(18px,3.8vw,28px)}
+    .stage{position:relative;max-width:680px;margin:0 auto}
+    .badge{position:absolute;top:16px;right:16px;background:var(--accent);color:#fff;
+      font-weight:700;border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px #0006}
+    #remoteBox{position:relative;background:#000;border-radius:14px;overflow:hidden}
+    #remote{width:100%;height:calc(100dvh - 240px);min-height:420px;object-fit:cover;display:block}
+    #local{position:absolute;right:12px;bottom:104px;width:92px;height:132px;border-radius:14px;
+      object-fit:cover;box-shadow:0 6px 20px #000b;border:2px solid #fff3}
+    .face-ring{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      pointer-events:none}
+    .face-ring .ring{width:240px;height:240px;border-radius:999px;border:4px solid var(--ring);
+      box-shadow:0 0 28px rgba(56,225,139,.35)}
+    .controls{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#0000,#0009);
+      padding:14px 12px;border-top:1px solid #0008;display:flex;align-items:center;gap:10px}
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;height:48px;
+      padding:0 18px;border-radius:14px;border:1px solid #ffffff1f;background:#1a1f2b;color:#fff;
+      font-weight:600;cursor:pointer;box-shadow:0 6px 16px #0006}
+    .btn:hover{background:#212739}
+    .btn-ghost{width:48px;padding:0;border-radius:999px;background:#0f1420;border:1px solid #ffffff2d}
+    .btn-accent{background:var(--accent);border-color:transparent}
+    .btn-next{background:#1f8b4c;border-color:#257a50}
+    .btn-danger{background:#c43d3d;border-color:#c43d3d}
+    .tip{max-width:680px;margin:10px auto 28px;padding:10px 14px;color:#cbd5e1;border-top:1px solid #151a22;font-size:18px}
+    .gate{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#000000a6,#000000d0);backdrop-filter:blur(6px)}
+    .gate .gate-card{background:#0e1219;border:1px solid #1b2130;border-radius:16px;padding:18px;
+      max-width:520px;box-shadow:0 20px 60px #000c;text-align:center}
+    .gate h2{margin:0 0 8px} .gate p{margin:0 0 14px;color:#c6d0e3}
+    .gate .start{display:inline-flex;align-items:center;gap:10px;background:#1f8b4c;border:0;color:#fff;
+      padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <header>Recherche d’un partenaire…</header>
+
+  <div class="stage">
+    <div id="remoteBox">
+      <span class="badge">18+ vérifié</span>
+      <video id="remote" autoplay playsinline></video>
+
+      <div class="face-ring"><div class="ring"></div></div>
+
+      <video id="local" class="hidden" autoplay playsinline muted></video>
+
+      <div class="controls">
+        <button id="report" class="btn btn-accent">Signaler</button>
+        <button id="micToggle" class="btn btn-ghost" title="Micro on/off">🎙️</button>
+        <button id="leave" class="btn btn-ghost btn-danger" title="Stop">⏹</button>
+        <button id="next" class="btn btn-ghost btn-next" title="Suivant">➔</button>
+      </div>
+
+      <div id="gate" class="gate">
+        <div class="gate-card">
+          <h2>Visage visible en cam requis</h2>
+          <p>Cliquez pour démarrer (caméra + micro).</p>
+          <button id="join" class="start">▶ Démarrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip">Visage visible en cam requis.</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
