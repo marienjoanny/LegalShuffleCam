@@ -10,3 +10,4 @@ dist/
 *.key
 video/
 video/
+*.bak*
