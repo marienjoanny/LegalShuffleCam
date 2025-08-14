@@ -6,6 +6,8 @@
 - [x] coTURN 3478 TCP/UDP en ligne
 - [ ] .env propre + variables manquantes documentées
 - [ ] Endpoints `/health` pour checks et monitoring
+- [ ] no ip show
+- [ ] 2 mode cam : cam 50 50 tool bar between
 
 ## M1 — Âge / accès (GO.cam)
 - [ ] Intégrer GO.cam (overlay ou redirect)
