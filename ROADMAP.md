@@ -8,6 +8,7 @@
 - [ ] Endpoints `/health` pour checks et monitoring
 - [ ] no ip show
 - [ ] 2 mode cam : cam 50 50 tool bar between
+- [ ] bloquer les bots wordpress qui flood les log nginx
 
 ## M1 — Âge / accès (GO.cam)
 - [ ] Intégrer GO.cam (overlay ou redirect)
