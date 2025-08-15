@@ -1,80 +1,60 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LegalShuffleCam</title>
-  <style>
-    :root { --bg:#0b0d10; --panel:#121418; --text:#eaeef3; --muted:#9aa3ad; }
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
-    header{padding:14px 18px;font-size:28px;font-weight:700;background:#000}
-    main{padding:16px;max-width:900px;margin:0 auto}
-    .badge{position:absolute;right:16px;top:16px;background:#ff7a00;color:#fff;border-radius:14px;padding:10px 14px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-    /* STAGE */
-    #stage{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4)}
-    #remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:1}
-    #ring{position:absolute;inset:0;z-index:2;pointer-events:none}
-    #local{position:absolute;right:16px;bottom:16px;width:min(32vw,160px);aspect-ratio:4/3;object-fit:cover;border-radius:12px;box-shadow:0 0 0 2px #454a55, 0 8px 24px rgba(0,0,0,.45);z-index:3}
-    /* Controls */
-    .controls{display:flex;align-items:center;gap:14px; padding:14px 16px;margin-top:14px;background:var(--panel);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
-    button{appearance:none;border:0;border-radius:14px;padding:12px 18px;font-weight:700;cursor:pointer;transition:.15s transform,.15s opacity}
-    button:disabled{opacity:.45;cursor:not-allowed}
-    .danger{background:#ff6b5b;color:#000}
-    .cta{background:#19c37d;color:#03291e}
-    .ghost{background:#1b1f25;color:#e8edf5;border:1px solid #2a2f37}
-    .report{background:#ff7a00;color:#2b0f00}
-    .hint{color:var(--muted);margin:12px 4px 0}
-    .hidden{display:none}
-    .spacer{flex:1}
-  </style>
-</head>
-<body>
-  <header>Recherche d’un partenaire…</header>
-  <main>
-    <div id="stage">
-      <div class="badge">18+ vérifié</div>
-      <!-- ordre des calques : remote (z1) -> ring (z2) -> local (z3) -->
-      <video id="remote" autoplay playsinline muted></video>
-      <canvas id="ring"></canvas>
-      <video id="local" autoplay playsinline muted class="hidden"></video>
+  <head>
+    <meta charset="utf-8" />
+    <title>LegalShuffleCam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root{
+        --ok:#22c55e;    /* vert */
+        --ko:#ef4444;    /* rouge */
+        --bg:#0b0b0b; --fg:#eaeaea; --muted:#9ca3af;
+      }
+      html,body{height:100%}
+      body{ font-family: system-ui, sans-serif; margin:0; padding:16px; background:var(--bg); color:var(--fg); }
+      .wrap{ max-width: 900px; margin: 0 auto; }
+      h1{ margin: 8px 0 16px; font-size: 42px; }
+      p.lead{ color: var(--muted); font-size: 20px; margin: 0 0 20px; }
+      .gate{
+        display:inline-block; padding:16px; border-radius:22px;
+        border:6px solid var(--ko); transition:border-color .2s ease, box-shadow .2s ease;
+        box-shadow: 0 0 0 0 var(--ko);
+        background:#000;
+      }
+      .gate.ok{ border-color: var(--ok); box-shadow: 0 0 0 4px #22c55e22; }
+      video{
+        width: 100%; max-width: 560px; height: auto; display:block; background:#000; border-radius:14px;
+      }
+      .hint{
+        position:absolute; margin:12px; padding:8px 12px; border-radius:10px;
+        background:#000a; color:#fff; font-weight:600; backdrop-filter: blur(2px);
+      }
+      .actions{ margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; }
+      button{
+        padding:12px 16px; border-radius:12px; border:0;
+        background:#2563eb; color:#fff; font-weight:700; font-size:16px;
+      }
+      button.secondary{ background:#374151; }
+      button:disabled{ opacity:.45; filter:saturate(.6); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>LegalShuffleCam</h1>
+      <p class="lead">Place ton visage dans le cadre, puis rejoins la session.</p>
+
+      <div id="gateBox" class="gate">
+        <div class="hint">📷 Mets ton visage bien en face de la caméra</div>
+        <video id="localVideo" playsinline autoplay muted></video>
+      </div>
+
+      <div class="actions">
+        <button id="btnTest" class="secondary">Tester la détection</button>
+        <button id="btnJoin" disabled><button id="joinBtn" disabled>Rejoindre</button></button>
+      </div>
     </div>
 
-    <div class="controls">
-      <button id="report" class="report">Signaler</button>
-      <div class="spacer"></div>
-      <button id="micToggle" class="ghost" title="Micro">🎙️</button>
-      <button id="leave" class="danger" title="Stop">⏹</button>
-      <button id="next" class="cta" title="Suivant">➡️</button>
-    </div>
-
-    <p class="hint">Visage visible en cam requis.</p>
-
-    <!-- Porte d'entrée -->
-    <div id="gate" class="controls" style="margin-top:14px;">
-      <button id="join" class="cta">Démarrer</button>
-      <span class="hint">Autorise la caméra et le micro</span>
-    </div>
-  </main>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js"></script>
-  <script>
-    // cercle vert animé (cosmétique)
-    const ring = document.getElementById('ring');
-    const ctx = ring.getContext('2d');
-    function resize(){ ring.width = ring.clientWidth; ring.height = ring.clientHeight; }
-    window.addEventListener('resize', resize); resize();
-    let t=0; (function loop(){
-      const w=ring.width,h=ring.height; ctx.clearRect(0,0,w,h);
-      const r=Math.min(w,h)*0.34, cx=w/2, cy=h/2;
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
-      const glow=6+4*Math.sin(t/8);
-      ctx.shadowBlur=18+8*Math.sin(t/12); ctx.shadowColor='rgba(28,255,150,.35)';
-      ctx.lineWidth=8; ctx.strokeStyle='rgba(28,255,150,.9)'; ctx.stroke();
-      ctx.beginPath(); ctx.arc(cx,cy,r, t/40, t/40+1.2);
-      ctx.lineWidth=glow; ctx.strokeStyle='rgba(28,255,150,.55)'; ctx.stroke();
-      t++; requestAnimationFrame(loop);
-    })();
-  </script>
-</body>
+    <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
+  <script src="/js/face-guard.js"></script>
+  </body>
 </html>
