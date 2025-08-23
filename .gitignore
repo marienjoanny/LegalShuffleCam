@@ -1,0 +1,29 @@
+# === Fichiers sensibles ===
+.env
+config.php
+
+# === Logs et fichiers temporaires ===
+*.log
+*.bak
+*.tmp
+*.swp
+
+# === Sauvegardes horodatées ===
+index-real.html.bak_*
+index.php.bak_*
+
+# === Répertoires spécifiques à la prod ===
+avs/
+avs-debug.log
+
+# === Node.js (si utilisé) ===
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# === Fichiers système ===
+.DS_Store
+Thumbs.db
+
+# === Autres fichiers à ne pas versionner ===
+public/test.php
