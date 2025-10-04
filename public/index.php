@@ -18,11 +18,11 @@ if (isset($_GET["src"]) && $_GET["src"] === "linkback") {
 // --- /AGE VERIFIED LINKBACK HANDLER ---
 // --- Cookie guard: évite de relancer Go.cam si déjà majeur ---
 if (isset($_COOKIE["age_verified"]) && $_COOKIE["age_verified"] === "1") {
-    header("Location: /index-real.html", true, 302);
+    header("Location: /index-real.php", true, 302);
     exit;
 }
 require_once __DIR__ . '/avsPhpSdkV1.php';
-require_once __DIR__ . '/config.php';
+require_once dirname(__DIR__) . '/config.php';
 
 try {
     $linkBack = "https://legalshufflecam.ovh/?src=linkback";
