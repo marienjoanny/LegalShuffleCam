@@ -51,3 +51,12 @@
 - [ ] Logs structurés JSON + rotation
 - [ ] Metrics usage
 
+
+M0.1 — Sélecteur caméra minimaliste
+  Remplacement du bouton 📷 par un <select> intégré
+  Liste dynamique des caméras via enumerateDevices()
+  Démarrage automatique de la première caméra détectée
+  Changement à la volée sans reload
+  Aucun impact sur layout ni proportions
+  Pas de dépendance externe, pas de menu flottant
+  Commit : feat: remplacement du bouton 📷 par un select caméra minimaliste
