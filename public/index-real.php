@@ -106,7 +106,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       flex-wrap: wrap;
     }
 
-    button {
+    button, select {
       padding: 12px 16px;
       border-radius: 12px;
       border: none;
@@ -119,8 +119,16 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
     button.red { background: #dc2626; }
     button.green { background: #10b981; }
     button.blue { background: #2563eb; }
-    button.yellow { background: #fbbf24; color: #111827; }
-    button:disabled { opacity: .45; filter: saturate(.6); cursor: not-allowed; }
+    select.yellow {
+      background: #fbbf24;
+      color: #111827;
+    }
+
+    button:disabled, select:disabled {
+      opacity: .45;
+      filter: saturate(.6);
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -140,7 +148,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
 
     <div class="actions">
       <button id="btnReport" class="red">Signaler</button>
-      <button id="btnCam" class="yellow">📷</button>
+      <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🎤</button>
       <button id="btnNext" class="blue">➡️</button>
     </div>
@@ -148,5 +156,54 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
 
   <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
   <script src="/js/face-guard.js"></script>
+  <script>
+    let currentStream = null;
+
+    async function listCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+
+        const select = document.getElementById('cameraSelect');
+        select.innerHTML = '';
+
+        videoInputs.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Caméra ${index + 1}`;
+          select.appendChild(option);
+        });
+
+        if (videoInputs.length > 0) {
+          startCamera(videoInputs[0].deviceId);
+        }
+      } catch (err) {
+        alert("Erreur détection caméra: " + err.message);
+      }
+    }
+
+    async function startCamera(deviceId) {
+      try {
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } }
+        });
+
+        currentStream = stream;
+        document.getElementById('localVideo').srcObject = stream;
+      } catch (err) {
+        alert("Caméra indisponible: " + err.message);
+      }
+    }
+
+    document.getElementById('cameraSelect').addEventListener('change', (e) => {
+      startCamera(e.target.value);
+    });
+
+    listCameras();
+  </script>
 </body>
 </html>
