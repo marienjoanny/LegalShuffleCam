@@ -60,3 +60,5 @@ M0.1 — Sélecteur caméra minimaliste
   Aucun impact sur layout ni proportions
   Pas de dépendance externe, pas de menu flottant
   Commit : feat: remplacement du bouton 📷 par un select caméra minimaliste
+- ✅ UI : Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
+- ✅ UI : Libellé caméra simplifié (Cam 1, Cam 2…) pour affichage stable et minimal

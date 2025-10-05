@@ -149,7 +149,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
     <div class="actions">
       <button id="btnReport" class="red">Signaler</button>
       <select id="cameraSelect" class="yellow"></select>
-      <button id="btnMic" class="green">🎤</button>
+      <button id="btnMic" class="green">🔊</button>
       <button id="btnNext" class="blue">➡️</button>
     </div>
   </div>
@@ -170,7 +170,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
         videoInputs.forEach((device, index) => {
           const option = document.createElement('option');
           option.value = device.deviceId;
-          option.textContent = device.label || `Caméra ${index + 1}`;
+          option.textContent = `Cam ${index + 1}`;
           select.appendChild(option);
         });
 
@@ -204,6 +204,15 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
     });
 
     listCameras();
+
+    // 🎧 Contrôle haut-parleur (remote audio)
+    const remoteVideo = document.getElementById('remoteVideo');
+    const btnSpeaker = document.getElementById('btnMic');
+
+    btnSpeaker.addEventListener('click', () => {
+      remoteVideo.muted = !remoteVideo.muted;
+      btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+    });
   </script>
 </body>
 </html>
