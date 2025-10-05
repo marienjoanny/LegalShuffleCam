@@ -8,16 +8,10 @@
 - [ ] Endpoints `/health` pour checks et monitoring
 - [ ] no ip show
 - [ ] 2 mode cam : cam 50 50 tool bar between
- Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
- Libellé caméra simplifié (Cam 1, Cam 2…) pour affichage stable et minimal
- Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
- Libellé caméra simplifié (Cam 1, Cam 2…) pour affichage stable et minimal
- Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
+- [x] Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
  Libellé caméra simplifié (Cam 1, Cam 2…) pour affichage stable et minimal
 - [ ] bloquer les bots wordpress qui flood les log nginx
 - [ ] 2 mode cam : cam 50 50 tool bar between
- Bouton haut-parleur (🔊/🔇) fonctionnel via remoteVideo.muted toggle
- Libellé caméra simplifié (Cam 1, Cam 2…) pour affichage stable et minimal
  bloquer les bots wordpress qui flood les log nginx
 
 ## M1 — Âge / accès (GO.cam)
