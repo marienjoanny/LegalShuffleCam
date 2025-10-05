@@ -27,3 +27,5 @@ Thumbs.db
 
 # === Autres fichiers à ne pas versionner ===
 public/test.php
+/var/log/legalshufflecam-denied.log
+/var/log/legalshufflecam-denied.log
