@@ -32,6 +32,13 @@
 - [ ] Analyse throttlée (2–3 fps)
 - [ ] Compteur infractions serveur
 - [ ] Blocage et ban progressif
+Détection combinée visage + contenu NSFW + signalement :
+- Utilisation unifiée de TensorFlow.js pour `face-api.js` et `nsfwjs`
+- Activation du bouton “Suivant” uniquement si visage détecté **et** contenu jugé safe
+- Analyse NSFW throttlée (1–2 fps) pour préserver les performances
+- Ratio minimum visage/cadre pour éviter les cadrages détournés
+- Capture automatique (frame + IP + timestamp) lors du clic sur “Signaler”
+- Stockage temporaire pour modération ou auto-ban si récidive
 
 ## M4 — Mouvements suspects
 - [ ] Détection mouvement par frame diff ou pose estimation
