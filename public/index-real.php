@@ -214,5 +214,8 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
     });
   </script>
+<footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
+  <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
+</footer>
 </body>
 </html>
