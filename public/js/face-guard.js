@@ -162,6 +162,7 @@
 
       setFrameOK(passed);
       setJoinEnabled(passed);
+    window.faceVisible = passed;
     } catch (e) {
       console.error(e);
       setFrameOK(false);

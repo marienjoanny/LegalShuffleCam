@@ -219,3 +219,35 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
 </footer>
 </body>
 </html>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const btnNext = document.getElementById('btnNext');
+    if (!btnNext) {
+      console.warn('[LegalShuffleCam] Bouton #btnNext introuvable');
+      return;
+    }
+
+    setInterval(() => {
+      const visible = window.faceVisible === true;
+      btnNext.disabled = !visible;
+      btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+    }, 500);
+  });
+</script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    window.faceVisible = false;
+
+    const btnNext = document.getElementById('btnNext');
+    if (!btnNext) {
+      console.warn('[LegalShuffleCam] Bouton #btnNext introuvable');
+      return;
+    }
+
+    setInterval(() => {
+      const visible = window.faceVisible === true;
+      btnNext.disabled = !visible;
+      btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+    }, 500);
+  });
+</script>
