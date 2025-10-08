@@ -1,5 +1,4 @@
 <?php
-// --- AGE VERIFIED LINKBACK HANDLER ---
 if (isset($_GET["src"]) && $_GET["src"] === "linkback") {
     $ttlDays = 30;
     $expires = time() + $ttlDays*24*60*60;
@@ -15,8 +14,6 @@ if (isset($_GET["src"]) && $_GET["src"] === "linkback") {
     header("Location: /", true, 302);
     exit;
 }
-// --- /AGE VERIFIED LINKBACK HANDLER ---
-// --- Cookie guard: évite de relancer Go.cam si déjà majeur ---
 if (isset($_COOKIE["age_verified"]) && $_COOKIE["age_verified"] === "1") {
     header("Location: /index-real.php", true, 302);
     exit;
@@ -67,23 +64,33 @@ try {
   <style>
     :root{color-scheme:dark light}
     html,body{height:100%}
-    body{margin:0;background:#0b1220;color:#e6e8ee;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
-    .box{max-width:740px;width:92vw;background:#111827;border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:22px}
+    body{margin:0;background:#0b1220;color:#e6e8ee;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:center;flex-direction:column}
+    .box{max-width:740px;width:92vw;background:#111827;border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:22px;margin-bottom:20px}
     a.btn{display:inline-block;margin-top:14px;padding:10px 14px;border:1px solid #334155;border-radius:10px;color:#e6e8ee;text-decoration:none}
     p{opacity:.9}
+    footer{font-size:0.9em;opacity:.6;text-align:center;margin-top:20px}
   </style>
   <script>
     (function(){
       var go = <?php echo json_encode($url, JSON_UNESCAPED_SLASHES); ?>;
-      try { window.top.location.replace(go); } catch(e) { location.href = go; }
+      setTimeout(function(){
+        try { window.top.location.replace(go); } catch(e) { location.href = go; }
+      }, 5000);
     })();
   </script>
 </head>
 <body>
   <div class="box">
     <h1>Vérification d’âge</h1>
-    <p>Redirection vers Go.cam…</p>
+    <p>Redirection vers Go.cam dans 5 secondes…</p>
     <a class="btn" href="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>">Lancer la vérification Go.cam</a>
   </div>
+  <footer>
+    <a href="/mentions-legales.html">Mentions légales</a> · 
+    <a href="/cgu.html">CGU</a>
+  </footer>
+<footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
+  <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
+</footer>
 </body>
 </html>
