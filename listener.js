@@ -145,7 +145,7 @@ function isBanned(ip) {
 function logModeration(action, ip, note = '') {
   const line = `${new Date().toISOString()} ${action} ${ip} ${note}\n`;
   try {
-      fs.appendFileSync('/var/log/legalshufflecam-moderation.log', line);
+      fs.appendFileSync('/var/log/legalshufflecam/moderation.log', line);
   } catch (e) {
       console.error('Error writing log:', e.message);
   }

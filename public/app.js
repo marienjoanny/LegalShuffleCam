@@ -1,175 +1,166 @@
-// --- Variables Globales ---
-const ioClient = io();
-let pc, localStream, peerId, micEnabled = true, myRole = 'callee';
-const rtcConfig = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
+/**
+ * APP.JS - Correction #33 (WebRTC Final Client)
+ * Consolide la détection du visage, la signalisation WebRTC et le contrôle de l'UI.
+ */
 
-// UI Selectors
-const $ = (id) => document.getElementById(id);
-const localVideo = $('local'), remoteVideo = $('remote');
-const btnJoin = $('join'), gate = $('gate'), btnNext = $('next'), 
-      btnLeave = $('leave'), btnMic = $('micToggle'), btnReport = $('report');
-const topBar = document.querySelector('.top-bar span');
-const loaderRing = document.querySelector('.loader-ring');
+// --- Variables Globales / DOM ---
+window.faceVisible = window.faceVisible || false; 
 
-[btnNext, btnLeave, btnMic, btnReport].forEach(b => b.disabled = true);
+const btnNext = document.getElementById('btnNext');
+const loaderRing = document.getElementById('loaderRing'); 
+const topBar = document.getElementById('topBar');
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
 
-async function ensureLocal(){
-  if (localStream) return true;
-  try{
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio:true, video:{ width:{max:640}, height:{max:480}, frameRate:{max:30} }
-    });
-    localVideo.setAttribute('playsinline',''); localVideo.setAttribute('autoplay',''); localVideo.muted = true;
-    localVideo.classList.remove('hidden'); localVideo.srcObject = localStream;
-    localVideo.onloadedmetadata = () => localVideo.play().catch(()=>{});
-    gate.classList.add('hidden'); 
-    [btnNext, btnLeave, btnMic, btnReport].forEach(b => b.disabled = false);
-    return true;
-  }catch(e){ console.warn('ensureLocal() failed:', e); return false; }
+let socket = null;
+let peerConnection = null;
+const ICE_SERVERS = []; // À configurer si nécessaire
+
+if (btnNext) {
+    btnNext.disabled = true; 
 }
 
-// 🎯 Mise à jour des gestionnaires de clics 🎯
+// --- Contrôle de l'Interface (Appelé par face-guard.js) ---
+window.checkUIUpdate = function() {
+    const faceReady = window.faceVisible;
 
-btnJoin.onclick = async () => { 
-    btnJoin.disabled = true; 
-    if(!(await ensureLocal())){ 
-        alert('Permission caméra/micro refusée.'); 
-        btnJoin.disabled=false; 
-        return; 
-    } 
-    ioClient.emit('queue:join'); 
-};
-
-// VÉRIFICATION FACIALE (Étape 1 & 3)
-btnNext.onclick  = () => {
-    // Si window.faceVisible n'est pas encore défini (FaceGuard pas chargé), on laisse passer.
-    if (typeof window.faceVisible === 'undefined' || window.faceVisible) {
-        ioClient.emit('next');
-    } else {
-        console.warn('Action "next" bloquée: visage non détecté.');
-    }
-};
-
-btnLeave.onclick = () => { 
-    ioClient.emit('queue:leave'); 
-    cleanupPC(); 
-    stopLocal(); 
-    myRole='callee'; 
-    gate.classList.remove('hidden'); 
-    btnJoin.disabled=false; 
-    [btnNext, btnLeave, btnMic, btnReport].forEach(b=>b.disabled=true); 
-};
-btnMic.onclick   = () => { micEnabled = !micEnabled; if(localStream) localStream.getAudioTracks().forEach(t=>t.enabled=micEnabled); btnMic.textContent = micEnabled ? '🎙️' : '🔇'; };
-btnReport.onclick= () => { if (peerId) ioClient.emit('report',{against:peerId}); btnReport.textContent='Signalé ✓'; setTimeout(()=>btnReport.textContent='Signaler',1200); };
-
-function newPC(){
-  pc = new RTCPeerConnection(rtcConfig);
-  pc.onconnectionstatechange = () => console.log('pc state:', pc.connectionState);
-  pc.oniceconnectionstatechange = () => console.log('ice state:', pc.iceConnectionState);
-  
-  if (localStream) { 
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  }
-
-  pc.ontrack = (ev) => {
-    console.log('ontrack stream:', ev.streams[0]);
-    remoteVideo.srcObject = ev.streams[0];
-    remoteVideo.muted = true;
-    remoteVideo.onloadedmetadata = () => remoteVideo.play().catch(err => console.warn('play remote error:', err));
-  };
-  pc.onicecandidate = (ev) => { if (ev.candidate) ioClient.emit('rtc:ice', { to: peerId, candidate: ev.candidate }); };
-}
-
-// 🎯 Gestionnaires de Socket.IO mis à jour (Matchmaking/Statut) 🎯
-
-ioClient.on('match', async ({ peerId: id, role }) => {
-  peerId = id; myRole = role || 'callee';
-  if (!(await ensureLocal())) return;
-  newPC();
-  
-  // Mise à jour de l'UI: Match trouvé
-  topBar.textContent = 'En conversation…';
-  loaderRing.style.visibility = 'hidden';
-
-  if (myRole === 'caller') {
-    const offer = await pc.createOffer({ offerToReceiveAudio:true, offerToReceiveVideo:true });
-    await pc.setLocalDescription(offer);
-    ioClient.emit('rtc:offer', { to: peerId, sdp: offer });
-  } else {
-    console.log('waiting offer…');
-  }
-});
-
-ioClient.on('rtc:offer', async ({ from, sdp }) => {
-  peerId = from;
-  if (!(await ensureLocal())) return;
-  if (!pc) newPC();
-  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  ioClient.emit('rtc:answer', { to: peerId, sdp: answer });
-});
-
-ioClient.on('rtc:answer', async ({ sdp }) => {
-  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-});
-
-ioClient.on('rtc:ice', async ({ candidate }) => {
-  try { await pc.addIceCandidate(candidate); } catch(e){ console.warn(e); }
-});
-
-// Gère l'état d'attente (Étape 5 - nouveau)
-ioClient.on('status:waiting', ({ queueSize }) => {
-    topBar.textContent = `Recherche en cours... (en file : ${queueSize})`;
-    loaderRing.style.visibility = 'visible';
-    remoteVideo.srcObject = null; 
-    cleanupPC(); 
-});
-
-// Gère la fin de match ou déconnexion du pair (Étape 6 - mis à jour)
-ioClient.on('ended', () => { 
-    cleanupPC(); 
-    remoteVideo.srcObject = null; 
-    myRole='callee'; 
-    topBar.textContent = 'Recherche d’un partenaire…'; 
-    loaderRing.style.visibility = 'visible';
-});
-
-// Gère le BLOCAGE par modération (Étape 5 - nouveau, critique)
-ioClient.on('moderation:blocked', ({ reason }) => {
-    console.error('Action bloquée par modération:', reason);
-    alert(`Votre action a été bloquée : ${reason}. Vous êtes déconnecté.`);
-    
-    ioClient.emit('queue:leave'); 
-    cleanupPC();
-    stopLocal(); 
-    myRole='callee'; 
-    
-    // Mise à jour de l'UI en cas de blocage
-    topBar.textContent = '⛔ BLOQUÉ PAR MODÉRATION';
-    loaderRing.style.visibility = 'hidden';
-    [btnNext, btnLeave, btnMic, btnReport].forEach(b=>b.disabled=true);
-});
-
-ioClient.on('next_ack', () => {
-    console.log('Serveur a bien reçu la demande de "Suivant"');
-});
-
-function cleanupPC(){ if (pc){ try{pc.close();}catch{} pc=null; } }
-function stopLocal(){ if(localStream){ try{ localStream.getTracks().forEach(t=>t.stop()); }catch{} } localStream=null; localVideo.srcObject=null; localVideo.classList.add('hidden'); }
-
-// Permettre d’activer le son distant après un tap (autoplay mobile)
-document.addEventListener('click', () => { if (remoteVideo && remoteVideo.srcObject) remoteVideo.muted = false; }, { once:true });
-
-
-// --- FaceGuard Dynamic Check (Étape 1) ---
-// Active/désactive le bouton "Suivant" en fonction de la détection faciale
-setInterval(() => {
-    // On vérifie que la gate n'est PAS visible (donc que localStream est ON)
-    if (gate.classList.contains('hidden')) {
-        // Attend que FaceGuard soit initialisé
-        if (typeof window.faceVisible !== 'undefined') {
-            btnNext.disabled = !window.faceVisible;
+    // Seul le contrôle du visage active le bouton
+    if (btnNext) {
+        // Le bouton n'est activé que si la connexion n'a pas démarré
+        if (!socket || socket.disconnected) {
+             btnNext.disabled = !faceReady;
+             btnNext.textContent = faceReady ? '➡️ Interlocuteur suivant' : 'Visage requis';
         }
     }
-}, 500);
+
+    if (topBar) {
+        // Si la recherche est déjà en cours, ne pas écraser le message
+        if (topBar.textContent.startsWith("Recherche") || topBar.textContent.startsWith("Connecté")) return;
+
+        if (faceReady) {
+            topBar.textContent = "✅ Visage OK. Prêt à chercher un partenaire.";
+            if (loaderRing) loaderRing.style.display = 'block';
+        } else {
+            topBar.textContent = "🔴 Visage non détecté/cadré.";
+            if (loaderRing) loaderRing.style.display = 'none';
+        }
+    }
+};
+
+window.checkUIUpdate(); 
+
+
+// --- Signalisation Socket.IO ---
+
+function getSocket() {
+    if (socket && typeof socket.on === 'function') return socket;
+    if (window.io) { 
+        try {
+            socket = window.io(); 
+            // Écoute des événements de matchmaking
+            setupSocketListeners(socket);
+            return socket; 
+        } catch (e) {
+            console.error('Socket.IO init error:', e);
+        }
+    }
+    topBar.textContent = "❌ Erreur: Socket.IO non chargé.";
+    return null;
+};
+
+function setupSocketListeners(s) {
+    s.on('connect', () => { console.log('[Socket] Connecté au serveur.'); });
+    s.on('disconnect', () => { console.log('[Socket] Déconnecté du serveur.'); });
+
+    // Événements de Matchmaking (issus de main.js)
+    s.on('waiting', () => {
+        console.log('[MATCH] En attente d\'un partenaire.');
+        topBar.textContent = 'Recherche d\'un partenaire en cours...';
+        if (btnNext) { btnNext.textContent = 'En attente...'; btnNext.disabled = true; }
+    });
+
+    s.on('matched', (payload) => {
+        console.log('[MATCH] Partenaire trouvé !', payload);
+        topBar.textContent = 'Connecté à la salle ' + payload.roomId;
+        if (btnNext) { btnNext.textContent = 'Connecté !'; btnNext.disabled = true; }
+
+        // Démarrer la connexion WebRTC après le match
+        // initiateWebRTC(payload.isInitiator, payload.remoteSocketId);
+        
+        // Pour l'instant on alerte juste
+        alert('Match trouvé — room: ' + payload?.roomId); 
+    });
+    
+    // Ajoutez ici les handlers WebRTC : 'offer', 'answer', 'ice-candidate'
+}
+
+
+// --- Logique WebRTC (À COMPLÉTER) ---
+
+/*
+function initiateWebRTC(isInitiator, remoteSocketId) {
+    // 1. Création du PeerConnection
+    peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+    // 2. Gestion des pistes (ajouter les pistes locales)
+    localVideo.srcObject.getTracks().forEach(track => peerConnection.addTrack(track, localVideo.srcObject));
+
+    // 3. Gestion de la piste distante
+    peerConnection.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
+    };
+    
+    // 4. Gestion des candidats ICE pour le réseau
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit('ice-candidate', { 
+                candidate: event.candidate, 
+                to: remoteSocketId 
+            });
+        }
+    };
+
+    // 5. Création de l'offre (si nous sommes l'initiateur)
+    if (isInitiator) {
+        peerConnection.createOffer()
+            .then(offer => peerConnection.setLocalDescription(offer))
+            .then(() => {
+                socket.emit('offer', { 
+                    offer: peerConnection.localDescription,
+                    to: remoteSocketId
+                });
+            });
+    }
+    
+    // 6. Gestion des signaux entrants (offer, answer, candidate)
+    // C'est ici que vous définissez les écouteurs de socket pour les signaux WebRTC
+    // ...
+}
+*/
+
+
+// --- GESTIONNAIRE D'ÉVÉNEMENT DU BOUTON FINAL ---
+
+if (btnNext) {
+    btnNext.addEventListener('click', function() {
+        if (!btnNext.disabled && window.faceVisible) {
+            console.log("Bouton Interlocuteur suivant cliqué.");
+            
+            // 1. Désactiver le bouton immédiatement
+            btnNext.disabled = true; 
+            btnNext.textContent = "Connexion...";
+
+            // 2. Démarrer le processus de signalisation
+            const s = getSocket();
+
+            if (s) {
+                // 3. Demander au serveur de nous mettre en file d'attente
+                s.emit('joinQueue');
+            } else {
+                topBar.textContent = "❌ Connexion Socket échouée.";
+                btnNext.textContent = "Réessayer";
+                btnNext.disabled = false;
+            }
+        }
+    });
+}

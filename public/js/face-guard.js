@@ -161,7 +161,7 @@
       const passed = okStreak >= 3; // 3 frames OK consécutives
 
       setFrameOK(passed);
-      setJoinEnabled(passed);
+      window.checkUIUpdate();
     window.faceVisible = passed;
     } catch (e) {
       console.error(e);

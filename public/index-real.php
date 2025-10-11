@@ -12,6 +12,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LegalShuffleCam • Session</title>
   <style>
+    /* Styles CSS inchangés (issus du commit 2f4ff1c) */
     html, body {
       margin: 0;
       padding: 0;
@@ -22,7 +23,6 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       display: flex;
       flex-direction: column;
     }
-
     .top-bar {
       padding: 12px;
       background: #111827;
@@ -35,7 +35,6 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       justify-content: center;
       gap: 12px;
     }
-
     .loader-ring {
       width: 20px;
       height: 20px;
@@ -44,11 +43,10 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to { transform: rotate(360deg);
+      }
     }
-
     .main {
       flex: 1;
       display: grid;
@@ -56,7 +54,6 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       padding: 16px;
       gap: 16px;
     }
-
     .video-zone {
       position: relative;
       background: #000;
@@ -66,14 +63,12 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       justify-content: center;
       align-items: center;
     }
-
     #remoteVideo {
       width: 100%;
       max-width: 560px;
       height: auto;
       background: #000;
     }
-
     #localVideo {
       position: absolute;
       bottom: 16px;
@@ -84,28 +79,24 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       background: #000;
       box-shadow: 0 0 8px #000a;
     }
-
     .hint {
       text-align: center;
       font-size: 14px;
       color: #10b981;
       font-weight: 500;
     }
-
     .warning {
       text-align: center;
       font-size: 13px;
       color: #ef4444;
       font-weight: 500;
     }
-
     .actions {
       display: flex;
       justify-content: center;
       gap: 12px;
       flex-wrap: wrap;
     }
-
     button, select {
       padding: 12px 16px;
       border-radius: 12px;
@@ -115,15 +106,15 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       cursor: pointer;
       color: #fff;
     }
-
-    button.red { background: #dc2626; }
+    button.red { background: #dc2626;
+    }
     button.green { background: #10b981; }
-    button.blue { background: #2563eb; }
+    button.blue { background: #2563eb;
+    }
     select.yellow {
       background: #fbbf24;
       color: #111827;
     }
-
     button:disabled, select:disabled {
       opacity: .45;
       filter: saturate(.6);
@@ -133,12 +124,12 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
 </head>
 <body>
   <div class="top-bar">
-    <div class="loader-ring"></div>
-    <span>Recherche d’un partenaire…</span>
+    <div class="loader-ring" id="loaderRing"></div>
+    <span id="topBar">Chargement de la détection de visage...</span>
   </div>
 
   <div class="main">
-    <div class="video-zone">
+    <div class="video-zone" id="faceFrame">
       <video id="remoteVideo" autoplay muted playsinline></video>
       <video id="localVideo" autoplay muted playsinline></video>
     </div>
@@ -150,14 +141,34 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
       <button id="btnReport" class="red">Signaler</button>
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
-      <button id="btnNext" class="blue">➡️</button>
+      <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
     </div>
   </div>
 
   <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
   <script src="/js/face-guard.js"></script>
+  <script src="/app.js" defer></script> 
+
   <script>
+    // **********************************************
+    // LOGIQUE DE LA CAMÉRA ET DES CONTRÔLES AUDIO/VIDEO (Version FINALE)
+    // **********************************************
     let currentStream = null;
+    const topBar = document.getElementById('topBar');
+    
+    // ** Initialisation de la variable globale et de la fonction de mise à jour **
+    window.faceVisible = false;
+    
+    window.checkUIUpdate = function() {
+      // Met à jour la barre de statut en fonction de la détection faciale
+      if (topBar) {
+        if (window.faceVisible) {
+          topBar.textContent = "✅ Visage OK. Prêt à chercher un partenaire.";
+        } else {
+          topBar.textContent = "👤 Détection faciale requise...";
+        }
+      }
+    };
 
     async function listCameras() {
       try {
@@ -170,7 +181,7 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
         videoInputs.forEach((device, index) => {
           const option = document.createElement('option');
           option.value = device.deviceId;
-          option.textContent = `Cam ${index + 1}`;
+          option.textContent = `Cam ${index + 1}`; 
           select.appendChild(option);
         });
 
@@ -178,7 +189,11 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
           startCamera(videoInputs[0].deviceId);
         }
       } catch (err) {
-        alert("Erreur détection caméra: " + err.message);
+        // Logique d'erreur qui met à jour le topBar
+        console.error("Erreur détection caméra: ", err.message);
+        if (topBar) {
+            topBar.textContent = "❌ Caméra non trouvée.";
+        }
       }
     }
 
@@ -195,59 +210,46 @@ if (!isset($_COOKIE['age_verified']) || $_COOKIE['age_verified'] !== '1') {
         currentStream = stream;
         document.getElementById('localVideo').srcObject = stream;
       } catch (err) {
-        alert("Caméra indisponible: " + err.message);
+        // Logique d'erreur qui met à jour le topBar
+        console.error("Caméra indisponible: ", err.message);
+        if (topBar) {
+            topBar.textContent = "❌ Caméra refusée ou indisponible.";
+        }
       }
     }
 
+    // Écouteur de changement de caméra
     document.getElementById('cameraSelect').addEventListener('change', (e) => {
       startCamera(e.target.value);
     });
 
+    // Démarrage de la détection et de la liste
     listCameras();
 
-    // 🎧 Contrôle haut-parleur (remote audio)
+    // Contrôle haut-parleur (remote audio)
     const remoteVideo = document.getElementById('remoteVideo');
     const btnSpeaker = document.getElementById('btnMic');
 
-    btnSpeaker.addEventListener('click', () => {
-      remoteVideo.muted = !remoteVideo.muted;
-      btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
-    });
+    if (btnSpeaker && remoteVideo) {
+        btnSpeaker.addEventListener('click', () => {
+          remoteVideo.muted = !remoteVideo.muted;
+          btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+        });
+    }
+
+    // Logique du bouton "Visage requis"
+    const btnNext = document.getElementById('btnNext');
+    if (btnNext) {
+        setInterval(() => {
+          const visible = window.faceVisible === true;
+          btnNext.disabled = !visible;
+          btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+        }, 500);
+    }
   </script>
+
 <footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
   <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
 </footer>
 </body>
 </html>
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const btnNext = document.getElementById('btnNext');
-    if (!btnNext) {
-      console.warn('[LegalShuffleCam] Bouton #btnNext introuvable');
-      return;
-    }
-
-    setInterval(() => {
-      const visible = window.faceVisible === true;
-      btnNext.disabled = !visible;
-      btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
-    }, 500);
-  });
-</script>
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    window.faceVisible = false;
-
-    const btnNext = document.getElementById('btnNext');
-    if (!btnNext) {
-      console.warn('[LegalShuffleCam] Bouton #btnNext introuvable');
-      return;
-    }
-
-    setInterval(() => {
-      const visible = window.faceVisible === true;
-      btnNext.disabled = !visible;
-      btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
-    }, 500);
-  });
-</script>
