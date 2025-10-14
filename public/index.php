@@ -1,96 +1,97 @@
 <?php
-if (isset($_GET["src"]) && $_GET["src"] === "linkback") {
-    $ttlDays = 30;
-    $expires = time() + $ttlDays*24*60*60;
-    setcookie("age_verified", "1", [
-        "expires"  => $expires,
+// ✅ Réinitialisation manuelle
+if (isset($_GET["reset"])) {
+    setcookie("age_verified", "", [
+        "expires"  => time() - 3600,
         "path"     => "/",
+        "domain"   => ".legalshufflecam.ovh",
         "secure"   => true,
-        "httponly" => true,
-        "samesite" => "Lax",
+        "httponly" => false,
+        "samesite" => "None"
     ]);
-    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-    header("Pragma: no-cache");
-    header("Location: /", true, 302);
+    file_put_contents(__DIR__ . "/avs-debug.log", "[".date("Y-m-d H:i:s")."] Cookie supprimé via reset IP=" . ($_SERVER["REMOTE_ADDR"] ?? "N/A") . " UA=" . ($_SERVER["HTTP_USER_AGENT"] ?? "N/A") . "\n", FILE_APPEND);
+    echo "<p>Cookie supprimé. <a href='/'>Revenir à l’accueil</a></p>";
     exit;
 }
+
+// ✅ Retour depuis Go.cam → pose du cookie avec options explicites
+$src = $_GET["src"] ?? $_GET["\\src"] ?? $_POST["src"] ?? $_POST["\\src"] ?? null;
+if ($src === "linkback") {
+    setcookie("age_verified", "1", [
+        "expires"  => time() + 86400 * 30,
+        "path"     => "/",
+        "domain"   => ".legalshufflecam.ovh",
+        "secure"   => true,
+        "httponly" => false,
+        "samesite" => "None"
+    ]);
+    file_put_contents(__DIR__ . "/avs-debug.log", "[".date("Y-m-d H:i:s")."] Cookie posé via linkback IP=" . ($_SERVER["REMOTE_ADDR"] ?? "N/A") . " UA=" . ($_SERVER["HTTP_USER_AGENT"] ?? "N/A") . "\n", FILE_APPEND);
+    echo "<p>✅ Cookie posé avec SameSite=None. <a href='/'>Revenir à l’accueil</a></p>";
+    echo "<p><a href='/test-cookie.php'>🔍 Vérifier le cookie via test-cookie.php</a></p>";
+    echo "<p><a href='/log-cookie.php'>📋 Journaliser et afficher le cookie</a></p>";
+    exit;
+}
+
+// ✅ Lecture du cookie → log explicite
+file_put_contents(__DIR__ . "/avs-debug.log", "[".date("Y-m-d H:i:s")."] Vérif cookie présent ? " . json_encode($_COOKIE) . " IP=" . ($_SERVER["REMOTE_ADDR"] ?? "N/A") . " UA=" . ($_SERVER["HTTP_USER_AGENT"] ?? "N/A") . "\n", FILE_APPEND);
+
+// ✅ Redirection si déjà vérifié
 if (isset($_COOKIE["age_verified"]) && $_COOKIE["age_verified"] === "1") {
+    file_put_contents(__DIR__ . "/avs-debug.log", "[".date("Y-m-d H:i:s")."] Cookie détecté → redirection vers index-real.php\n", FILE_APPEND);
     header("Location: /index-real.php", true, 302);
     exit;
 }
+
+// ✅ Appel SDK Go.cam
 require_once __DIR__ . '/avsPhpSdkV1.php';
 require_once dirname(__DIR__) . '/config.php';
 
-try {
-    $linkBack = "https://legalshufflecam.ovh/?src=linkback";
-    $callback = "https://legalshufflecam.ovh/avs/callback?src=callback";
-    $logf = __DIR__ . "/avs-debug.log";
+global $config;
 
-    $ua   = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown-UA';
-    $host = $_SERVER['HTTP_HOST'] ?? 'legalshufflecam.ovh';
-    $ip   = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+$avs = new AvsPhpSdkV1(
+    $config['partnerId'],
+    $config['cipherKey'],
+    $config['hmacKey']
+);
 
-    $avs = new AvsPhpSdkV1($config['partnerId'], $config['cipherKey'], $config['hmacKey']);
-    $avs->fillRequest([
-        'userData' => ['userId' => 12345],
-        'http' => [
-            'userAgent'       => $ua,
-            'websiteHostname' => $host,
-        ],
-        'ipStr'    => $ip,
-        'linkBack' => $linkBack,
-        'callback' => $callback,
-    ]);
+$avs->fillRequest([
+    'userData' => ['userId' => 0],
+    'http' => [
+        'userAgent'       => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown-UA',
+        'websiteHostname' => $_SERVER['SERVER_NAME'] ?? 'legalshufflecam.ovh',
+    ],
+    'ipStr'    => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+    'linkBack' => 'https://legalshufflecam.ovh/?src=linkback',
+]);
 
-    $url = $avs->toUrl();
-    if (!$url) {
-        throw new Exception('URL Go.cam vide');
-    }
-
-    header('Content-Type: text/html; charset=UTF-8');
-} catch (Throwable $e) {
-    http_response_code(500);
-    header('Content-Type: text/plain; charset=UTF-8');
-    echo "EXCEPTION: ".$e->getMessage()."\n";
-    exit;
-}
+$url = $avs->toUrl();
 ?>
 <!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Vérification d’âge</title>
-  <style>
-    :root{color-scheme:dark light}
-    html,body{height:100%}
-    body{margin:0;background:#0b1220;color:#e6e8ee;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:center;flex-direction:column}
-    .box{max-width:740px;width:92vw;background:#111827;border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:22px;margin-bottom:20px}
-    a.btn{display:inline-block;margin-top:14px;padding:10px 14px;border:1px solid #334155;border-radius:10px;color:#e6e8ee;text-decoration:none}
-    p{opacity:.9}
-    footer{font-size:0.9em;opacity:.6;text-align:center;margin-top:20px}
-  </style>
-  <script>
-    (function(){
-      var go = <?php echo json_encode($url, JSON_UNESCAPED_SLASHES); ?>;
-      setTimeout(function(){
-        try { window.top.location.replace(go); } catch(e) { location.href = go; }
-      }, 5000);
-    })();
-  </script>
 </head>
 <body>
-  <div class="box">
-    <h1>Vérification d’âge</h1>
-    <p>Redirection vers Go.cam dans 5 secondes…</p>
-    <a class="btn" href="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>">Lancer la vérification Go.cam</a>
-  </div>
-  <footer>
-    <a href="/mentions-legales.html">Mentions légales</a> · 
-    <a href="/cgu.html">CGU</a>
-  </footer>
-<footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
-  <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
-</footer>
+  <h1>Vérification d’âge</h1>
+  <p>Veuillez cliquer pour lancer la vérification :</p>
+  <a href="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>">Lancer la vérification</a>
+  <p><a href="/?reset=1">🧹 Réinitialiser le cookie</a></p>
+  <p><a href="/test-cookie.php">🔍 Vérifier le cookie via test-cookie.php</a></p>
+  <p><a href="/log-cookie.php">📋 Journaliser et afficher le cookie</a></p>
+  <hr>
+  <pre>
+  $_GET: <?php print_r($_GET); ?>
+
+  $_POST: <?php print_r($_POST); ?>
+
+  $_COOKIE: <?php print_r($_COOKIE); ?>
+
+  $_SERVER: <?php print_r([
+    'HTTP_USER_AGENT' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+    'SERVER_NAME'     => $_SERVER['SERVER_NAME'] ?? '',
+    'REMOTE_ADDR'     => $_SERVER['REMOTE_ADDR'] ?? '',
+  ]); ?>
+  </pre>
 </body>
 </html>
