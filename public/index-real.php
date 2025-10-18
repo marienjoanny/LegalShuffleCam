@@ -187,8 +187,6 @@
         currentStream = stream;
         document.getElementById('localVideo').srcObject = stream;
 
-        if (typeof connectSocketAndWebRTC === 'function') {
-          connectSocketAndWebRTC(stream);
         }
       } catch (err) {
         console.error("Caméra indisponible: ", err.message);
@@ -211,15 +209,15 @@
       });
     }
 
-    window.nextInterlocutor = function() {
+  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
+});
+
       console.log('[LSC] Demande d\'interlocuteur suivant...');
       if (typeof disconnectWebRTC === 'function') disconnectWebRTC();
       document.getElementById('remoteVideo').srcObject = null;
       const btnNext = document.getElementById('btnNext');
       if (btnNext) btnNext.disabled = true;
       setTimeout(() => {
-        if (typeof connectSocketAndWebRTC === 'function') {
-          connectSocketAndWebRTC(currentStream);
         }
       }, 1500);
     };
@@ -231,7 +229,9 @@
         btnNext.disabled = !visible;
         btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
         if (visible && !btnNext.onclick) {
-          btnNext.onclick = window.nextInterlocutor;
+  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
+});
+
         } else if (!visible) {
           btnNext.onclick = null;
         }
@@ -246,11 +246,20 @@
   <script>
     document.getElementById("btnTestShuffle").addEventListener("click", () => {
       console.log("[TEST] Shuffle forcé");
-      if (typeof connectSocketAndWebRTC === "function") {
-        connectSocketAndWebRTC(currentStream);
       }
     });
   </script>
-  <script src="app.js"></script>
+<script src="/js/rtc-core.js"></script>
 </body>
 </html>
+<script>
+  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
+});
+
+  } else {
+  }
+};
+</script>
+socket.on("partner", (partnerId) => {
+  window.nextInterlocutor(partnerId);
+        if (typeof connectSocketAndWebRTC === 'function') {
