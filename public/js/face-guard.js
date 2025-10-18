@@ -154,11 +154,11 @@
       const ok = isCentered(face, vw, vh);
 
       if (ok) {
-        okStreak = Math.min(okStreak + 1, 8);
+        okStreak = Math.min(okStreak + 1, 30);
       } else {
         okStreak = Math.max(okStreak - 1, 0);
       }
-      const passed = okStreak >= 3; // 3 frames OK consécutives
+      const passed = okStreak >= 15; // 15 frames OK consécutives
 
       setFrameOK(passed);
       window.checkUIUpdate();
