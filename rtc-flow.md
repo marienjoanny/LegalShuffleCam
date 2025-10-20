@@ -1024,3 +1024,23 @@
 - 📄 Fichier : /var/www/legalshufflecam/index-real.php
 - 🧾 Sauvegarde : /var/www/legalshufflecam/index-real.faceguard.bak.php
 - ✅ Rapport : /var/log/rtc-inject-trackingjs-into-index-real.log
+
+## 🔁 Migration app.js vers tracking.js
+- 📅 Mon Oct 20 19:41:13 UTC 2025
+- 🔖 Tag : RTC:migrated-appjs-to-trackingjs
+- 📄 Fichier : /var/www/legalshufflecam/app.js
+- 🧾 Sauvegarde : /var/www/legalshufflecam/app.js.bak.faceguard
+- ✅ Rapport : /var/log/rtc-migrate-appjs-to-trackingjs.log
+
+## 🔁 Migration app.js vers tracking.js
+- 📅 Mon Oct 20 19:44:17 UTC 2025
+- 🔖 Tag : RTC:migrated-appjs-to-trackingjs
+- 📄 Fichier : /var/www/legalshufflecam/public/app.js
+- 🧾 Sauvegarde : /var/www/legalshufflecam/app.js.bak.faceguard
+- ✅ Rapport : /var/log/rtc-migrate-appjs-to-trackingjs.log
+
+## 🧹 Nettoyage FaceGuard dans index-real.php
+- 📅 Mon Oct 20 19:47:24 UTC 2025
+- 🔖 Tag : RTC:cleaned-faceguard-index-real
+- 📄 Fichier : /var/www/legalshufflecam/index-real.php
+- ✅ Rapport : /var/log/rtc-clean-index-real-faceguard.log

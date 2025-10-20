@@ -270,18 +270,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-window.okStreak = 0;
-setInterval(async () => {
-  const video = document.getElementById('remoteVideo');
-  if (!video || video.readyState < 2) return;
-
-  if (!window.__fgBlazeModel) {
-    console.warn('[RTC] ⛔ __fgBlazeModel non défini');
-    return;
-  }
-
-  try {
-    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
     const visible = faces.length > 0;
     window.faceVisible = visible;
     window.okStreak = visible ? window.okStreak + 1 : 0;
@@ -291,3 +279,25 @@ setInterval(async () => {
     console.error('[RTC] ❌ Erreur estimateFaces:', err);
   }
 }, 500);
+
+window.okStreak = 0;
+const history = Array(30).fill(0);
+const remoteVideo = document.getElementById("remoteVideo");
+
+const tracker = new tracking.ObjectTracker("face");
+tracker.setInitialScale(2);
+tracker.setStepSize(1.5);
+tracker.setEdgesDensity(0.05);
+
+tracking.track("#remoteVideo", tracker);
+
+tracker.on("track", event => {
+  const face = event.data[0];
+  const visible = !!face;
+  window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
+  history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
+  const sum = history.reduce((a, b) => a + b, 0);
+  window.faceVisible = sum >= 15;
+
+  console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
+});
