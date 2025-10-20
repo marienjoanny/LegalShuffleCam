@@ -1044,3 +1044,15 @@
 - 🔖 Tag : RTC:cleaned-faceguard-index-real
 - 📄 Fichier : /var/www/legalshufflecam/index-real.php
 - ✅ Rapport : /var/log/rtc-clean-index-real-faceguard.log
+
+## 🧹 Nettoyage app.js FaceGuard & duplications
+- 📅 Mon Oct 20 19:52:06 UTC 2025
+- 🔖 Tag : RTC:cleaned-appjs-faceguard
+- 📄 Fichier : /var/www/legalshufflecam/public/app.js
+- 🧾 Sauvegarde : /var/www/legalshufflecam/public/app.js.bak.cleanup
+- ✅ Rapport : /var/log/rtc-clean-appjs-faceguard.log
+
+## 🔍 Diff app.js après nettoyage FaceGuard
+- 📅 Mon Oct 20 19:54:11 UTC 2025
+- 🔖 Tag : RTC:diff-appjs-cleanup
+- 📄 Rapport : /var/log/rtc-diff-appjs-cleanup.log
