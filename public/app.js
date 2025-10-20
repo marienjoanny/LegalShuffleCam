@@ -269,3 +269,25 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('[RTC] ⚠ Modèle Blazeface non détecté');
   }
 });
+
+window.okStreak = 0;
+setInterval(async () => {
+  const video = document.getElementById('remoteVideo');
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) {
+    console.warn('[RTC] ⛔ __fgBlazeModel non défini');
+    return;
+  }
+
+  try {
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+    const visible = faces.length > 0;
+    window.faceVisible = visible;
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    console.log('[RTC] 🔍 Visage détecté:', visible, '| Streak:', window.okStreak);
+  } catch (err) {
+    console.error('[RTC] ❌ Erreur estimateFaces:', err);
+  }
+}, 500);
