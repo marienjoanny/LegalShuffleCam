@@ -150,3 +150,146 @@ function logModeration(action, ip, note = '') {
       console.error('Error writing log:', e.message);
   }
 }
+const waitingUsers = [];
+
+io.on("connection", (socket) => {
+  console.log("[RTC] Connexion :", socket.id);
+
+  // 🔁 File d’attente
+  waitingUsers.push(socket.id);
+  if (waitingUsers.length >= 2) {
+    const [a, b] = waitingUsers.splice(0, 2);
+    io.to(a).emit("partner", { id: b });
+    io.to(b).emit("partner", { id: a });
+    console.log("[RTC] Match :", a, "<>", b);
+  }
+
+  socket.on("disconnect", () => {
+    const i = waitingUsers.indexOf(socket.id);
+    if (i !== -1) waitingUsers.splice(i, 1);
+    console.log("[RTC] Déconnexion :", socket.id);
+  });
+});
+
+socket.on("ice-candidate", ({ from, candidate }) => {
+  console.log("📨 ICE reçu :", candidate);
+  if (peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+// 🔍 Traces WebRTC
+console.log("[RTC] Création RTCPeerConnection");
+peerConnection = new RTCPeerConnection();
+
+peerConnection.ontrack = (event) => {
+  console.log("[RTC] Track reçu :", event.track.kind);
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo && event.streams[0]) {
+    remoteVideo.srcObject = event.streams[0];
+    console.log("[RTC] remoteVideo.srcObject assigné");
+  }
+};
+
+peerConnection.onicecandidate = (event) => {
+  if (event.candidate) {
+    console.log("[RTC] ICE local :", event.candidate);
+    socket.emit("ice-candidate", { to: partnerId, candidate: event.candidate });
+  }
+};
+
+
+// 🔍 Réception de l'offre SDP
+socket.on("offer", ({ from, sdp }) => {
+  console.log("[RTC] Offre reçue de", from);
+  peerConnection = new RTCPeerConnection();
+
+  peerConnection.ontrack = (event) => {
+    console.log("[RTC] Track reçue :", event.track.kind);
+    const remoteVideo = document.getElementById("remoteVideo");
+    if (remoteVideo && event.streams[0]) {
+      remoteVideo.srcObject = event.streams[0];
+      console.log("[RTC] remoteVideo.srcObject assigné");
+    }
+  };
+
+  peerConnection.setRemoteDescription(new RTCSessionDescription(sdp)).then(() => {
+    console.log("[RTC] Description distante définie");
+    return peerConnection.createAnswer();
+  }).then(answer => {
+    console.log("[RTC] Réponse créée :", answer.sdp);
+    return peerConnection.setLocalDescription(answer);
+  }).then(() => {
+    console.log("[RTC] Description locale définie (récepteur)");
+    socket.emit("answer", { to: from, sdp: peerConnection.localDescription });
+  });
+});
+
+// 🔍 Vérification visuelle de remoteVideo.srcObject côté callee
+setTimeout(() => {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo && remoteVideo.srcObject) {
+    console.log("[RTC] ✅ remoteVideo.srcObject actif (callee)");
+  } else {
+    console.warn("[RTC] ⚠️ remoteVideo.srcObject absent ou null (callee)");
+  }
+}, 2000);
+
+// 🔔 Réception de l'offre et démarrage WebRTC côté callee
+socket.on("offer", ({ from, sdp }) => {
+  console.log("[RTC] Offre reçue de", from);
+  peerConnection = new RTCPeerConnection();
+
+  peerConnection.ontrack = (event) => {
+    console.log("[RTC] Flux reçu côté callee");
+    document.getElementById("remoteVideo").srcObject = event.streams[0];
+  };
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("[RTC] ICE local (callee)", event.candidate);
+      socket.emit("rtc:ice", { to: from, candidate: event.candidate });
+    }
+  };
+
+  peerConnection.setRemoteDescription(new RTCSessionDescription(sdp)).then(() => {
+    return peerConnection.createAnswer();
+  }).then(answer => {
+    return peerConnection.setLocalDescription(answer);
+  }).then(() => {
+    console.log("[RTC] Réponse créée et envoyée");
+    socket.emit("rtc:answer", { to: from, sdp: peerConnection.localDescription });
+  }).catch(err => {
+    console.error("[RTC] Erreur côté callee :", err);
+  });
+});
+
+// 🔄 Réception des ICE distants
+socket.on("ice-candidate", ({ candidate }) => {
+  console.log("[RTC] ICE distant reçu (callee)", candidate);
+  peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+// 🔍 Vérification côté callee : remoteVideo.srcObject
+setTimeout(() => {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo && remoteVideo.srcObject) {
+    console.log("[RTC] ✅ remoteVideo.srcObject actif (callee)");
+  } else {
+    console.warn("[RTC] ⚠️ remoteVideo.srcObject absent ou null (callee)");
+  }
+}, 2000);
+
+// 🧭 Logger réception socket.on côté callee
+(function() {
+  const originalOn = socket.on;
+  socket.on = function(event, handler) {
+    console.log("[RTC] 📥 Réception socket.on (callee) :", event);
+    return originalOn.call(this, event, handler);
+  };
+})();
+
+if (peerConnection) {
+  peerConnection.onconnectionstatechange = () => {
+    console.log("[RTC] 🔄 État peerConnection :", peerConnection.connectionState);
+  };
+}
+

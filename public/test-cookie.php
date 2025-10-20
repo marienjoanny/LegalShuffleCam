@@ -1,1 +1,5 @@
-<?php file_put_contents("/tmp/avs-cookie.log", json_encode($_COOKIE) . "\n", FILE_APPEND); ?>
+<?php
+setcookie("age_verified", "1", time() + 86400 * 30, "/");
+header("Content-Type: text/plain");
+echo "✅ Cookie age_verified posé (réponse HTTP)";
+?>

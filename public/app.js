@@ -1,166 +1,247 @@
-/**
- * APP.JS - Correction #33 (WebRTC Final Client)
- * Consolide la détection du visage, la signalisation WebRTC et le contrôle de l'UI.
- */
+window.connectSocketAndWebRTC = function(localStream) {
+  const socket = io('https://legalshufflecam.ovh', {
+    transports: ['websocket'],
+    secure: true
+  });
+  window.socket = socket;
 
-// --- Variables Globales / DOM ---
-window.faceVisible = window.faceVisible || false; 
+  const peerConnection = new RTCPeerConnection();
+  window.peerConnection = peerConnection;
 
-const btnNext = document.getElementById('btnNext');
-const loaderRing = document.getElementById('loaderRing'); 
-const topBar = document.getElementById('topBar');
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
+  const topBar = document.getElementById('topBar');
+  const btnNext = document.getElementById('btnNext');
+  const btnReport = document.getElementById('btnReport');
+  const remoteVideo = document.getElementById('remoteVideo');
 
-let socket = null;
-let peerConnection = null;
-const ICE_SERVERS = []; // À configurer si nécessaire
+  peerConnection.ontrack = (event) => {
+    console.log('[WebRTC] Flux distant reçu', event.streams);
+    remoteVideo.srcObject = event.streams[0];
+  };
 
-if (btnNext) {
-    btnNext.disabled = true; 
-}
+  peerConnection.onaddstream = (event) => {
+    console.log('[WebRTC] Flux distant (fallback onaddstream)', event.stream);
+    remoteVideo.srcObject = event.stream;
+  };
 
-// --- Contrôle de l'Interface (Appelé par face-guard.js) ---
-window.checkUIUpdate = function() {
-    const faceReady = window.faceVisible;
+  remoteVideo.onloadedmetadata = () => {
+    console.log('[WebRTC] Vidéo prête à jouer');
+    remoteVideo.play();
+  };
 
-    // Seul le contrôle du visage active le bouton
-    if (btnNext) {
-        // Le bouton n'est activé que si la connexion n'a pas démarré
-        if (!socket || socket.disconnected) {
-             btnNext.disabled = !faceReady;
-             btnNext.textContent = faceReady ? '➡️ Interlocuteur suivant' : 'Visage requis';
-        }
+  socket.on('connect', () => {
+    console.log('[Socket.IO] Connecté au serveur :', socket.id);
+    socket.emit('ready-for-match');
+
+    socket.on('match-found', async (peerId) => {
+      console.log('[LSC] Match trouvé avec :', peerId);
+      if (topBar) topBar.textContent = " Connecté à un partenaire";
+
+      localStream.getTracks().forEach(track => {
+        console.log('[WebRTC] Ajout track côté émetteur', track);
+        peerConnection.addTrack(track, localStream);
+      });
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', peerConnection.localDescription);
+    });
+  });
+
+  socket.on('offer', async (offer) => {
+    console.log('[WebRTC] Offer reçue', offer);
+
+    localStream.getTracks().forEach(track => {
+      console.log('[WebRTC] Ajout track côté receveur', track);
+      peerConnection.addTrack(track, localStream);
+    });
+
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('answer', peerConnection.localDescription);
+  });
+
+  socket.on('answer', async (answer) => {
+    console.log('[WebRTC] Answer reçue', answer);
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  });
+
+  socket.on('ice-candidate', async (candidate) => {
+    console.log('[WebRTC] ICE candidate reçue', candidate);
+    if (peerConnection.remoteDescription) {
+      await peerConnection.addIceCandidate(candidate);
     }
+  });
 
-    if (topBar) {
-        // Si la recherche est déjà en cours, ne pas écraser le message
-        if (topBar.textContent.startsWith("Recherche") || topBar.textContent.startsWith("Connecté")) return;
+  socket.on('partner-disconnected', () => {
+    console.log('[Socket.IO] Partenaire déconnecté');
+    if (topBar) topBar.textContent = "⚠ Partenaire déconnecté. Recherche...";
+    window.disconnectWebRTC();
+    setTimeout(() => {
+      window.connectSocketAndWebRTC(localStream);
+    }, 3000);
+  });
 
-        if (faceReady) {
-            topBar.textContent = "✅ Visage OK. Prêt à chercher un partenaire.";
-            if (loaderRing) loaderRing.style.display = 'block';
-        } else {
-            topBar.textContent = "🔴 Visage non détecté/cadré.";
-            if (loaderRing) loaderRing.style.display = 'none';
-        }
+  socket.on('was-reported', () => {
+    console.log('[MODERATION] Vous avez été signalé');
+    if (topBar) topBar.textContent = '⚠ Signalé. Recherche...';
+    window.nextInterlocutor();
+  });
+
+  socket.on('force-disconnect', (reason) => {
+    console.log('[MODERATION] Déconnexion forcée :', reason);
+    if (reason === 'banned') {
+      if (topBar) topBar.textContent = ' Banni pour 24h';
+      if (btnNext) btnNext.disabled = true;
+      if (btnReport) btnReport.disabled = true;
+      window.disconnectWebRTC();
+      alert('Vous avez été banni du service pour 24h.');
     }
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.warn('[Socket.IO] Déconnecté :', reason);
+    if (topBar) topBar.textContent = " Déconnecté. Reconnexion...";
+  });
 };
 
-window.checkUIUpdate(); 
+socket.on("partner", (partnerId) => {
+  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
+  if (typeof connectSocketAndWebRTC === "function") connectSocketAndWebRTC(partnerId);
+});
 
+// 🔍 Traces WebRTC offreur
+console.log("[RTC] Création RTCPeerConnection (offreur)");
+peerConnection = new RTCPeerConnection();
 
-// --- Signalisation Socket.IO ---
+localStream.getTracks().forEach(track => {
+  peerConnection.addTrack(track, localStream);
+  console.log("[RTC] Track locale ajoutée :", track.kind);
+});
 
-function getSocket() {
-    if (socket && typeof socket.on === 'function') return socket;
-    if (window.io) { 
-        try {
-            socket = window.io(); 
-            // Écoute des événements de matchmaking
-            setupSocketListeners(socket);
-            return socket; 
-        } catch (e) {
-            console.error('Socket.IO init error:', e);
-        }
-    }
-    topBar.textContent = "❌ Erreur: Socket.IO non chargé.";
-    return null;
+peerConnection.onicecandidate = (event) => {
+  if (event.candidate) {
+    console.log("[RTC] ICE local (offreur) :", event.candidate);
+    socket.emit("ice-candidate", { to: partnerId, candidate: event.candidate });
+  }
 };
 
-function setupSocketListeners(s) {
-    s.on('connect', () => { console.log('[Socket] Connecté au serveur.'); });
-    s.on('disconnect', () => { console.log('[Socket] Déconnecté du serveur.'); });
-
-    // Événements de Matchmaking (issus de main.js)
-    s.on('waiting', () => {
-        console.log('[MATCH] En attente d\'un partenaire.');
-        topBar.textContent = 'Recherche d\'un partenaire en cours...';
-        if (btnNext) { btnNext.textContent = 'En attente...'; btnNext.disabled = true; }
-    });
-
-    s.on('matched', (payload) => {
-        console.log('[MATCH] Partenaire trouvé !', payload);
-        topBar.textContent = 'Connecté à la salle ' + payload.roomId;
-        if (btnNext) { btnNext.textContent = 'Connecté !'; btnNext.disabled = true; }
-
-        // Démarrer la connexion WebRTC après le match
-        // initiateWebRTC(payload.isInitiator, payload.remoteSocketId);
-        
-        // Pour l'instant on alerte juste
-        alert('Match trouvé — room: ' + payload?.roomId); 
-    });
-    
-    // Ajoutez ici les handlers WebRTC : 'offer', 'answer', 'ice-candidate'
-}
+peerConnection.createOffer().then(offer => {
+  console.log("[RTC] Offre créée :", offer.sdp);
+  return peerConnection.setLocalDescription(offer);
+}).then(() => {
+  console.log("[RTC] Description locale définie");
+  socket.emit("offer", { to: partnerId, sdp: peerConnection.localDescription });
+});
 
 
-// --- Logique WebRTC (À COMPLÉTER) ---
+// 🔍 Traces WebRTC offreur
+console.log("[RTC] Création RTCPeerConnection (offreur)");
+peerConnection = new RTCPeerConnection();
 
-/*
-function initiateWebRTC(isInitiator, remoteSocketId) {
-    // 1. Création du PeerConnection
-    peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+localStream.getTracks().forEach(track => {
+  peerConnection.addTrack(track, localStream);
+  console.log("[RTC] Track locale ajoutée :", track.kind);
+});
 
-    // 2. Gestion des pistes (ajouter les pistes locales)
-    localVideo.srcObject.getTracks().forEach(track => peerConnection.addTrack(track, localVideo.srcObject));
+peerConnection.onicecandidate = (event) => {
+  if (event.candidate) {
+    console.log("[RTC] ICE local (offreur) :", event.candidate);
+    socket.emit("ice-candidate", { to: partnerId, candidate: event.candidate });
+  }
+};
 
-    // 3. Gestion de la piste distante
-    peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-    };
-    
-    // 4. Gestion des candidats ICE pour le réseau
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            socket.emit('ice-candidate', { 
-                candidate: event.candidate, 
-                to: remoteSocketId 
-            });
-        }
-    };
+peerConnection.createOffer().then(offer => {
+  console.log("[RTC] Offre créée :", offer.sdp);
+  return peerConnection.setLocalDescription(offer);
+}).then(() => {
+  console.log("[RTC] Description locale définie");
+  socket.emit("offer", { to: partnerId, sdp: peerConnection.localDescription });
+});
 
-    // 5. Création de l'offre (si nous sommes l'initiateur)
-    if (isInitiator) {
-        peerConnection.createOffer()
-            .then(offer => peerConnection.setLocalDescription(offer))
-            .then(() => {
-                socket.emit('offer', { 
-                    offer: peerConnection.localDescription,
-                    to: remoteSocketId
-                });
-            });
+
+// 🔔 Réception du match et démarrage WebRTC côté caller
+socket.on("match", ({ peerId, role }) => {
+  console.log("[RTC] Match reçu :", peerId, "rôle :", role);
+  if (role !== "caller") return;
+
+  peerConnection = new RTCPeerConnection();
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("[RTC] ICE local :", event.candidate);
+      socket.emit("rtc:ice", { to: peerId, candidate: event.candidate });
     }
-    
-    // 6. Gestion des signaux entrants (offer, answer, candidate)
-    // C'est ici que vous définissez les écouteurs de socket pour les signaux WebRTC
-    // ...
+  };
+
+  peerConnection.createOffer().then(offer => {
+    console.log("[RTC] Offre créée :", offer.sdp);
+    return peerConnection.setLocalDescription(offer);
+  }).then(() => {
+    console.log("[RTC] Description locale définie (caller)");
+    socket.emit("rtc:offer", { to: peerId, sdp: peerConnection.localDescription });
+  }).catch(err => {
+    console.error("[RTC] Erreur création d’offre :", err);
+  });
+});
+
+// 🔔 Réception du match et démarrage WebRTC côté caller
+socket.on("match", ({ peerId, role }) => {
+  console.log("[RTC] Match reçu :", peerId, "rôle :", role);
+  if (role !== "caller") return;
+
+  peerConnection = new RTCPeerConnection();
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("[RTC] ICE local :", event.candidate);
+      socket.emit("rtc:ice", { to: peerId, candidate: event.candidate });
+    }
+  };
+
+  peerConnection.createOffer().then(offer => {
+    console.log("[RTC] Offre créée :", offer.sdp);
+    return peerConnection.setLocalDescription(offer);
+  }).then(() => {
+    console.log("[RTC] Description locale définie (caller)");
+    socket.emit("rtc:offer", { to: peerId, sdp: peerConnection.localDescription });
+  }).catch(err => {
+    console.error("[RTC] Erreur création d’offre :", err);
+  });
+});
+
+// 🔍 Vérification visuelle de remoteVideo.srcObject côté caller
+setTimeout(() => {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo && remoteVideo.srcObject) {
+    console.log("[RTC] ✅ remoteVideo.srcObject actif (caller)");
+  } else {
+    console.warn("[RTC] ⚠️ remoteVideo.srcObject absent ou null (caller)");
+  }
+}, 2000);
+
+// 🔍 Vérification côté caller : remoteVideo.srcObject
+setTimeout(() => {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo && remoteVideo.srcObject) {
+    console.log("[RTC] ✅ remoteVideo.srcObject actif (caller)");
+  } else {
+    console.warn("[RTC] ⚠️ remoteVideo.srcObject absent ou null (caller)");
+  }
+}, 2000);
+
+// 🧭 Logger réception socket.on côté caller
+(function() {
+  const originalOn = socket.on;
+  socket.on = function(event, handler) {
+    console.log("[RTC] 📥 Réception socket.on (caller) :", event);
+    return originalOn.call(this, event, handler);
+  };
+})();
+
+if (peerConnection) {
+  peerConnection.onconnectionstatechange = () => {
+    console.log("[RTC] 🔄 État peerConnection :", peerConnection.connectionState);
+  };
 }
-*/
 
-
-// --- GESTIONNAIRE D'ÉVÉNEMENT DU BOUTON FINAL ---
-
-if (btnNext) {
-    btnNext.addEventListener('click', function() {
-        if (!btnNext.disabled && window.faceVisible) {
-            console.log("Bouton Interlocuteur suivant cliqué.");
-            
-            // 1. Désactiver le bouton immédiatement
-            btnNext.disabled = true; 
-            btnNext.textContent = "Connexion...";
-
-            // 2. Démarrer le processus de signalisation
-            const s = getSocket();
-
-            if (s) {
-                // 3. Demander au serveur de nous mettre en file d'attente
-                s.emit('joinQueue');
-            } else {
-                topBar.textContent = "❌ Connexion Socket échouée.";
-                btnNext.textContent = "Réessayer";
-                btnNext.disabled = false;
-            }
-        }
-    });
-}

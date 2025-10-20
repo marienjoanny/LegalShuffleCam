@@ -133,11 +133,23 @@
       <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
     </div>
   </div>
-
   <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
-  <script src="/js/face-guard.js"></script>
+  <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
+  <script src="/js/face-guard.js" defer></script>
+  <script src="/js/face-guard.js" defer></script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="/app.js" defer></script> 
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="/js/rtc-core.js" defer></script>
+  <script src="/js/rtc-core.js" defer></script>
+  <script src="/app.js" defer></script>
+  <script>
+    const socket = io("https://legalshufflecam.ovh", { transports: ["websocket"], secure: true });
+    socket.on("partner", (partnerId) => {
+      console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
+      if (typeof window.nextInterlocutor === "function") window.nextInterlocutor(partnerId);
+      if (typeof connectSocketAndWebRTC === "function") connectSocketAndWebRTC(partnerId);
+    });
+  </script>
 
   <script>
     let currentStream = null;
@@ -186,8 +198,6 @@
 
         currentStream = stream;
         document.getElementById('localVideo').srcObject = stream;
-
-        }
       } catch (err) {
         console.error("Caméra indisponible: ", err.message);
         if (topBar) topBar.textContent = "❌ Caméra refusée ou indisponible.";
@@ -200,7 +210,7 @@
 
     listCameras();
 
-    let remoteVideo = document.getElementById('remoteVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
     const btnSpeaker = document.getElementById('btnMic');
     if (btnSpeaker && remoteVideo) {
       btnSpeaker.addEventListener('click', () => {
@@ -209,19 +219,6 @@
       });
     }
 
-  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
-});
-
-      console.log('[LSC] Demande d\'interlocuteur suivant...');
-      if (typeof disconnectWebRTC === 'function') disconnectWebRTC();
-      document.getElementById('remoteVideo').srcObject = null;
-      const btnNext = document.getElementById('btnNext');
-      if (btnNext) btnNext.disabled = true;
-      setTimeout(() => {
-        }
-      }, 1500);
-    };
-
     const btnNext = document.getElementById('btnNext');
     if (btnNext) {
       setInterval(() => {
@@ -229,37 +226,20 @@
         btnNext.disabled = !visible;
         btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
         if (visible && !btnNext.onclick) {
-  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
-});
-
+          btnNext.onclick = () => {
+            if (typeof disconnectWebRTC === 'function') disconnectWebRTC();
+            remoteVideo.srcObject = null;
+            btnNext.disabled = true;
+            setTimeout(() => {
+              if (typeof socket !== 'undefined') socket.emit("ready-for-match");
+            }, 1500);
+          };
         } else if (!visible) {
           btnNext.onclick = null;
         }
       }, 500);
     }
   </script>
-
-  <footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
-    <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
-  </footer>
-  <button id="btnTestShuffle" style="position:fixed;bottom:1em;right:1em;z-index:9999">🔁 Test Shuffle</button>
-  <script>
-    document.getElementById("btnTestShuffle").addEventListener("click", () => {
-      console.log("[TEST] Shuffle forcé");
-      }
-    });
   </script>
-<script src="/js/rtc-core.js"></script>
+<script src="/listener.js" defer></script>
 </body>
-</html>
-<script>
-  console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
-});
-
-  } else {
-  }
-};
-</script>
-socket.on("partner", (partnerId) => {
-  window.nextInterlocutor(partnerId);
-        if (typeof connectSocketAndWebRTC === 'function') {
