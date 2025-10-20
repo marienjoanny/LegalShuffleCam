@@ -18,8 +18,6 @@ window.connectSocketAndWebRTC = function(localStream) {
     remoteVideo.srcObject = event.streams[0];
   };
 
-  peerConnection.onaddstream = (event) => {
-    console.log('[WebRTC] Flux distant (fallback onaddstream)', event.stream);
     remoteVideo.srcObject = event.stream;
   };
 
@@ -245,3 +243,15 @@ if (peerConnection) {
   };
 }
 
+
+window.getLocalStream = async function() {
+  if (window.localStream) return window.localStream;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    window.localStream = stream;
+    return stream;
+  } catch (err) {
+    console.error("[RTC] Erreur caméra :", err.message);
+    throw err;
+  }
+};
