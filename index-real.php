@@ -153,8 +153,113 @@ file_put_contents($logFile, date('c') . " ALLOWED " . ($_SERVER['REMOTE_ADDR'] ?
     </div>
   </div>
 
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
   <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
   <script src="/js/face-guard.js"></script>
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
   <script src="/app.js" defer></script>
 
   <script>
@@ -223,12 +328,117 @@ file_put_contents($logFile, date('c') . " ALLOWED " . ($_SERVER['REMOTE_ADDR'] ?
         btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
       }, 500);
     }
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
   </script>
 
   <footer style="text-align:center; font-size:0.9em; margin-top:2em; opacity:0.6">
     <a href="/cgu.html">CGU</a> · <a href="/mentions-legales.html">Mentions légales</a>
   </footer>
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
 <script src="/socket.io/socket.io.js"></script>
+<script>
+
+window.okStreak = 0;
+
+setInterval(async () => {
+
+  const video = document.getElementById("localVideo");
+
+  if (!video || video.readyState < 2) return;
+
+  if (!window.__fgBlazeModel) return;
+
+  try {
+
+    const faces = await window.__fgBlazeModel.estimateFaces(video, false);
+
+    const visible = faces.length > 0;
+
+    window.faceVisible = visible;
+
+    window.okStreak = visible ? window.okStreak + 1 : 0;
+
+    window.checkUIUpdate();
+
+    console.log("[RTC] FaceCheck:", visible, "| Streak:", window.okStreak);
+
+  } catch (err) {
+
+    console.error("[RTC] Erreur estimateFaces:", err);
+
+  }
+
+}, 500);
+
+</script>
 <script src="/listener.js"></script>
 
 </body>
