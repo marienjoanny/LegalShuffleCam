@@ -1056,3 +1056,9 @@
 - 📅 Mon Oct 20 19:54:11 UTC 2025
 - 🔖 Tag : RTC:diff-appjs-cleanup
 - 📄 Rapport : /var/log/rtc-diff-appjs-cleanup.log
+
+## 🧹 Nettoyage index-real.php FaceGuard & doublons
+- 📅 Mon Oct 20 19:56:34 UTC 2025
+- 🔖 Tag : RTC:cleaned-index-real-faceguard
+- 📄 Fichier : /var/www/legalshufflecam/index-real.php
+- ✅ Rapport : /var/log/rtc-clean-index-real-faceguard.log
