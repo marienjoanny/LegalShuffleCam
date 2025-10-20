@@ -255,3 +255,17 @@ window.getLocalStream = async function() {
     throw err;
   }
 };
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.tf && tf.version && tf.version.tfjs) {
+    console.log('[RTC] ✅ tfjs version :', tf.version.tfjs);
+  } else {
+    console.warn('[RTC] ⚠ tfjs non chargé');
+  }
+
+  if (window.__fgBlazeModel && typeof window.__fgBlazeModel.estimateFaces === 'function') {
+    console.log('[RTC] ✅ Modèle Blazeface actif via fg-blaze-loader.js');
+  } else {
+    console.warn('[RTC] ⚠ Modèle Blazeface non détecté');
+  }
+});
