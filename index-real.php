@@ -312,6 +312,29 @@ setInterval(async () => {
     document.getElementById('cameraSelect').addEventListener('change', e => startCamera(e.target.value));
     listCameras();
 
+window.okStreak = 0;
+const history = Array(30).fill(0);
+const localVideo = document.getElementById("localVideo");
+
+const tracker = new tracking.ObjectTracker("face");
+tracker.setInitialScale(2);
+tracker.setStepSize(1.5);
+tracker.setEdgesDensity(0.05);
+
+tracking.track("#localVideo", tracker);
+
+tracker.on("track", event => {
+  const face = event.data[0];
+  const visible = !!face;
+  window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
+  history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
+  const sum = history.reduce((a, b) => a + b, 0);
+  window.faceVisible = sum >= 15;
+  window.checkUIUpdate();
+  console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
+});
+
+
     const remoteVideo = document.getElementById('remoteVideo');
     const btnSpeaker = document.getElementById('btnMic');
     if (btnSpeaker && remoteVideo) {
