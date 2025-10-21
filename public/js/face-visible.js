@@ -1,23 +1,20 @@
+// LegalShuffleCam • face-visible.js réécrit
 window.initFaceVisible = function(videoElement) {
   if (!videoElement || window.trackerInitialized) return;
 
   const tracker = new tracking.ObjectTracker("face");
-  videoElement.onloadedmetadata = () => {
-    videoElement.play();
-    console.log("[FaceVisible] Vidéo prête, lancement tracking...");
-  };
   tracker.setInitialScale(2);
   tracker.setStepSize(1.5);
   tracker.setEdgesDensity(0.05);
+
+  const history = Array(30).fill(0);
+  window.okStreak = 0;
 
   videoElement.onloadedmetadata = () => {
     videoElement.play();
     console.log("[FaceVisible] Vidéo prête, lancement tracking...");
     tracking.track(`#${videoElement.id}`, tracker);
   };
-  const history = Array(30).fill(0);
-  window.okStreak = 0;
-
 
   tracker.on("track", event => {
     const face = event.data[0];

@@ -1,125 +1,112 @@
-window.connectSocketAndWebRTC = function(localStream) {
-  const socket = io('https://legalshufflecam.ovh', {
-    transports: ['websocket'],
-    secure: true
-  });
-  window.socket = socket;
+// LegalShuffleCam • app.js réécrit
+let currentStream = null;
+const topBar = document.getElementById('topBar');
+const remoteVideo = document.getElementById('remoteVideo');
+const localVideo = document.getElementById('localVideo');
+const btnSpeaker = document.getElementById('btnMic');
+const btnNext = document.getElementById('btnNext');
+const cameraSelect = document.getElementById('cameraSelect');
 
-  const peerConnection = new RTCPeerConnection();
-  window.peerConnection = peerConnection;
+window.faceVisible = false;
 
-  const topBar = document.getElementById('topBar');
-  const btnNext = document.getElementById('btnNext');
-  const btnReport = document.getElementById('btnReport');
-  const remoteVideo = document.getElementById('remoteVideo');
-
-  peerConnection.ontrack = (event) => {
-    console.log('[WebRTC] Flux distant reçu', event.streams);
-    remoteVideo.srcObject = event.streams[0];
-  };
-
-  remoteVideo.onloadedmetadata = () => {
-    console.log('[WebRTC] Vidéo prête à jouer');
-    remoteVideo.play();
-
-    setTimeout(() => {
-      if (typeof window.initFaceVisible === "function") {
-        window.initFaceVisible(remoteVideo, "remote");
-      }
-    }, 1000);
-  };
-
-  socket.on('connect', () => {
-    console.log('[Socket.IO] Connecté au serveur :', socket.id);
-    socket.emit('ready-for-match');
-
-    socket.on('match-found', async (peerId) => {
-      console.log('[LSC] Match trouvé avec :', peerId);
-      if (topBar) topBar.textContent = " Connecté à un partenaire";
-
-      localStream.getTracks().forEach(track => {
-        console.log('[WebRTC] Ajout track côté émetteur', track);
-        peerConnection.addTrack(track, localStream);
-      });
-
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      socket.emit('offer', peerConnection.localDescription);
-    });
-  });
-
-  socket.on('offer', async (offer) => {
-    console.log('[WebRTC] Offer reçue', offer);
-
-    localStream.getTracks().forEach(track => {
-      console.log('[WebRTC] Ajout track côté receveur', track);
-      peerConnection.addTrack(track, localStream);
-    });
-
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    socket.emit('answer', peerConnection.localDescription);
-  });
-
-  socket.on('answer', async (answer) => {
-    console.log('[WebRTC] Answer reçue', answer);
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-  });
-
-  socket.on('ice-candidate', async (candidate) => {
-    console.log('[WebRTC] ICE candidate reçue', candidate);
-    if (peerConnection.remoteDescription) {
-      await peerConnection.addIceCandidate(candidate);
-    }
-  });
-
-  socket.on('partner-disconnected', () => {
-    console.log('[Socket.IO] Partenaire déconnecté');
-    if (topBar) topBar.textContent = "⚠ Partenaire déconnecté. Recherche...";
-    window.disconnectWebRTC();
-    setTimeout(() => {
-      window.connectSocketAndWebRTC(localStream);
-    }, 3000);
-  });
-
-  socket.on('force-disconnect', (reason) => {
-    console.log('[MODERATION] Déconnexion forcée :', reason);
-    if (reason === 'banned') {
-      if (topBar) topBar.textContent = ' Banni pour 24h';
-      if (btnNext) btnNext.disabled = true;
-      if (btnReport) btnReport.disabled = true;
-      window.disconnectWebRTC();
-      alert('Vous avez été banni du service pour 24h.');
-    }
-  });
-
-  socket.on('disconnect', (reason) => {
-    console.warn('[Socket.IO] Déconnecté :', reason);
-    if (topBar) topBar.textContent = " Déconnecté. Reconnexion...";
-  });
-
-  (function() {
-    const originalOn = socket.on;
-    socket.on = function(event, handler) {
-      console.log("[RTC] 📥 Réception socket.on :", event);
-      return originalOn.call(this, event, handler);
-    };
-  })();
-
-  peerConnection.onconnectionstatechange = () => {
-    console.log("[RTC] 🔄 État peerConnection :", peerConnection.connectionState);
-  };
-};
-
-window.getLocalStream = async function() {
-  if (window.localStream) return window.localStream;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    window.localStream = stream;
-    return stream;
-  } catch (err) {
-    console.error("[RTC] Erreur caméra :", err.message);
-    throw err;
+window.checkUIUpdate = function() {
+  const faceFrame = document.getElementById("faceFrame");
+  if (faceFrame) {
+    faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
+  }
+  if (topBar) {
+    topBar.textContent = window.faceVisible
+      ? "✅ Visage OK. Prêt à chercher un partenaire."
+      : "👤 Détection faciale requise...";
   }
 };
+
+async function listCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = devices.filter(d => d.kind === 'videoinput');
+    cameraSelect.innerHTML = '';
+
+    videoInputs.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = `Cam ${index + 1}`;
+      cameraSelect.appendChild(option);
+    });
+
+    if (videoInputs.length > 0) {
+      startCamera(videoInputs[0].deviceId);
+    }
+  } catch (err) {
+    console.error("[RTC] Erreur détection caméra:", err.message);
+    if (topBar) topBar.textContent = "❌ Caméra non trouvée.";
+  }
+}
+
+async function startCamera(deviceId) {
+  try {
+    if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: deviceId } },
+      audio: true
+    });
+
+    currentStream = stream;
+    localVideo.srcObject = stream;
+
+    if (typeof window.initFaceVisible === "function") {
+      window.initFaceVisible(localVideo);
+    }
+
+    if (typeof window.connectSocketAndWebRTC === "function") {
+      window.connectSocketAndWebRTC(stream);
+    }
+
+    if (topBar) topBar.textContent = "✅ Caméra active, détection en cours...";
+  } catch (err) {
+    console.error("[RTC] Caméra indisponible:", err.message);
+    if (topBar) topBar.textContent = "❌ Caméra refusée ou indisponible.";
+  }
+}
+
+cameraSelect.addEventListener('change', (e) => {
+  startCamera(e.target.value);
+});
+
+listCameras();
+
+setTimeout(() => {
+  console.log("[AUDIT] localVideo.srcObject:", localVideo?.srcObject);
+  console.log("[AUDIT] localVideo.readyState:", localVideo?.readyState);
+  console.log("[AUDIT] faceVisible:", window.faceVisible);
+  console.log("[AUDIT] trackerInitialized:", window.trackerInitialized);
+  if (topBar) console.log("[AUDIT] topBar:", topBar.textContent);
+}, 3000);
+
+if (btnSpeaker && remoteVideo) {
+  btnSpeaker.addEventListener('click', () => {
+    remoteVideo.muted = !remoteVideo.muted;
+    btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+  });
+}
+
+if (btnNext) {
+  setInterval(() => {
+    const visible = window.faceVisible === true;
+    btnNext.disabled = !visible;
+    btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+    if (visible && !btnNext.onclick) {
+      btnNext.onclick = () => {
+        if (typeof disconnectWebRTC === 'function') disconnectWebRTC();
+        remoteVideo.srcObject = null;
+        btnNext.disabled = true;
+        setTimeout(() => {
+          if (typeof socket !== 'undefined') socket.emit("ready-for-match");
+        }, 1500);
+      };
+    } else if (!visible) {
+      btnNext.onclick = null;
+    }
+  }, 500);
+}
