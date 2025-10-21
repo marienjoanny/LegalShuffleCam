@@ -1086,3 +1086,9 @@
 - 🔖 Tag : RTC:faceVisible-ui-logic-fixed
 - 📄 Fichier : /var/www/legalshufflecam/public/app.js
 - ✅ Rapport : /var/log/rtc-fix-appjs-faceVisible-ui-logic.log
+
+## 🟩 Patch faceVisible UI + logique (index-real)
+- 📅 Tue Oct 21 08:14:25 UTC 2025
+- 🔖 Tag : RTC:faceVisible-ui-logic-fixed:index-real
+- 📄 Fichier : /var/www/legalshufflecam/public/index-real.php
+- ✅ Rapport : /var/log/rtc-fix-indexreal-faceVisible-ui-logic.log

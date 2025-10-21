@@ -159,6 +159,10 @@
     window.checkUIUpdate = function() {
       if (topBar) {
         topBar.textContent = window.faceVisible
+  const faceFrame = document.getElementById("faceFrame");
+  if (faceFrame) {
+    faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
+  }
           ? "✅ Visage OK. Prêt à chercher un partenaire."
           : "👤 Détection faciale requise...";
       }
@@ -222,6 +226,15 @@ tracker.setEdgesDensity(0.05);
 tracking.track("#localVideo", tracker);
 
 tracker.on("track", event => {
+  if (!localVideo || !localVideo.srcObject) {
+    window.faceVisible = false;
+    window.okStreak = 0;
+    history.fill(0);
+    const faceFrame = document.getElementById("faceFrame");
+    if (faceFrame) faceFrame.style.border = "3px solid #dc2626";
+    console.warn("[RTC] ⚠ Flux local absent — désactivation faceVisible");
+    return;
+  }
   const face = event.data[0];
   const visible = !!face;
   window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
