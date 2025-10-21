@@ -134,7 +134,6 @@
 
   <!-- Librairies externes -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
   <script src="/js/face-guard.js" defer></script>
   <script src="/js/rtc-core.js" defer></script>
 
@@ -199,6 +198,9 @@
 
         currentStream = stream;
         localVideo.srcObject = stream;
+        if (topBar && topBar.textContent.includes("Caméra refusée")) {
+          topBar.textContent = "✅ Caméra active, détection en cours...";
+        }
 
         if (typeof window.initFaceVisible === "function") {
           window.initFaceVisible(localVideo);
@@ -214,6 +216,15 @@
     });
 
     listCameras();
+setTimeout(() => {
+  const lv = document.getElementById("localVideo");
+  const tb = document.getElementById("topBar");
+  console.log("[AUDIT] localVideo.srcObject:", lv?.srcObject);
+  console.log("[AUDIT] localVideo.readyState:", lv?.readyState);
+  console.log("[AUDIT] faceVisible:", window.faceVisible);
+  console.log("[AUDIT] trackerInitialized:", window.trackerInitialized);
+  if (tb) console.log("[AUDIT] topBar:", tb.textContent);
+}, 3000);
 
     if (btnSpeaker && remoteVideo) {
       btnSpeaker.addEventListener('click', () => {
