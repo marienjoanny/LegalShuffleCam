@@ -1092,3 +1092,15 @@
 - 🔖 Tag : RTC:faceVisible-ui-logic-fixed:index-real
 - 📄 Fichier : /var/www/legalshufflecam/public/index-real.php
 - ✅ Rapport : /var/log/rtc-fix-indexreal-faceVisible-ui-logic.log
+
+## 🔙 Restauration index-real.php
+- 📅 Tue Oct 21 08:20:03 UTC 2025
+- 🔖 Tag : RTC:index-real-restored
+- 📄 Fichier : public/index-real.php
+- ✅ Rapport : /var/log/rtc-restore-indexreal.log
+
+## 🔙 Restauration app.js
+- 📅 Tue Oct 21 08:21:18 UTC 2025
+- 🔖 Tag : RTC:appjs-restored
+- 📄 Fichier : public/app.js
+- ✅ Rapport : /var/log/rtc-restore-appjs.log
