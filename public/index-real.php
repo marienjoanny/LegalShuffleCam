@@ -253,6 +253,6 @@ setTimeout(() => {
     }
   </script>
 
-  <script src="/listener.js" defer></script>
+  <script src="/js/listener.js" defer></script>
 </body>
 </html>

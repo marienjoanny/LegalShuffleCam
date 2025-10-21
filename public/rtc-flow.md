@@ -48,3 +48,18 @@
 - 📅 Tue Oct 21 14:46:20 UTC 2025
 - 🔖 Tag : RTC:script-paths-patched
 - 📄 Rapport : /var/log/rtc-patch-script-paths-20251021-144620.log
+
+## ✅ listener.js déplacé et chemin corrigé
+- 📅 Tue Oct 21 14:54:46 UTC 2025
+- 🔖 Tag : RTC:listener-moved-public
+- 📄 Rapport : /var/log/rtc-move-listener-20251021-145446.log
+
+## ✅ Audit faceVisible terminé
+- 📅 Tue Oct 21 14:57:23 UTC 2025
+- 🔖 Tag : RTC:facevisible-status-checked
+- 📄 Rapport : /var/log/rtc-check-facevisible-status-20251021-145723.log
+
+## ✅ initFaceVisible injecté dans app.js
+- 📅 Tue Oct 21 14:58:36 UTC 2025
+- 🔖 Tag : RTC:init-facevisible-patched
+- 📄 Rapport : /var/log/rtc-patch-init-facevisible-20251021-145836.log
