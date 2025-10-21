@@ -5,6 +5,7 @@ window.connectSocketAndWebRTC = function(localStream) {
   });
   window.socket = socket;
 
+  const peerConnection = new RTCPeerConnection();
   window.peerConnection = peerConnection;
 
   const topBar = document.getElementById('topBar');
@@ -17,12 +18,36 @@ window.connectSocketAndWebRTC = function(localStream) {
     remoteVideo.srcObject = event.streams[0];
   };
 
-    remoteVideo.srcObject = event.stream;
-  };
-
   remoteVideo.onloadedmetadata = () => {
     console.log('[WebRTC] Vidéo prête à jouer');
     remoteVideo.play();
+
+    setTimeout(() => {
+      if (!window.trackerInitialized) {
+        const tracker = new tracking.ObjectTracker("face");
+        tracker.setInitialScale(2);
+        tracker.setStepSize(1.5);
+        tracker.setEdgesDensity(0.05);
+
+        const history = Array(30).fill(0);
+        window.okStreak = 0;
+
+        tracking.track("#remoteVideo", tracker);
+
+        tracker.on("track", event => {
+          const face = event.data[0];
+          const visible = !!face;
+          window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
+          history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
+          const sum = history.reduce((a, b) => a + b, 0);
+          window.faceVisible = sum >= 15;
+
+          console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
+        });
+
+        window.trackerInitialized = true;
+      }
+    }, 1000);
   };
 
   socket.on('connect', () => {
@@ -38,6 +63,8 @@ window.connectSocketAndWebRTC = function(localStream) {
         peerConnection.addTrack(track, localStream);
       });
 
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
       socket.emit('offer', peerConnection.localDescription);
     });
   });
@@ -72,24 +99,45 @@ window.connectSocketAndWebRTC = function(localStream) {
     console.log('[Socket.IO] Partenaire déconnecté');
     if (topBar) topBar.textContent = "⚠ Partenaire déconnecté. Recherche...";
     window.disconnectWebRTC();
+    setTimeout(() => {
+      window.connectSocketAndWebRTC(localStream);
+    }, 3000);
+  });
 
-// 🔍 Vérification côté caller : remoteVideo.srcObject
+  socket.on('was-reported', () => {
+    console.log('[MODERATION] Vous avez été signalé');
+    if (topBar) topBar.textContent = '⚠ Signalé. Recherche...';
+    window.nextInterlocutor();
+  });
 
-// 🧭 Logger réception socket.on côté caller
-(function() {
-  const originalOn = socket.on;
-  socket.on = function(event, handler) {
-    console.log("[RTC] 📥 Réception socket.on (caller) :", event);
-    return originalOn.call(this, event, handler);
-  };
-})();
+  socket.on('force-disconnect', (reason) => {
+    console.log('[MODERATION] Déconnexion forcée :', reason);
+    if (reason === 'banned') {
+      if (topBar) topBar.textContent = ' Banni pour 24h';
+      if (btnNext) btnNext.disabled = true;
+      if (btnReport) btnReport.disabled = true;
+      window.disconnectWebRTC();
+      alert('Vous avez été banni du service pour 24h.');
+    }
+  });
 
-if (peerConnection) {
+  socket.on('disconnect', (reason) => {
+    console.warn('[Socket.IO] Déconnecté :', reason);
+    if (topBar) topBar.textContent = " Déconnecté. Reconnexion...";
+  });
+
+  (function() {
+    const originalOn = socket.on;
+    socket.on = function(event, handler) {
+      console.log("[RTC] 📥 Réception socket.on :", event);
+      return originalOn.call(this, event, handler);
+    };
+  })();
+
   peerConnection.onconnectionstatechange = () => {
     console.log("[RTC] 🔄 État peerConnection :", peerConnection.connectionState);
   };
-}
-
+};
 
 window.getLocalStream = async function() {
   if (window.localStream) return window.localStream;
@@ -102,15 +150,3 @@ window.getLocalStream = async function() {
     throw err;
   }
 };
-
-
-    const visible = faces.length > 0;
-    window.faceVisible = visible;
-    window.okStreak = visible ? window.okStreak + 1 : 0;
-
-    console.log('[RTC] 🔍 Visage détecté:', visible, '| Streak:', window.okStreak);
-  } catch (err) {
-    console.error('[RTC] ❌ Erreur estimateFaces:', err);
-  }
-}, 500);
-

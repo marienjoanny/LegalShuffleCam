@@ -1062,3 +1062,9 @@
 - 🔖 Tag : RTC:cleaned-index-real-faceguard
 - 📄 Fichier : /var/www/legalshufflecam/index-real.php
 - ✅ Rapport : /var/log/rtc-clean-index-real-faceguard.log
+
+## 🔁 Reconstruction complète de app.js
+- 📅 Tue Oct 21 07:56:17 UTC 2025
+- 🔖 Tag : RTC:rebuilt-appjs-trackingjs
+- 📄 Fichier : /var/www/legalshufflecam/public/app.js
+- ✅ Rapport : /var/log/rtc-rebuild-appjs.log
