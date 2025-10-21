@@ -23,16 +23,8 @@ window.connectSocketAndWebRTC = function(localStream) {
     remoteVideo.play();
 
     setTimeout(() => {
-      if (!window.trackerInitialized) {
-        const tracker = new tracking.ObjectTracker("face");
-        tracker.setInitialScale(2);
-        tracker.setStepSize(1.5);
-        tracker.setEdgesDensity(0.05);
-
-        const history = Array(30).fill(0);
-        window.okStreak = 0;
-
-        tracking.track("#remoteVideo", tracker);
+      window.initFaceVisible(remoteVideo);
+    }, 1000);
 
         tracker.on("track", event => {
   if (!remoteVideo || !remoteVideo.srcObject) {
@@ -113,16 +105,8 @@ window.connectSocketAndWebRTC = function(localStream) {
     if (topBar) topBar.textContent = "⚠ Partenaire déconnecté. Recherche...";
     window.disconnectWebRTC();
     setTimeout(() => {
-      window.connectSocketAndWebRTC(localStream);
-    }, 3000);
-  });
-
-  socket.on('was-reported', () => {
-    console.log('[MODERATION] Vous avez été signalé');
-    if (topBar) topBar.textContent = '⚠ Signalé. Recherche...';
-    window.nextInterlocutor();
-  });
-
+      window.initFaceVisible(remoteVideo);
+    }, 1000);
   socket.on('force-disconnect', (reason) => {
     console.log('[MODERATION] Déconnexion forcée :', reason);
     if (reason === 'banned') {
