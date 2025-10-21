@@ -35,9 +35,7 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .main {
       flex: 1;
       display: grid;
@@ -133,36 +131,35 @@
       <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
     </div>
   </div>
-  <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
-  <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
-  <script src="/js/face-guard.js" defer></script>
-  <script src="/js/face-guard.js" defer></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="/js/rtc-core.js" defer></script>
-  <script src="/js/rtc-core.js" defer></script>
-  <script src="/app.js" defer></script>
-  <script>
-    const socket = io("https://legalshufflecam.ovh", { transports: ["websocket"], secure: true });
-    socket.on("partner", (partnerId) => {
-      console.log("🧑‍🤝‍🧑 Partenaire reçu :", partnerId);
-      if (typeof window.nextInterlocutor === "function") window.nextInterlocutor(partnerId);
-      if (typeof connectSocketAndWebRTC === "function") connectSocketAndWebRTC(partnerId);
-    });
-  </script>
 
+  <!-- Librairies externes -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="/vendor/tfjs/fg-blaze-loader.js" defer></script>
+  <script src="/js/face-guard.js" defer></script>
+  <script src="/js/rtc-core.js" defer></script>
+
+  <!-- Modules internes -->
+  <script src="/js/face-visible.js" defer></script>
+  <script src="/app.js" defer></script>
+
+  <!-- Initialisation locale -->
   <script>
     let currentStream = null;
     const topBar = document.getElementById('topBar');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const localVideo = document.getElementById('localVideo');
+    const btnSpeaker = document.getElementById('btnMic');
+    const btnNext = document.getElementById('btnNext');
+
     window.faceVisible = false;
 
     window.checkUIUpdate = function() {
+      const faceFrame = document.getElementById("faceFrame");
+      if (faceFrame) {
+        faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
+      }
       if (topBar) {
         topBar.textContent = window.faceVisible
-  const faceFrame = document.getElementById("faceFrame");
-  if (faceFrame) {
-    faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
-  }
           ? "✅ Visage OK. Prêt à chercher un partenaire."
           : "👤 Détection faciale requise...";
       }
@@ -201,7 +198,11 @@
         });
 
         currentStream = stream;
-        document.getElementById('localVideo').srcObject = stream;
+        localVideo.srcObject = stream;
+
+        if (typeof window.initFaceVisible === "function") {
+          window.initFaceVisible(localVideo);
+        }
       } catch (err) {
         console.error("Caméra indisponible: ", err.message);
         if (topBar) topBar.textContent = "❌ Caméra refusée ou indisponible.";
@@ -214,40 +215,6 @@
 
     listCameras();
 
-window.okStreak = 0;
-const history = Array(30).fill(0);
-const localVideo = document.getElementById("localVideo");
-
-const tracker = new tracking.ObjectTracker("face");
-tracker.setInitialScale(2);
-tracker.setStepSize(1.5);
-tracker.setEdgesDensity(0.05);
-
-tracking.track("#localVideo", tracker);
-
-tracker.on("track", event => {
-  if (!localVideo || !localVideo.srcObject) {
-    window.faceVisible = false;
-    window.okStreak = 0;
-    history.fill(0);
-    const faceFrame = document.getElementById("faceFrame");
-    if (faceFrame) faceFrame.style.border = "3px solid #dc2626";
-    console.warn("[RTC] ⚠ Flux local absent — désactivation faceVisible");
-    return;
-  }
-  const face = event.data[0];
-  const visible = !!face;
-  window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
-  history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
-  const sum = history.reduce((a, b) => a + b, 0);
-  window.faceVisible = sum >= 15;
-  window.checkUIUpdate();
-  console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
-});
-
-
-    const remoteVideo = document.getElementById('remoteVideo');
-    const btnSpeaker = document.getElementById('btnMic');
     if (btnSpeaker && remoteVideo) {
       btnSpeaker.addEventListener('click', () => {
         remoteVideo.muted = !remoteVideo.muted;
@@ -255,7 +222,6 @@ tracker.on("track", event => {
       });
     }
 
-    const btnNext = document.getElementById('btnNext');
     if (btnNext) {
       setInterval(() => {
         const visible = window.faceVisible === true;
@@ -276,6 +242,7 @@ tracker.on("track", event => {
       }, 500);
     }
   </script>
-  </script>
-<script src="/listener.js" defer></script>
+
+  <script src="/listener.js" defer></script>
 </body>
+</html>

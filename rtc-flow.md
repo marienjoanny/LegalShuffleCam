@@ -1128,3 +1128,15 @@
 - 🔖 Tag : RTC:faceVisible-cleaned
 - 📄 Fichier : public/js/face-visible.js
 - ✅ Rapport : /var/log/rtc-reinject-faceVisible-clean.log
+
+## 🧱 Création partielle index-real.php (head + structure)
+- 📅 Tue Oct 21 10:02:16 UTC 2025
+- 🔖 Tag : RTC:index-real-head-created
+- 📄 Fichier : public/index-real.php
+- ✅ Rapport : /var/log/rtc-create-indexreal-head.log
+
+## 🧩 Append scripts index-real.php
+- 📅 Tue Oct 21 10:03:00 UTC 2025
+- 🔖 Tag : RTC:index-real-scripts-appended
+- 📄 Fichier : public/index-real.php
+- ✅ Rapport : /var/log/rtc-append-indexreal-scripts.log
