@@ -1,6 +1,13 @@
-// LegalShuffleCam • face-visible.js réécrit
+// =======================================================
+// LegalShuffleCam • face-visible.js
+// Détection de visage avec tracking.js
+// Active/désactive dynamiquement le bouton "Suivant"
+// =======================================================
+
 window.initFaceVisible = function(videoElement) {
   if (!videoElement || window.trackerInitialized) return;
+
+  console.log("[FaceVisible] Initialisation du suivi facial...");
 
   const tracker = new tracking.ObjectTracker("face");
   tracker.setInitialScale(2);
@@ -9,17 +16,26 @@ window.initFaceVisible = function(videoElement) {
 
   const history = Array(30).fill(0);
   window.okStreak = 0;
+  window.faceVisible = false;
 
+  // Lancer le tracking quand la vidéo est prête
   videoElement.onloadedmetadata = () => {
-    videoElement.play();
-    console.log("[FaceVisible] Vidéo prête, lancement tracking...");
-    tracking.track(`#${videoElement.id}`, tracker);
+    try {
+      videoElement.play().catch(err =>
+        console.warn("[FaceVisible] Erreur lecture vidéo:", err)
+      );
+      console.log("[FaceVisible] Vidéo détectée, lancement du tracking...");
+      tracking.track(`#${videoElement.id}`, tracker);
+    } catch (e) {
+      console.error("[FaceVisible] Erreur de lancement tracking:", e);
+    }
   };
 
   tracker.on("track", event => {
     const face = event.data[0];
     const visible = !!face;
 
+    // Maintenir un "streak" de détection
     window.okStreak = visible
       ? Math.min(window.okStreak + 1, 30)
       : Math.max(window.okStreak - 1, 0);
@@ -30,13 +46,15 @@ window.initFaceVisible = function(videoElement) {
     const sum = history.reduce((a, b) => a + b, 0);
     window.faceVisible = sum >= 15;
 
+    // UI — cadre vidéo
     const faceFrame = document.getElementById("faceFrame");
     if (faceFrame) {
       faceFrame.style.border = window.faceVisible
-        ? "3px solid #10b981"
-        : "3px solid #dc2626";
+        ? "3px solid #10b981" // vert
+        : "3px solid #dc2626"; // rouge
     }
 
+    // UI — bouton "Suivant"
     const btnNext = document.getElementById("btnNext");
     if (btnNext) {
       btnNext.disabled = !window.faceVisible;
@@ -45,6 +63,7 @@ window.initFaceVisible = function(videoElement) {
         : "🚫 Visage requis";
     }
 
+    // UI — barre d’état
     const topBar = document.getElementById("topBar");
     if (topBar) {
       topBar.textContent = window.faceVisible
@@ -52,8 +71,11 @@ window.initFaceVisible = function(videoElement) {
         : "👤 Détection faciale requise...";
     }
 
-    console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
+    console.log(
+      `[FaceVisible] Visage:${visible ? "✔" : "❌"} | Streak:${window.okStreak} | faceVisible:${window.faceVisible}`
+    );
   });
 
   window.trackerInitialized = true;
+  console.log("[FaceVisible] Tracker initialisé avec succès.");
 };
