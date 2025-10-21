@@ -1116,3 +1116,9 @@
 - 🔖 Tag : RTC:faceVisible-module-injected
 - 📄 Fichiers : public/js/face-visible.js, public/app.js
 - ✅ Rapport : /var/log/rtc-inject-faceVisible-module.log
+
+## 🧼 Réinjection app.js propre
+- 📅 Tue Oct 21 09:47:53 UTC 2025
+- 🔖 Tag : RTC:appjs-cleaned-faceVisible-remote
+- 📄 Fichier : public/app.js
+- ✅ Rapport : /var/log/rtc-reinject-appjs-clean.log
