@@ -1,5 +1,5 @@
-window.initFaceVisible = function(remoteVideo) {
-  if (!remoteVideo || window.trackerInitialized) return;
+window.initFaceVisible = function(videoElement) {
+  if (!videoElement || window.trackerInitialized) return;
 
   const tracker = new tracking.ObjectTracker("face");
   tracker.setInitialScale(2);
@@ -9,25 +9,35 @@ window.initFaceVisible = function(remoteVideo) {
   const history = Array(30).fill(0);
   window.okStreak = 0;
 
-  tracking.track("#remoteVideo", tracker);
+  tracking.track(`#${videoElement.id}`, tracker);
 
   tracker.on("track", event => {
     const face = event.data[0];
     const visible = !!face;
-    window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
-    history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
+
+    window.okStreak = visible
+      ? Math.min(window.okStreak + 1, 30)
+      : Math.max(window.okStreak - 1, 0);
+
+    history.shift();
+    history.push(window.okStreak >= 15 ? 1 : 0);
+
     const sum = history.reduce((a, b) => a + b, 0);
     window.faceVisible = sum >= 15;
 
     const faceFrame = document.getElementById("faceFrame");
     if (faceFrame) {
-      faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
+      faceFrame.style.border = window.faceVisible
+        ? "3px solid #10b981"
+        : "3px solid #dc2626";
     }
 
     const btnNext = document.getElementById("btnNext");
     if (btnNext) {
       btnNext.disabled = !window.faceVisible;
-      btnNext.textContent = window.faceVisible ? "➡️ Interlocuteur suivant" : "🚫 Visage requis";
+      btnNext.textContent = window.faceVisible
+        ? "➡️ Interlocuteur suivant"
+        : "🚫 Visage requis";
     }
 
     const topBar = document.getElementById("topBar");

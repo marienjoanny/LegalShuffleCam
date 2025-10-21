@@ -1122,3 +1122,9 @@
 - 🔖 Tag : RTC:appjs-cleaned-faceVisible-remote
 - 📄 Fichier : public/app.js
 - ✅ Rapport : /var/log/rtc-reinject-appjs-clean.log
+
+## 🧼 Réinjection face-visible.js propre
+- 📅 Tue Oct 21 09:52:07 UTC 2025
+- 🔖 Tag : RTC:faceVisible-cleaned
+- 📄 Fichier : public/js/face-visible.js
+- ✅ Rapport : /var/log/rtc-reinject-faceVisible-clean.log
