@@ -134,7 +134,6 @@
 
   <!-- Librairies externes -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="/js/face-guard.js" defer></script>
   <script src="/js/rtc-core.js" defer></script>
 
   <!-- Modules internes -->
