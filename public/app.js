@@ -35,12 +35,25 @@ window.connectSocketAndWebRTC = function(localStream) {
         tracking.track("#remoteVideo", tracker);
 
         tracker.on("track", event => {
+  if (!remoteVideo || !remoteVideo.srcObject) {
+    window.faceVisible = false;
+    window.okStreak = 0;
+    history.fill(0);
+    const faceFrame = document.getElementById("faceFrame");
+    if (faceFrame) faceFrame.style.border = "3px solid #dc2626";
+    console.warn("[RTC] ⚠ Flux distant absent — désactivation faceVisible");
+    return;
+  }
           const face = event.data[0];
           const visible = !!face;
           window.okStreak = visible ? Math.min(window.okStreak + 1, 30) : Math.max(window.okStreak - 1, 0);
           history.shift(); history.push(window.okStreak >= 15 ? 1 : 0);
           const sum = history.reduce((a, b) => a + b, 0);
           window.faceVisible = sum >= 15;
+  const faceFrame = document.getElementById("faceFrame");
+  if (faceFrame) {
+    faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
+  }
 
           console.log("[RTC] 🔍 Visage détecté:", visible, "| Streak:", window.okStreak, "| faceVisible:", window.faceVisible);
         });

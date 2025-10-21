@@ -1080,3 +1080,9 @@
 - 🔖 Tag : RTC:trackingjs-local-injected:public
 - 📄 Fichier : /var/www/legalshufflecam/public/index-real.php
 - ✅ Rapport : /var/log/rtc-inject-local-trackingjs-public.log
+
+## 🟩 Patch faceVisible : cadre + désactivation flux
+- 📅 Tue Oct 21 08:10:53 UTC 2025
+- 🔖 Tag : RTC:faceVisible-ui-logic-fixed
+- 📄 Fichier : /var/www/legalshufflecam/public/app.js
+- ✅ Rapport : /var/log/rtc-fix-appjs-faceVisible-ui-logic.log
