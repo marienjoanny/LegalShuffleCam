@@ -72,7 +72,7 @@
     try {
       await window.__fgBlazeReady;
       if (!window.blazeface) throw new Error('blazeface missing');
-      blazeModel = await window.blazeface.load();
+      blazeModel = await window.blazeface.load({ modelUrl: '/models/blazeface/model.json' });
       mode = 'blazeface';
       return {
         type: mode,

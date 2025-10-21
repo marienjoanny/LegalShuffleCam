@@ -31,8 +31,8 @@
   window.__fgBlazeReady = (async () => {
     await ensureTF();
     await ensureBlaze();
-    console.log('[FG] calling blazeface.load() …');
-    const model = await window.blazeface.load();
+    console.log('[FG] calling blazeface.load({ modelUrl: '/models/blazeface/model.json' }) …');
+    const model = await window.blazeface.load({ modelUrl: '/models/blazeface/model.json' });
     if (!model || typeof model.estimateFaces !== 'function') {
       throw new Error('blazeface model invalid');
     }
