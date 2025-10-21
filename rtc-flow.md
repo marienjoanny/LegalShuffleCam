@@ -1074,3 +1074,9 @@
 - 🔖 Tag : RTC:trackingjs-local-injected
 - 📄 Fichier : /var/www/legalshufflecam/index-real.php
 - ✅ Rapport : /var/log/rtc-inject-local-trackingjs.log
+
+## 🎯 Injection tracking.js sur localVideo (public)
+- 📅 Tue Oct 21 08:04:10 UTC 2025
+- 🔖 Tag : RTC:trackingjs-local-injected:public
+- 📄 Fichier : /var/www/legalshufflecam/public/index-real.php
+- ✅ Rapport : /var/log/rtc-inject-local-trackingjs-public.log
