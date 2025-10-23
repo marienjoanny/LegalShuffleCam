@@ -5,7 +5,8 @@ window.initFaceVisible = function(video) {
   tracker.setEdgesDensity(0.05);
 
   let history = new Array(30).fill(0);
-  window.faceVisible = false;
+  let lastDetection = Date.now();
+  const bufferMs = 2000;
 
   tracking.track(video, tracker);
 
@@ -14,8 +15,13 @@ window.initFaceVisible = function(video) {
     history.shift();
     history.push(detected);
 
+    if (detected) lastDetection = Date.now();
+
     const sum = history.reduce((a, b) => a + b, 0);
-    window.faceVisible = sum >= 15;
+    const streakVisible = sum >= 10;
+    const bufferVisible = (Date.now() - lastDetection) < bufferMs;
+
+    window.faceVisible = streakVisible || bufferVisible;
 
     const btnNext = document.getElementById("btnNext");
     const topBar = document.getElementById("topBar");
@@ -37,6 +43,6 @@ window.initFaceVisible = function(video) {
       ? "3px solid #10b981"
       : "3px solid #dc2626";
 
-    console.log(`[FaceVisible] detected:${detected} | sum:${sum} | faceVisible:${window.faceVisible}`);
+    console.log(`[FaceVisible] detected:${detected} | sum:${sum} | buffer:${bufferVisible} | faceVisible:${window.faceVisible}`);
   });
 };
