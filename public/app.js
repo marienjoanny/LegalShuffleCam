@@ -7,11 +7,11 @@ const localVideo    = document.getElementById('localVideo');
 const btnSpeaker    = document.getElementById('btnMic');
 const btnNext       = document.getElementById('btnNext');
 const cameraSelect  = document.getElementById('cameraSelect');
+const faceFrame     = document.getElementById("faceFrame");
 
 window.faceVisible = false;
 
 window.checkUIUpdate = function () {
-  const faceFrame = document.getElementById("faceFrame");
   if (faceFrame) {
     faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
   }
@@ -21,6 +21,12 @@ window.checkUIUpdate = function () {
       : "👤 Détection faciale requise...";
   }
 };
+
+setInterval(() => {
+  if (typeof window.checkUIUpdate === "function") {
+    window.checkUIUpdate();
+  }
+}, 500);
 
 async function listCameras() {
   if (!cameraSelect) return console.warn("[RTC] cameraSelect introuvable");
