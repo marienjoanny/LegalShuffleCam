@@ -38,7 +38,7 @@
     }
     #localVideo {
       position: absolute; bottom: 16px; right: 16px;
-      width: 100px; height: 75px; border-radius: 10px;
+      width: 320px; height: 240px; border-radius: 10px;
       background: #000; box-shadow: 0 0 8px #000a;
     }
     .hint {
@@ -91,8 +91,8 @@
 
   <!-- Librairies externes -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
   <script src="/js/rtc-core.js" defer></script>
   <script src="/js/face-visible.js" defer></script>
   <script src="/app.js" defer></script>
