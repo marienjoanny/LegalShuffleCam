@@ -1,225 +1,204 @@
-let localStream;
-let peerConnection;
-let remoteId;
-const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+// LegalShuffleCam • rtc-core.js (version optimisée)
+// Gestion centrale des connexions WebRTC et des flux multimédias.
 
-async function startLocalVideo() {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  document.getElementById('localVideo').srcObject = localStream;
-  console.log('[RTC] Flux local démarré');
-}
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
 
-if (!localStream) {  console.warn("[RTC] ⚠ createPeerConnection appelé sans flux local");  return;}
-  peerConnection = new RTCPeerConnection(config);
+let localStream = null;
+let peerConnection = null;
+let remoteId = null;
+let socket = null;
 
-  localStream.getTracks().forEach(track => {
-    peerConnection.addTrack(track, localStream);
+function createPeerConnection(stream) {
+  if (!stream) {
+    console.error("[RTC] Impossible de créer peerConnection : pas de flux local.");
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Flux local manquant pour WebRTC." }
+    }));
+    return null;
+  }
+
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+
+  stream.getTracks().forEach(track => {
+    if (track.kind === 'video' || track.kind === 'audio') {
+      pc.addTrack(track, stream);
+      console.log(`[RTC] Track ajouté : ${track.kind}`);
+    }
   });
 
-  peerConnection.ontrack = event => {
-    document.getElementById('remoteVideo').srcObject = event.streams[0];
-    console.log('[RTC] Flux distant reçu');
-  };
-
-  peerConnection.onicecandidate = event => {
+  pc.onicecandidate = (event) => {
     if (event.candidate) {
-      socket.emit('icecandidate', { candidate: event.candidate, to: remoteId });
-      console.log('[RTC] ICE locale envoyée');
+      console.log("[RTC] Nouveau candidat ICE généré.");
+      socket.emit("ice-candidate", { to: remoteId, candidate: event.candidate });
+    } else {
+      console.log("[RTC] Tous les candidats ICE envoyés.");
     }
   };
+
+  pc.ontrack = (event) => {
+    const remoteVideo = document.getElementById("remoteVideo");
+    if (remoteVideo && event.streams && event.streams[0]) {
+      remoteVideo.srcObject = event.streams[0];
+      console.log("[RTC] Flux distant reçu et assigné.");
+      window.dispatchEvent(new CustomEvent('rtcConnected', {
+        detail: { stream: event.streams[0] }
+      }));
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log(`[RTC] État de la connexion : ${pc.connectionState}`);
+    if (pc.connectionState === "failed") {
+      window.dispatchEvent(new CustomEvent('rtcFailed', {
+        detail: { error: "Échec de la connexion WebRTC." }
+      }));
+    } else if (pc.connectionState === "connected") {
+      window.dispatchEvent(new CustomEvent('rtcConnected', {
+        detail: { message: "Connexion WebRTC établie." }
+      }));
+    }
+  };
+
+  return pc;
 }
 
-socket.on('offer', async ({ sdp, from }) => {
-  remoteId = from;
-if (!localStream) {  console.warn("[RTC] ⚠ createPeerConnection appelé sans flux local");  return;}
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-  const answer = await peerConnection.createAnswer();
-  await peerConnection.setLocalDescription(answer);
-  socket.emit('answer', { sdp: answer, to: remoteId });
-  console.log('[RTC] Answer envoyée');
-});
+async function initLocalStream() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+    localStream = stream;
+    console.log("[RTC] Flux local initialisé avec succès.");
+    return stream;
+  } catch (err) {
+    console.error("[RTC] Erreur lors de l'initialisation du flux local :", err);
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Impossible d'accéder à la caméra/micro.", error: err }
+    }));
+    throw err;
+  }
+}
 
-socket.on('answer', async ({ sdp }) => {
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-  console.log('[RTC] Answer reçue et appliquée');
-});
+async function startCall(partnerId) {
+  try {
+    if (!localStream) {
+      localStream = await initLocalStream();
+      document.getElementById("localVideo").srcObject = localStream;
+    }
 
-socket.on('icecandidate', async ({ candidate }) => {
-  await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-  console.log('[RTC] ICE distante ajoutée');
-});
+    remoteId = partnerId;
+    peerConnection = createPeerConnection(localStream);
 
-async function initiateCall(targetId) {
-  remoteId = targetId;
-if (!localStream) {  console.warn("[RTC] ⚠ createPeerConnection appelé sans flux local");  return;}
-  const offer = await peerConnection.createOffer();
-  await peerConnection.setLocalDescription(offer);
-  socket.emit('offer', { sdp: offer, to: remoteId });
-  console.log('[RTC] Offer envoyée');
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit("offer", { to: partnerId, sdp: offer });
+    console.log("[RTC] Offre créée et envoyée.");
+  } catch (err) {
+    console.error("[RTC] Erreur lors de la création de l'offre :", err);
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Échec de la création de l'offre WebRTC.", error: err }
+    }));
+  }
+}
+
+async function handleOffer(data) {
+  try {
+    if (!localStream) {
+      localStream = await initLocalStream();
+      document.getElementById("localVideo").srcObject = localStream;
+    }
+
+    remoteId = data.from;
+    peerConnection = createPeerConnection(localStream);
+
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit("answer", { to: remoteId, sdp: answer });
+    console.log("[RTC] Réponse créée et envoyée.");
+  } catch (err) {
+    console.error("[RTC] Erreur lors de la gestion de l'offre :", err);
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Échec de la gestion de l'offre WebRTC.", error: err }
+    }));
+  }
+}
+
+async function handleAnswer(data) {
+  try {
+    if (!peerConnection) {
+      throw new Error("Aucune peerConnection active pour appliquer la réponse.");
+    }
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    console.log("[RTC] Réponse appliquée avec succès.");
+  } catch (err) {
+    console.error("[RTC] Erreur lors de l'application de la réponse :", err);
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Échec de l'application de la réponse WebRTC.", error: err }
+    }));
+  }
+}
+
+async function handleICECandidate(data) {
+  try {
+    if (!peerConnection) {
+      throw new Error("Aucune peerConnection active pour ajouter le candidat ICE.");
+    }
+    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    console.log("[RTC] Candidat ICE ajouté avec succès.");
+  } catch (err) {
+    console.error("[RTC] Erreur lors de l'ajout du candidat ICE :", err);
+  }
 }
 
 function disconnectWebRTC() {
   if (peerConnection) {
+    peerConnection.getSenders().forEach(sender => {
+      if (sender.track) sender.track.stop();
+    });
     peerConnection.close();
     peerConnection = null;
-    console.log('[RTC] Connexion WebRTC fermée');
+    console.log("[RTC] Connexion WebRTC fermée et ressources libérées.");
   }
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+    console.log("[RTC] Flux local arrêté.");
+  }
+
+  window.dispatchEvent(new CustomEvent('rtcDisconnected', {
+    detail: { message: "Déconnexion WebRTC effectuée." }
+  }));
 }
 
-// 🔗 Réception ID partenaire
-socket.on('partner', ({ id }) => {
-  initiateCall(id);
-});
-
-// 🎥 Initialisation du flux local avec fallback
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(stream => {
-    localStream = stream;
-  console.log("[RTC] ✅ localStream prêt :", localStream);
-    console.log("[RTC] 🎥 Flux local initialisé :", localStream);
-    document.getElementById("localVideo").srcObject = stream;
-  })
-  .catch(err => {
-    console.error("[RTC] ❌ Erreur getUserMedia :", err);
+function initSocket() {
+  socket = io();
+  socket.on("connect", () => {
+    console.log("[RTC] Connecté au serveur Socket.IO.");
   });
 
-
-// 🎯 Remplacement de onaddstream par ontrack
-peerConnection.ontrack = (event) => {
-  console.log("[RTC] 📡 Track reçu :", event.streams[0]);
-  document.getElementById("remoteVideo").srcObject = event.streams[0];
-};
-
-
-// 🧪 Vérification de remoteVideo.srcObject
-const remoteVideo = document.getElementById("remoteVideo");
-if (remoteVideo && remoteVideo.srcObject) {
-  console.log("[RTC] ✅ remoteVideo.srcObject actif :", remoteVideo.srcObject);
-} else {
-  console.warn("[RTC] ⚠ remoteVideo.srcObject absent ou null");
-}
-
-
-// 🎯 Remplacement de onaddstream par ontrack
-peerConnection.ontrack = (event) => {
-  console.log("[RTC] 📡 Track reçu :", event.streams[0]);
-  const remoteVideo = document.getElementById("remoteVideo");
-  if (remoteVideo) {
-    remoteVideo.srcObject = event.streams[0];
-    console.log("[RTC] 🎥 remoteVideo.srcObject défini :", remoteVideo.srcObject);
-  } else {
-    console.warn("[RTC] ⚠ remoteVideo introuvable");
-  }
-};
-
-
-// 🎥 Initialisation du flux local + création peerConnection
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(stream => {
-    localStream = stream;
-  console.log("[RTC] ✅ localStream prêt :", localStream);
-    console.log("[RTC] ✅ Flux local prêt :", localStream);
-    document.getElementById("localVideo").srcObject = stream;
-
-    // 🔄 Création de la peerConnection après flux prêt
-  })
-  .catch(err => {
-    console.error("[RTC] ❌ Erreur getUserMedia :", err);
+  socket.on("disconnect", () => {
+    console.log("[RTC] Déconnecté du serveur Socket.IO.");
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Déconnexion du serveur Socket.IO." }
+    }));
   });
 
-
-// 🔒 Traçage de fermeture peerConnection
-if (peerConnection) {
-  peerConnection.onconnectionstatechange = () => {
-    console.log("[RTC] 🔄 État peerConnection :", peerConnection.connectionState);
-    if (peerConnection.connectionState === "closed") {
-      console.warn("[RTC] ❌ Connexion WebRTC fermée");
-    }
-  };
+  socket.on("partner", ({ id }) => startCall(id));
+  socket.on("offer", handleOffer);
+  socket.on("answer", handleAnswer);
+  socket.on("ice-candidate", handleICECandidate);
 }
 
-
-// 🧪 Vérification des flux vidéo côté client
-const localVideo = document.getElementById("localVideo");
-const remoteVideo = document.getElementById("remoteVideo");
-
-if (localVideo && localVideo.srcObject) {
-  console.log("[RTC] ✅ Flux local actif :", localVideo.srcObject);
-} else {
-  console.warn("[RTC] ⚠ Flux local absent ou null");
-}
-
-if (remoteVideo && remoteVideo.srcObject) {
-  console.log("[RTC] ✅ Flux distant actif :", remoteVideo.srcObject);
-} else {
-  console.warn("[RTC] ⚠ Flux distant absent ou null");
-}
-
-
-// 🔊 Vérification du flux audio côté client
-if (localStream && typeof localStream.getAudioTracks === "function") {
-  const audioTracks = localStream.getAudioTracks();
-  if (audioTracks.length > 0) {
-    console.log("[RTC] ✅ Flux audio actif :", audioTracks);
-  } else {
-    console.warn("[RTC] ⚠ Aucun flux audio détecté");
-  }
-} else {
-  console.error("[RTC] ❌ localStream audio non accessible");
-}
-
-
-// 🧩 Traçage SDP et ICE
-if (peerConnection) {
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      console.log("[RTC] ❄ ICE candidate reçu :", event.candidate);
-    } else {
-      console.log("[RTC] ✅ Fin des ICE candidates");
-    }
-  };
-
-  const originalSetLocalDescription = peerConnection.setLocalDescription;
-  peerConnection.setLocalDescription = async function(desc) {
-    console.log("[RTC] 📤 setLocalDescription appelée :", desc);
-    return originalSetLocalDescription.call(this, desc);
-  };
-
-  const originalSetRemoteDescription = peerConnection.setRemoteDescription;
-  peerConnection.setRemoteDescription = async function(desc) {
-    console.log("[RTC] 📥 setRemoteDescription appelée :", desc);
-    return originalSetRemoteDescription.call(this, desc);
-  };
-}
-
-
-// 🎥 Initialisation du flux local + création peerConnection
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(stream => {
-    localStream = stream;
-  console.log("[RTC] ✅ localStream prêt :", localStream);
-    console.log("[RTC] ✅ Flux local prêt :", localStream);
-    document.getElementById("localVideo").srcObject = stream;
-
-    // 🔄 Création de la peerConnection après flux prêt
-if (!localStream) {  console.warn('[RTC] ⚠ createPeerConnection appelé sans flux local');  return;}
-    createPeerConnection();
-  })
-  .catch(err => {
-    console.error("[RTC] ❌ Erreur getUserMedia :", err);
-  });
-
-
-// 🧪 Vérification de disponibilité du flux avant opérations
-if (!localStream) {
-  console.error("[RTC] ❌ Tentative d’accès à getTracks/addTrack sans flux local");
-  return;
-}
-
-// Exemple d’usage sécurisé
-const tracks = localStream.getTracks();
-tracks.forEach(track => {
-  peerConnection.addTrack(track, localStream);
-  console.log("[RTC] 🎯 Track ajoutée :", track.kind);
-});
-
+window.initLocalStream = initLocalStream;
+window.startCall = startCall;
+window.disconnectWebRTC = disconnectWebRTC;
+window.initSocket = initSocket;

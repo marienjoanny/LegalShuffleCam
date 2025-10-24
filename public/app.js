@@ -1,56 +1,66 @@
-// LegalShuffleCam • app.js réécrit v2
-let currentStream = null;
+// LegalShuffleCam • app.js (version optimisée)
+// Gère la caméra, l’audio, la détection faciale et la logique de "Next".
 
-const topBar        = document.getElementById('topBar');
-const remoteVideo   = document.getElementById('remoteVideo');
-const localVideo    = document.getElementById('localVideo');
-const btnSpeaker    = document.getElementById('btnMic');
-const btnNext       = document.getElementById('btnNext');
-const cameraSelect  = document.getElementById('cameraSelect');
-const faceFrame     = document.getElementById("faceFrame");
+let currentStream = null;
+const topBar = document.getElementById('topBar');
+const remoteVideo = document.getElementById('remoteVideo');
+const localVideo = document.getElementById('localVideo');
+const btnSpeaker = document.getElementById('btnMic');
+const btnNext = document.getElementById('btnNext');
+const cameraSelect = document.getElementById('cameraSelect');
 
 window.faceVisible = false;
+window.trackerInitialized = false;
 
-window.checkUIUpdate = function () {
-  if (faceFrame) {
-    faceFrame.style.border = window.faceVisible ? "3px solid #10b981" : "3px solid #dc2626";
-  }
-  if (topBar) {
-    topBar.textContent = window.faceVisible
-      ? "✅ Visage OK. Prêt à chercher un partenaire."
-      : "👤 Détection faciale requise...";
-  }
-};
+function updateTopBar(message) {
+  if (topBar) topBar.textContent = message;
+}
 
-setInterval(() => {
-  if (typeof window.checkUIUpdate === "function") {
-    window.checkUIUpdate();
+function updateNextButtonState() {
+  const visible = window.faceVisible === true;
+  if (btnNext) {
+    btnNext.disabled = !visible;
+    btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+    btnNext.onclick = visible ? handleNextClick : null;
   }
-}, 500);
+}
+
+function handleNextClick() {
+  console.log("[RTC] Bouton 'Next' déclenché.");
+  if (typeof window.disconnectWebRTC === 'function') {
+    window.disconnectWebRTC();
+  }
+  if (remoteVideo) remoteVideo.srcObject = null;
+  updateNextButtonState();
+  setTimeout(() => {
+    if (typeof socket !== 'undefined' && socket.connected) {
+      socket.emit("ready-for-match");
+      updateTopBar("🔍 Recherche d’un partenaire...");
+    }
+  }, 1500);
+}
 
 async function listCameras() {
-  if (!cameraSelect) return console.warn("[RTC] cameraSelect introuvable");
-
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoInputs = devices.filter(d => d.kind === 'videoinput');
-    cameraSelect.innerHTML = '';
-
-    videoInputs.forEach((device, index) => {
-      const option = document.createElement('option');
-      option.value = device.deviceId;
-      option.textContent = `Cam ${index + 1}`;
-      cameraSelect.appendChild(option);
-    });
-
+    if (cameraSelect) {
+      cameraSelect.innerHTML = '';
+      videoInputs.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Caméra ${index + 1}`;
+        cameraSelect.appendChild(option);
+      });
+    }
     if (videoInputs.length > 0) {
-      startCamera(videoInputs[0].deviceId);
+      await startCamera(videoInputs[0].deviceId);
     } else {
-      if (topBar) topBar.textContent = "❌ Aucune caméra détectée";
+      updateTopBar("❌ Aucune caméra détectée.");
     }
   } catch (err) {
-    console.error("[RTC] Erreur enumerateDevices:", err.message);
-    if (topBar) topBar.textContent = "❌ Caméra non trouvée.";
+    console.error("[RTC] Erreur détection caméra:", err);
+    updateTopBar("❌ Erreur caméra. Vérifiez les permissions.");
   }
 }
 
@@ -59,47 +69,29 @@ async function startCamera(deviceId) {
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
-
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId } },
       audio: true
     });
-
     currentStream = stream;
-    localVideo.srcObject = stream;
+    if (localVideo) localVideo.srcObject = stream;
+    updateTopBar("✅ Caméra active. Détection en cours...");
 
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
     }
-
-    if (typeof window.connectSocketAndWebRTC === "function") {
-      window.connectSocketAndWebRTC(stream);
+    if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
+      window.connectSocketAndWebRTC(currentStream);
     }
-
-    if (topBar) topBar.textContent = "✅ Caméra active, détection en cours...";
   } catch (err) {
-    console.error("[RTC] Caméra indisponible:", err.message);
-    if (topBar) topBar.textContent = "❌ Caméra refusée ou indisponible.";
+    console.error("[RTC] Erreur caméra:", err);
+    updateTopBar("❌ Caméra refusée ou indisponible.");
   }
 }
 
-window.startCamera = startCamera;
-
 if (cameraSelect) {
-  cameraSelect.addEventListener('change', (e) => {
-    startCamera(e.target.value);
-  });
+  cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
 }
-
-listCameras();
-
-setTimeout(() => {
-  console.log("[AUDIT] localVideo.srcObject:", localVideo?.srcObject);
-  console.log("[AUDIT] localVideo.readyState:", localVideo?.readyState);
-  console.log("[AUDIT] faceVisible:", window.faceVisible);
-  console.log("[AUDIT] trackerInitialized:", window.trackerInitialized);
-  if (topBar) console.log("[AUDIT] topBar:", topBar.textContent);
-}, 3000);
 
 if (btnSpeaker && remoteVideo) {
   btnSpeaker.addEventListener('click', () => {
@@ -108,23 +100,18 @@ if (btnSpeaker && remoteVideo) {
   });
 }
 
-if (btnNext) {
-  setInterval(() => {
-    const visible = window.faceVisible === true;
-    btnNext.disabled = !visible;
-    btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
+window.addEventListener('faceVisibilityChanged', updateNextButtonState);
 
-    if (visible && !btnNext.onclick) {
-      btnNext.onclick = () => {
-        if (typeof disconnectWebRTC === 'function') disconnectWebRTC();
-        remoteVideo.srcObject = null;
-        btnNext.disabled = true;
-        setTimeout(() => {
-          if (typeof socket !== 'undefined') socket.emit("ready-for-match");
-        }, 1500);
-      };
-    } else if (!visible) {
-      btnNext.onclick = null;
+window.addEventListener('load', () => {
+  listCameras();
+  window.addEventListener('beforeunload', () => {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
     }
-  }, 500);
-}
+    if (typeof window.disconnectWebRTC === 'function') {
+      window.disconnectWebRTC();
+    }
+  });
+});
+
+updateNextButtonState();
