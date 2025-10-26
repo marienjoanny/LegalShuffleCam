@@ -469,3 +469,25 @@
 - ✅ /var/www/legalshufflecam/public/rtc-facecheck.html : 4 balises META présentes
 - ⚠️ /var/www/legalshufflecam/public/moderation.html : 5/4 balises META détectées (rating:1 age:1 robots:2 googlebot:1)
 - ✅ /var/www/legalshufflecam/public/rtc-facecheck-graph.html : 4 balises META présentes
+
+## 🧹 Nettoyage des balises META en double
+- 📅 2025-10-26 10:55:15
+- 🔖 Tag : RTC_meta_cleaner_20251026_1055
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck-faceapi.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/cgu.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/confidentialite.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck-trackingjs.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/contact.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/reglement.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/mentions-legales.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/accessibilite.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/cookies.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/test-facevisible.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/test-camera-select.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/test-facevisible-select.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/sitemap.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck-static.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck-mediapipe.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck.html : 4 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/moderation.html : 5 → 4 balises META conservées
+- 🧹 /var/www/legalshufflecam/public/rtc-facecheck-graph.html : 4 → 4 balises META conservées
