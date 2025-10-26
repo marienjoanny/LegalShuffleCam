@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="utf-8" />
+  <title>Test FaceVisible</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f9fafb;
+      text-align: center;
+      margin-top: 20px;
+    }
+    #localVideo {
+      width: 320px;
+      height: 240px;
+      border: 3px solid #dc2626;
+      border-radius: 8px;
+      background: #000;
+    }
+    #faceFrame {
+      padding: 12px;
+    }
+    #topBar {
+      font-weight: bold;
+      margin-top: 12px;
+    }
+    #btnNext {
+      margin-top: 12px;
+      padding: 8px 16px;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>LegalShuffleCam • Test FaceVisible</h1>
+  <div id="faceFrame">
+    <video id="localVideo" autoplay muted playsinline></video>
+  </div>
+  <div id="topBar">Chargement...</div>
+  <button id="btnNext" disabled>🚫 Visage requis</button>
+
+  <!-- Librairies externes -->
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
+
+  <!-- Scripts locaux -->
+  <script src="/js/face-visible.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -403,3 +403,47 @@
 - ✅ accessibilite.html présent · chmod 644 · META RGPD : 1 balise(s)
 - ✅ .well-known/parental-control.txt présent · chmod 644 · META RGPD : 0 balise(s)
 - ✅ robots.txt présent · chmod 644 · META RGPD : 0 balise(s)
+
+## 🧬 Injection META contrôle parental
+- 📅 2025-10-26 10:53:08
+- 🔖 Tag : RTC_meta_injection_20251026_1053
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-faceapi.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/cgu.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/confidentialite.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-trackingjs.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/contact.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/reglement.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/mentions-legales.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/accessibilite.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/cookies.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-facevisible.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-camera-select.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-facevisible-select.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/sitemap.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-static.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-mediapipe.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/moderation.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-graph.html : META injectée
+
+## 🧬 Injection META contrôle parental
+- 📅 2025-10-26 10:53:54
+- 🔖 Tag : RTC_meta_injection_20251026_1053
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-faceapi.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/cgu.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/confidentialite.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-trackingjs.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/contact.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/reglement.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/mentions-legales.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/accessibilite.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/cookies.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-facevisible.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-camera-select.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/test-facevisible-select.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/sitemap.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-static.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-mediapipe.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/moderation.html : META injectée
+- 🧬 /var/www/legalshufflecam/public/rtc-facecheck-graph.html : META injectée

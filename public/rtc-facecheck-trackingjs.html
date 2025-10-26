@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="UTF-8">
+  <title>RTC FaceCheck tracking.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    video, canvas { width: 640px; height: 480px; border: 1px solid black; }
+    #status { margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>RTC FaceCheck tracking.js</h1>
+  <video id="webcam" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+  <div id="status">Chargement du détecteur…</div>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+    });
+
+    const tracker = new tracking.ObjectTracker('face');
+    tracker.setInitialScale(2);
+    tracker.setStepSize(1.5);
+    tracker.setEdgesDensity(0.05);
+
+    tracking.track('#webcam', tracker, { camera: true });
+
+    const history = Array(30).fill(0);
+
+    tracker.on('track', event => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const detected = event.data.length > 0 ? 1 : 0;
+      history.shift();
+      history.push(detected);
+
+      const sum = history.reduce((a, b) => a + b, 0);
+      status.textContent = sum >= 15 ? '✅ Détecte' : '❌ Détecte pas';
+
+      event.data.forEach(rect => {
+        ctx.strokeStyle = '#00FF00';
+        ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      });
+    });
+  </script>
+</body>
+</html>

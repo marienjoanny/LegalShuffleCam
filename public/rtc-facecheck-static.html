@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="UTF-8">
+  <title>RTC FaceCheck Static</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    video { width: 640px; height: 480px; border: 1px solid black; }
+    #status { margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+    #errorlog { margin-top: 10px; color: red; white-space: pre-wrap; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>RTC FaceCheck Static</h1>
+  <video id="webcam" autoplay muted playsinline></video>
+  <div id="status">Chargement du modèle…</div>
+  <pre id="errorlog"></pre>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      const status = document.getElementById('status');
+      const errorlog = document.getElementById('errorlog');
+      try {
+        status.textContent = '📦 Chargement du modèle…';
+        const model = await blazeface.load(); // par défaut depuis tfhub.dev
+        status.textContent = '✅ Modèle chargé';
+        const video = document.getElementById('webcam');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.onloadeddata = () => detectLoop(model, video, status);
+      } catch (err) {
+        console.error('[RTC] loader error:', err);
+        status.textContent = '❌ Erreur chargement modèle';
+        errorlog.textContent = err.message || String(err);
+      }
+    });
+
+    async function detectLoop(model, video, status) {
+      while (true) {
+        const predictions = await model.estimateFaces(video, false);
+        status.textContent = predictions.length > 0 ? '✅ Détecte' : '❌ Détecte pas';
+        await tf.nextFrame();
+      }
+    }
+  </script>
+</body>
+</html>
