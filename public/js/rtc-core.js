@@ -217,7 +217,10 @@ function initSocket() {
   });
 
   setupPartnerListener();
-  // ... (autres écouteurs pour offer/answer/ice-candidate) ...
+
+  socket.on("offer", handleOffer);
+  socket.on("answer", handleAnswer);
+  socket.on("ice-candidate", handleICECandidate);
 }
 
 // --- Export des fonctions ---
