@@ -212,6 +212,10 @@ function initSocket() {
     console.log(`[SOCKET] ❌ Déconnecté (raison: ${reason})`);
   });
 
+  socket.on("connect_error", (err) => {
+    console.error("[SOCKET] ⚠ Erreur de connexion :", err);
+  });
+
   setupPartnerListener();
   // ... (autres écouteurs pour offer/answer/ice-candidate) ...
 }
