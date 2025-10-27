@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (version optimisée)
+// LegalShuffleCam • app.js (version optimisée avec fallback caméra)
 // Gère la caméra, l’audio, la détection faciale et la logique de "Next".
 
 let currentStream = null;
@@ -69,10 +69,13 @@ async function startCamera(deviceId) {
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
+
+    // Tentative stricte avec deviceId exact
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId } },
       audio: true
     });
+
     currentStream = stream;
     if (localVideo) localVideo.srcObject = stream;
     updateTopBar("✅ Caméra active. Détection en cours...");
@@ -83,9 +86,31 @@ async function startCamera(deviceId) {
     if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
       window.connectSocketAndWebRTC(currentStream);
     }
+
   } catch (err) {
-    console.error("[RTC] Erreur caméra:", err);
-    updateTopBar("❌ Caméra refusée ou indisponible.");
+    console.warn("[RTC] 🎯 Échec avec deviceId exact, tentative sans contrainte…", err);
+
+    try {
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      currentStream = fallbackStream;
+      if (localVideo) localVideo.srcObject = fallbackStream;
+      updateTopBar("✅ Caméra fallback active.");
+
+      if (typeof window.initFaceVisible === "function") {
+        window.initFaceVisible(localVideo);
+      }
+      if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
+        window.connectSocketAndWebRTC(currentStream);
+      }
+
+    } catch (fallbackErr) {
+      console.error("[RTC] ❌ Erreur caméra (fallback échoué):", fallbackErr);
+      updateTopBar("❌ Caméra refusée ou indisponible.");
+    }
   }
 }
 
