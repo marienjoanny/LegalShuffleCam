@@ -46,9 +46,13 @@ io.on('connection', socket => {
     console.log('[MATCHMAKING] État de waitingClient :', waitingClient && waitingClient.id, 'connecté =', waitingClient && waitingClient.connected);
 
     if (waitingClient && waitingClient.connected !== false) {
+      if (waitingClient.id === socket.id) {
+        console.warn('[MATCHMAKING] ⚠ Tentative d’appariement avec soi-même ignorée :', socket.id);
+        return;
+      }
       console.log('[MATCHMAKING] Mise en relation entre', socket.id, 'et', waitingClient.id);
-      socket.emit("partner", waitingClient.id);
-      waitingClient.emit("partner", socket.id);
+      socket.emit("partner", { id: waitingClient.id });
+      waitingClient.emit("partner", { id: socket.id });
       waitingClient = null;
     } else {
       console.log('[MATCHMAKING] Aucun client en attente. Mise en file :', socket.id);
