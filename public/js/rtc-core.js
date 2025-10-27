@@ -1,43 +1,59 @@
-// LegalShuffleCam • rtc-core.js (version optimisée avec tampon ICE)
-// Gestion centrale des connexions WebRTC, des flux multimédias et des erreurs.
+// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets)
+// Gestion des connexions WebRTC, tampon ICE, et logs détaillés.
 
-// --- Configuration globale ---
+// --- Configuration et variables globales ---
 const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
+    { urls: 'stun:stun1.l.google.com:19302' }
   ]
 };
 
-// --- Variables globales ---
 let localStream = null;
 let peerConnection = null;
 let remoteId = null;
-let iceBuffer = [];
-let partnerSocketId = null;
 let socket = null;
-window.lastRTCPartnerId = null;
+let iceBuffer = [];          // Tampon pour les candidats ICE
+let partnerSocketId = null;  // ID du partenaire pour l'envoi des ICE
+let iceSentCount = 0;        // Compteur de candidats ICE envoyés (diagnostic)
+let iceBufferedCount = 0;    // Compteur de candidats ICE bufferisés (diagnostic)
 
-/**
- * Envoie un candidat ICE au partenaire.
- */
+// --- Fonctions de gestion des ICE ---
 function sendIce(candidate) {
+  if (!candidate) {
+    console.warn("[RTC-ICE] Candidat ICE invalide ignoré.");
+    return;
+  }
+
   if (partnerSocketId) {
     socket.emit("ice-candidate", { to: partnerSocketId, candidate });
+    iceSentCount++;
+    console.log(`[RTC-ICE] ✅ Candidat ICE envoyé à ${partnerSocketId} (total envoyé: ${iceSentCount})`);
   } else {
     iceBuffer.push(candidate);
+    iceBufferedCount++;
+    console.log(`[RTC-ICE] ⏳ Candidat ICE bufferisé (total bufferisé: ${iceBufferedCount}, tampon: ${iceBuffer.length})`);
   }
 }
 
-/**
- * Vide le tampon ICE si le partenaire est connu.
- */
 function flushIceBuffer() {
-  if (partnerSocketId && iceBuffer.length > 0) {
-    iceBuffer.forEach(c => socket.emit("ice-candidate", { to: partnerSocketId, candidate: c }));
-    iceBuffer = [];
+  if (!partnerSocketId) {
+    console.warn("[RTC-ICE] ⚠ Impossible de vider le tampon : partnerSocketId non défini.");
+    return;
   }
+
+  if (iceBuffer.length === 0) {
+    console.log("[RTC-ICE] 🗑 Tampon ICE déjà vide.");
+    return;
+  }
+
+  console.log(`[RTC-ICE] 📤 Vidage du tampon : ${iceBuffer.length} candidats vers ${partnerSocketId}`);
+  iceBuffer.forEach(candidate => {
+    socket.emit("ice-candidate", { to: partnerSocketId, candidate });
+    iceSentCount++;
+  });
+  iceBufferedCount = 0;
+  iceBuffer = [];
 }
 
 // --- Fonctions principales ---
@@ -81,22 +97,38 @@ function createPeerConnection(stream) {
 }
 
 async function startCall(partnerId) {
-  if (!partnerId) return;
-  if (!localStream) {
-    localStream = await initLocalStream();
-    const localVideo = document.getElementById("localVideo");
-    if (localVideo) localVideo.srcObject = localStream;
+  console.log(`[RTC] Démarrage de l'appel avec partnerId: ${partnerId}`);
+
+  if (!partnerId || typeof partnerId !== 'string') {
+    console.error("[RTC] ❌ partnerId invalide:", partnerId);
+    return;
   }
 
-  remoteId = partnerId;
-  partnerSocketId = partnerId;
-  flushIceBuffer();
-  window.lastRTCPartnerId = partnerId;
+  try {
+    if (!localStream) {
+      localStream = await initLocalStream();
+      document.getElementById("localVideo").srcObject = localStream;
+    }
 
-  peerConnection = createPeerConnection(localStream);
-  const offer = await peerConnection.createOffer();
-  await peerConnection.setLocalDescription(offer);
-  socket.emit("offer", { to: remoteId, sdp: offer });
+    remoteId = partnerId;
+    partnerSocketId = partnerId;
+    window.lastRTCPartnerId = partnerId;
+    console.log(`[RTC] 🔗 Partenaire défini : ${partnerSocketId}`);
+
+    if (iceBuffer.length > 0) {
+      flushIceBuffer();
+    } else {
+      console.log("[RTC-ICE] 🟢 Tampon ICE déjà vide, aucun candidat à envoyer.");
+    }
+
+    peerConnection = createPeerConnection(localStream);
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit("offer", { to: partnerId, sdp: offer });
+    console.log(`[RTC] 📤 Offre envoyée à ${partnerId}`);
+  } catch (err) {
+    console.error("[RTC] ❌ Erreur dans startCall:", err);
+  }
 }
 
 async function handleOffer(data) {
@@ -104,14 +136,16 @@ async function handleOffer(data) {
 
   if (!localStream) {
     localStream = await initLocalStream();
-    const localVideo = document.getElementById("localVideo");
-    if (localVideo) localVideo.srcObject = localStream;
+    document.getElementById("localVideo").srcObject = localStream;
   }
 
   remoteId = data.from;
   partnerSocketId = data.from;
-  flushIceBuffer();
   window.lastRTCPartnerId = data.from;
+
+  if (iceBuffer.length > 0) {
+    flushIceBuffer();
+  }
 
   peerConnection = createPeerConnection(localStream);
   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -147,29 +181,42 @@ function disconnectWebRTC() {
   window.dispatchEvent(new CustomEvent('rtcDisconnected'));
 }
 
-function initSocket() {
-  socket = io();
-  socket.on("connect", () => {
-    console.log(`[RTC] Connecté (id: ${socket.id})`);
-  });
-
-  socket.on("disconnect", (reason) => {
-    console.log(`[RTC] Déconnecté : ${reason}`);
-  });
-
-  socket.on("connect_error", (err) => {
-    console.error("[RTC] Erreur Socket.IO :", err);
-  });
-
+// --- Écouteur pour l'événement "partner" ---
+function setupPartnerListener() {
   socket.on("partner", (data) => {
-    if (data.id) {
-      partnerSocketId = data.id;
+    if (!data || !data.id) {
+      console.error("[RTC] ❌ Données partenaire invalides:", data);
+      return;
+    }
+
+    partnerSocketId = data.id;
+    console.log(`[RTC] 🤝 Partenaire reçu : ${partnerSocketId}`);
+
+    if (iceBuffer.length > 0) {
       flushIceBuffer();
+    } else {
+      console.log("[RTC-ICE] 🟢 Tampon vide, aucun candidat à envoyer.");
     }
   });
 }
 
-// --- Export des fonctions globales ---
+// --- Initialisation Socket.IO avec écouteurs ---
+function initSocket() {
+  socket = io();
+
+  socket.on("connect", () => {
+    console.log(`[SOCKET] ✅ Connecté (id: ${socket.id})`);
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log(`[SOCKET] ❌ Déconnecté (raison: ${reason})`);
+  });
+
+  setupPartnerListener();
+  // ... (autres écouteurs pour offer/answer/ice-candidate) ...
+}
+
+// --- Export des fonctions ---
 window.initLocalStream = initLocalStream;
 window.startCall = startCall;
 window.handleOffer = handleOffer;
