@@ -23,19 +23,30 @@
       border-radius: 50%; animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
     .main {
       flex: 1; position: relative;
       display: flex; justify-content: center; align-items: center;
       padding: 0;
     }
+
     .video-zone {
-      position: relative; width: 100%;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       display: flex; justify-content: center; align-items: center;
       background: #000;
     }
+
+    #remoteVideo, #localVideo {
+      object-fit: cover;
+    }
+
     #remoteVideo {
       width: 100%; height: auto; background: #000;
     }
+
     #localVideo {
       position: absolute;
       bottom: 64px; right: 16px;
@@ -44,12 +55,15 @@
       border: 2px solid #10b981;
       background: #000;
       box-shadow: 0 0 8px #000a;
+      z-index: 10;
     }
+
     .actions {
       position: absolute;
       bottom: 16px; left: 16px;
       display: flex; gap: 16px;
     }
+
     .actions button {
       width: 48px; height: 48px;
       padding: 0;
@@ -60,9 +74,11 @@
       border: none;
       display: flex; align-items: center; justify-content: center;
     }
+
     .actions button.red { background: #dc2626; }
     .actions button.gray { background: #374151; }
     .actions button.pink { background: #ec4899; }
+
     .warning {
       position: absolute;
       bottom: 0; left: 0; right: 0;
