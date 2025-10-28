@@ -1,4 +1,4 @@
-// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets + patch mobile-friendly + AV1 filter)
+// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets + patch mobile-friendly + AV1 filter + codec logs)
 
 const RTC_CONFIG = {
   iceServers: [
@@ -19,7 +19,9 @@ let iceBufferedCount = 0;
 // --- SDP Filter ---
 function filterSDP(sdp) {
   if (!sdp) return sdp;
-  return sdp.replace(/a=rtpmap:99 AV1\/90000[\s\S]*?a=fmtp:100 apt=99\r\n/g, '');
+  return sdp
+    .replace(/a=rtpmap:99 AV1\/90000[\s\S]*?a=fmtp:100 apt=99\r\n/g, '')
+    .replace(/a=rtpmap:39 AV1\/90000[\s\S]*?a=rtpmap:40 rtx\/90000\r\n/g, '');
 }
 
 // --- ICE ---
@@ -111,7 +113,7 @@ async function startCall(partnerId) {
 
     peerConnection = createPeerConnection(localStream);
     const offer = await peerConnection.createOffer();
-    offer.sdp = filterSDP(offer.sdp); // 🔧 filtre AV1
+    offer.sdp = filterSDP(offer.sdp);
     await peerConnection.setLocalDescription(offer);
     socket.emit("offer", { to: partnerId, sdp: offer });
     console.log(`[RTC] 📤 Offre envoyée à ${partnerId}`);
@@ -139,11 +141,11 @@ async function handleOffer(data) {
   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 
   peerConnection.getReceivers().forEach(receiver => {
-    console.log("[RTC] 📡 Receiver:", receiver.track.kind, receiver.track);
+    console.log("[RTC] 📡 Codec négocié (offer):", receiver.track.kind, receiver.track);
   });
 
   const answer = await peerConnection.createAnswer();
-  answer.sdp = filterSDP(answer.sdp); // 🔧 filtre AV1
+  answer.sdp = filterSDP(answer.sdp);
   await peerConnection.setLocalDescription(answer);
   socket.emit("answer", { to: remoteId, sdp: answer });
 }
@@ -152,6 +154,10 @@ async function handleOffer(data) {
 async function handleAnswer(data) {
   if (!data.sdp || !peerConnection) return;
   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+  peerConnection.getReceivers().forEach(receiver => {
+    console.log("[RTC] 📡 Codec négocié (answer):", receiver.track.kind, receiver.track);
+  });
 }
 
 // --- Réception d'un ICE ---
