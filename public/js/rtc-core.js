@@ -1,4 +1,4 @@
-// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets)
+// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets + patch mobile-friendly)
 // Gestion des connexions WebRTC, tampon ICE, et logs détaillés.
 
 // --- Configuration et variables globales ---
@@ -86,10 +86,19 @@ function createPeerConnection(stream) {
     if (event.candidate) sendIce(event.candidate);
   };
 
+  // ✅ Patch mobile-friendly pour affichage du flux distant
   pc.ontrack = (event) => {
     const remoteVideo = document.getElementById("remoteVideo");
-    if (remoteVideo && event.streams[0]) {
-      remoteVideo.srcObject = event.streams[0];
+    const stream = event.streams?.[0] || new MediaStream([event.track]);
+
+    if (remoteVideo && stream) {
+      remoteVideo.srcObject = stream;
+      remoteVideo.play().catch(err => {
+        console.warn("[RTC] ⚠ remoteVideo play() bloqué :", err);
+      });
+      console.log("[RTC] 🎥 Flux distant attaché à remoteVideo.");
+    } else {
+      console.warn("[RTC] ⚠ remoteVideo ou stream manquant dans ontrack.");
     }
   };
 
@@ -149,6 +158,12 @@ async function handleOffer(data) {
 
   peerConnection = createPeerConnection(localStream);
   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+  // 🔍 Diagnostic : log des receivers
+  peerConnection.getReceivers().forEach(receiver => {
+    console.log("[RTC] 📡 Receiver track:", receiver.track.kind, receiver.track);
+  });
+
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
   socket.emit("answer", { to: remoteId, sdp: answer });
