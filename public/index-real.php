@@ -112,5 +112,20 @@
 ">
 ▶️ Débloquer lecture
 </button>
+<button onclick="document.getElementById('remoteVideo').play()" style="
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 0 6px #000a;
+">
+▶️ Débloquer lecture
+</button>
 </body>
 </html>
