@@ -34,7 +34,11 @@
       display: flex; justify-content: center; align-items: center;
     }
     #remoteVideo {
-      width: 100%; max-width: 560px; height: auto; background: #000;
+      width: 100%; max-width: 560px; height: auto;
+      background: #000;
+      z-index: 1;
+      visibility: visible;
+      opacity: 1;
     }
     #localVideo {
       position: absolute; bottom: 16px; right: 16px;
@@ -63,6 +67,19 @@
     select.yellow { background: #fbbf24; color: #111827; }
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
+    }
+    #unlockVideoBtn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 9999;
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 0 6px #000a;
     }
   </style>
 </head>
@@ -97,35 +114,7 @@
   <script src="/js/face-visible.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/js/listener.js" defer></script>
-<button onclick="document.getElementById('remoteVideo').play()" style="
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 9999;
-  background: #10b981;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  box-shadow: 0 0 6px #000a;
-">
-▶️ Débloquer lecture
-</button>
-<button onclick="document.getElementById('remoteVideo').play()" style="
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 9999;
-  background: #10b981;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  box-shadow: 0 0 6px #000a;
-">
-▶️ Débloquer lecture
-</button>
+
+  <button id="unlockVideoBtn" onclick="document.getElementById('remoteVideo').play()">▶️ Débloquer lecture</button>
 </body>
 </html>
