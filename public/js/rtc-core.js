@@ -1,4 +1,4 @@
-// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets + patch mobile-friendly)
+// LegalShuffleCam • rtc-core.js (version finale avec diagnostics ICE complets + patch mobile-friendly + AV1 filter)
 
 const RTC_CONFIG = {
   iceServers: [
@@ -15,6 +15,12 @@ let iceBuffer = [];
 let partnerSocketId = null;
 let iceSentCount = 0;
 let iceBufferedCount = 0;
+
+// --- SDP Filter ---
+function filterSDP(sdp) {
+  if (!sdp) return sdp;
+  return sdp.replace(/a=rtpmap:99 AV1\/90000[\s\S]*?a=fmtp:100 apt=99\r\n/g, '');
+}
 
 // --- ICE ---
 function sendIce(candidate) {
@@ -105,6 +111,7 @@ async function startCall(partnerId) {
 
     peerConnection = createPeerConnection(localStream);
     const offer = await peerConnection.createOffer();
+    offer.sdp = filterSDP(offer.sdp); // 🔧 filtre AV1
     await peerConnection.setLocalDescription(offer);
     socket.emit("offer", { to: partnerId, sdp: offer });
     console.log(`[RTC] 📤 Offre envoyée à ${partnerId}`);
@@ -136,6 +143,7 @@ async function handleOffer(data) {
   });
 
   const answer = await peerConnection.createAnswer();
+  answer.sdp = filterSDP(answer.sdp); // 🔧 filtre AV1
   await peerConnection.setLocalDescription(answer);
   socket.emit("answer", { to: remoteId, sdp: answer });
 }
