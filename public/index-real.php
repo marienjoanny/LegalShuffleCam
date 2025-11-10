@@ -47,21 +47,33 @@
       padding: 16px; gap: 16px;
     }
     .video-zone {
-      position: relative; background: #000;
-      border-radius: 14px; overflow: hidden;
-      display: flex; justify-content: center; align-items: center;
+      width: 100%;
+      max-width: 100%;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      background: #000;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     #remoteVideo {
-      width: 100%; max-width: 560px; height: auto;
-      background: #000;
-      z-index: 1;
-      visibility: visible;
-      opacity: 1;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      object-fit: cover;
+      border-radius: 12px;
     }
     #localVideo {
-      position: absolute; bottom: 16px; right: 16px;
-      width: 320px; height: 240px; border-radius: 10px;
-      background: #000; box-shadow: 0 0 8px #000a;
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 120px;
+      height: 90px;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 0 6px #000a;
     }
     .warning {
       text-align: center; font-size: 13px;
@@ -120,12 +132,12 @@
     <div class="warning">⚠ Votre IP est visible et loguée. Visage visible et navigation privée requis !</div>
 
     <div class="actions">
-      <button id="btnConsent" class="green">👍</button>
-      <button id="btnVibrate" class="purple">🔔</button>
-      <button id="btnReport" class="red">🚩</button>
+      <button id="btnConsent" class="green">👍 Consentement</button>
+      <button id="btnVibrate" class="purple">🔔 Vibre</button>
+      <button id="btnReport" class="red">🚩 Signaler</button>
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
-      <button id="btnNext" class="blue">➡️</button>
+      <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
     </div>
   </div>
 
