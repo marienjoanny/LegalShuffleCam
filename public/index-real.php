@@ -11,6 +11,9 @@
       font-family: system-ui, sans-serif;
       display: flex; flex-direction: column;
     }
+    video {
+      object-fit: cover;
+    }
     .top-bar {
       padding: 12px; background: #111827;
       display: flex; flex-direction: column;
@@ -53,7 +56,7 @@
       position: relative;
       background: #000;
       border-radius: 14px;
-      overflow: hidden;
+      /* overflow: hidden; ← à commenter si besoin */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -62,15 +65,14 @@
       width: 100%;
       height: auto;
       max-width: 100%;
-      object-fit: cover;
       border-radius: 12px;
     }
     #localVideo {
       position: absolute;
       bottom: 12px;
       right: 12px;
-      width: 120px;
-      height: 90px;
+      width: 240px;
+      height: 180px;
       border-radius: 8px;
       background: #000;
       box-shadow: 0 0 6px #000a;
