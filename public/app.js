@@ -163,7 +163,7 @@ window.connectSocketAndWebRTC = function (stream, config) {
     }
   };
 
-  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream);
+  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
 
   socket.on("partner-info", ({ remoteId, ip }) => {
     capturePartnerSnapshot(remoteId, ip);
