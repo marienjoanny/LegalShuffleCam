@@ -13,9 +13,22 @@
     }
     .top-bar {
       padding: 12px; background: #111827;
-      text-align: center; font-weight: 600;
-      font-size: 16px; border-bottom: 1px solid #1f2937;
-      display: flex; align-items: center; justify-content: center; gap: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #1f2937;
+    }
+    .tabs {
+      display: flex; gap: 12px;
+    }
+    .tab {
+      padding: 8px 16px;
+      background: #1f2937;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: #2563eb;
+      color: #fff;
     }
     .loader-ring {
       width: 20px; height: 20px;
@@ -64,6 +77,8 @@
     button.red { background: #dc2626; }
     button.green { background: #10b981; }
     button.blue { background: #2563eb; }
+    button.yellow { background: #fbbf24; color: #111827; }
+    button.purple { background: #7c3aed; }
     select.yellow { background: #fbbf24; color: #111827; }
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
@@ -86,6 +101,10 @@
 <body>
   <div class="top-bar">
     <div class="loader-ring" id="loaderRing"></div>
+    <div class="tabs">
+      <div class="tab active" id="tabCam">CAM</div>
+      <div class="tab" id="tabGames">JEUX</div>
+    </div>
     <span id="topBar">Chargement de la détection de visage...</span>
   </div>
 
@@ -95,14 +114,16 @@
       <video id="localVideo" autoplay muted playsinline></video>
     </div>
 
-    <div class="hint">🔒 Visage visible et navigation privée requis.</div>
-    <div class="warning">⚠ Votre IP est visible et loguée. Soyez respectueux !</div>
+    <div class="warning">⚠ Votre IP est visible et loguée. Visage visible et navigation privée requis !</div>
 
     <div class="actions">
+      <button id="btnConsent" class="yellow">🔓 Consentement</button>
+      <button id="btnVibrate" class="purple">🔔 Vibre</button>
       <button id="btnReport" class="red">Signaler</button>
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
       <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
+      <button id="btnGames" class="blue">🎮 Jeux</button>
     </div>
   </div>
 
