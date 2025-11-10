@@ -63,10 +63,6 @@
       width: 320px; height: 240px; border-radius: 10px;
       background: #000; box-shadow: 0 0 8px #000a;
     }
-    .hint {
-      text-align: center; font-size: 14px;
-      color: #10b981; font-weight: 500;
-    }
     .warning {
       text-align: center; font-size: 13px;
       color: #ef4444; font-weight: 500;
@@ -88,18 +84,18 @@
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
     }
-    #unlockVideoBtn {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      z-index: 9999;
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      box-shadow: 0 0 6px #000a;
+    footer {
+      background: #111827;
+      border-top: 1px solid #1f2937;
+      padding: 16px;
+      text-align: center;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    footer a {
+      color: #fbbf24;
+      text-decoration: none;
+      margin: 0 6px;
     }
   </style>
 </head>
@@ -133,6 +129,27 @@
     </div>
   </div>
 
+  <footer>
+    <p>
+      <a href="/accessibilite.html">Accessibilité</a> •
+      <a href="/cgu.html">CGU</a> •
+      <a href="/contact.html">Contact</a> •
+      <a href="/confidentialite.html">Confidentialité</a> •
+      <a href="/cookies.html">Cookies</a> •
+      <a href="/mentions-legales.html">Mentions légales</a> •
+      <a href="/moderation.html">Modération</a> •
+      <a href="/reglement.html">Règlement</a> •
+      <a href="/sitemap.html">Plan du site</a>
+    </p>
+    <p style="margin-top:8px;">
+      🔗 <a href="https://github.com/marienjoanny/LegalShuffleCam/tree/main/public" target="_blank">Voir le dépôt GitHub</a>
+    </p>
+    <p style="font-size:11px; margin-top:8px;">
+      IP : <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?> •
+      UA : <?php echo $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'; ?>
+    </p>
+  </footer>
+
   <!-- Librairies externes -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
@@ -141,7 +158,5 @@
   <script src="/js/face-visible.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/js/listener.js" defer></script>
-
-  <button id="unlockVideoBtn" onclick="document.getElementById('remoteVideo').play()">▶️ Débloquer lecture</button>
 </body>
 </html>
