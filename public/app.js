@@ -8,14 +8,13 @@ const btnSpeaker = document.getElementById('btnMic');
 const btnNext = document.getElementById('btnNext');
 const cameraSelect = document.getElementById('cameraSelect');
 const reportSelect = document.getElementById('reportTarget');
-const reportBtn = document.getElementById('reportBtn');
+const reportBtn = document.getElementById('btnReport');
 
 window.faceVisible = false;
 window.trackerInitialized = false;
 
-const recentPartners = []; // Historique des interlocuteurs
+const recentPartners = [];
 
-// 🔐 Configuration TURN uniquement
 const rtcConfig = {
   iceServers: [
     {
@@ -130,7 +129,6 @@ async function startCamera(deviceId) {
   }
 }
 
-// 🧠 Capture interlocuteur pour signalement
 function capturePartnerSnapshot(remoteId, ip) {
   const canvas = document.createElement("canvas");
   canvas.width = remoteVideo.videoWidth;
@@ -149,7 +147,6 @@ function capturePartnerSnapshot(remoteId, ip) {
   updateReportList();
 }
 
-// 🎯 Ajout du listener TURN/STUN dans la fonction WebRTC
 window.connectSocketAndWebRTC = function (stream, config) {
   const peerConnection = new RTCPeerConnection(config);
 
@@ -166,9 +163,8 @@ window.connectSocketAndWebRTC = function (stream, config) {
     }
   };
 
-  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream);
 
-  // Exemple : capture partenaire après réception ID/IP
   socket.on("partner-info", ({ remoteId, ip }) => {
     capturePartnerSnapshot(remoteId, ip);
   });
@@ -176,7 +172,6 @@ window.connectSocketAndWebRTC = function (stream, config) {
   // Ajoute ici ton signaling (offer/answer via socket)
 };
 
-// 🧾 Mise à jour de la liste de signalement
 function updateReportList() {
   if (!reportSelect) return;
   reportSelect.innerHTML = '<option disabled selected>Choisir un interlocuteur</option>';
@@ -185,7 +180,6 @@ function updateReportList() {
   });
 }
 
-// 🚨 Signalement
 if (reportBtn) {
   reportBtn.addEventListener("click", () => {
     const index = reportSelect.value;
