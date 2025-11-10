@@ -1,5 +1,4 @@
-// LegalShuffleCam • app.js (version optimisée avec fallback caméra + TURN coturn)
-// Gère la caméra, l’audio, la détection faciale et la logique de "Next".
+// LegalShuffleCam • app.js (version enrichie avec signalement rétroactif + TURN coturn)
 
 let currentStream = null;
 const topBar = document.getElementById('topBar');
@@ -8,20 +7,24 @@ const localVideo = document.getElementById('localVideo');
 const btnSpeaker = document.getElementById('btnMic');
 const btnNext = document.getElementById('btnNext');
 const cameraSelect = document.getElementById('cameraSelect');
+const reportSelect = document.getElementById('reportTarget');
+const reportBtn = document.getElementById('reportBtn');
 
 window.faceVisible = false;
 window.trackerInitialized = false;
 
-// 🔐 Configuration TURN/STUN
+const recentPartners = []; // Historique des interlocuteurs
+
+// 🔐 Configuration TURN uniquement
 const rtcConfig = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
     {
       urls: 'turn:legalshufflecam.ovh:3478?transport=udp',
       username: 'user',
       credential: '6945ea1ef73a87ff45116ae305ae019c36945d4d455a0f5bf44f24ad9efdb82c'
     }
-  ]
+  ],
+  sdpSemantics: 'unified-plan'
 };
 
 function updateTopBar(message) {
@@ -127,6 +130,25 @@ async function startCamera(deviceId) {
   }
 }
 
+// 🧠 Capture interlocuteur pour signalement
+function capturePartnerSnapshot(remoteId, ip) {
+  const canvas = document.createElement("canvas");
+  canvas.width = remoteVideo.videoWidth;
+  canvas.height = remoteVideo.videoHeight;
+  canvas.getContext("2d").drawImage(remoteVideo, 0, 0);
+  const imageData = canvas.toDataURL("image/jpeg");
+
+  recentPartners.unshift({
+    remoteId,
+    ip,
+    image: imageData,
+    timestamp: new Date().toISOString()
+  });
+
+  if (recentPartners.length > 5) recentPartners.pop();
+  updateReportList();
+}
+
 // 🎯 Ajout du listener TURN/STUN dans la fonction WebRTC
 window.connectSocketAndWebRTC = function (stream, config) {
   const peerConnection = new RTCPeerConnection(config);
@@ -145,8 +167,46 @@ window.connectSocketAndWebRTC = function (stream, config) {
   };
 
   stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+  // Exemple : capture partenaire après réception ID/IP
+  socket.on("partner-info", ({ remoteId, ip }) => {
+    capturePartnerSnapshot(remoteId, ip);
+  });
+
   // Ajoute ici ton signaling (offer/answer via socket)
 };
+
+// 🧾 Mise à jour de la liste de signalement
+function updateReportList() {
+  if (!reportSelect) return;
+  reportSelect.innerHTML = '<option disabled selected>Choisir un interlocuteur</option>';
+  recentPartners.forEach((p, i) => {
+    reportSelect.innerHTML += `<option value="${i}">#${i + 1} • ${p.remoteId} • ${new Date(p.timestamp).toLocaleTimeString()}</option>`;
+  });
+}
+
+// 🚨 Signalement
+if (reportBtn) {
+  reportBtn.addEventListener("click", () => {
+    const index = reportSelect.value;
+    const partner = recentPartners[index];
+    const reason = prompt("Motif du signalement :");
+
+    if (!reason || !partner) return;
+
+    fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...partner,
+        reason,
+        reporterId: socket.id
+      })
+    }).then(res => {
+      alert(res.ok ? "✅ Signalement transmis" : "❌ Échec du signalement");
+    });
+  });
+}
 
 if (cameraSelect) {
   cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
