@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (version enrichie avec signalement rétroactif + TURN coturn)
+// LegalShuffleCam • app.js (version enrichie avec signalement rétroactif + TURN coturn + alertes debug)
 
 let currentStream = null;
 const topBar = document.getElementById('topBar');
@@ -40,7 +40,6 @@ function updateNextButtonState() {
 }
 
 function handleNextClick() {
-  console.log("[RTC] Bouton 'Next' déclenché.");
   if (typeof window.disconnectWebRTC === 'function') {
     window.disconnectWebRTC();
   }
@@ -73,7 +72,6 @@ async function listCameras() {
       updateTopBar("❌ Aucune caméra détectée.");
     }
   } catch (err) {
-    console.error("[RTC] Erreur détection caméra:", err);
     updateTopBar("❌ Erreur caméra. Vérifiez les permissions.");
   }
 }
@@ -102,8 +100,6 @@ async function startCamera(deviceId) {
     }
 
   } catch (err) {
-    console.warn("[RTC] 🎯 Échec avec deviceId exact, tentative sans contrainte…", err);
-
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -123,7 +119,6 @@ async function startCamera(deviceId) {
       }
 
     } catch (fallbackErr) {
-      console.error("[RTC] ❌ Erreur caméra (fallback échoué):", fallbackErr);
       updateTopBar("❌ Caméra refusée ou indisponible.");
     }
   }
@@ -169,7 +164,7 @@ window.connectSocketAndWebRTC = function (stream, config) {
     capturePartnerSnapshot(remoteId, ip);
   });
 
-  // Ajoute ici ton signaling (offer/answer via socket)
+  // Signaling offer/answer à ajouter ici
 };
 
 function updateReportList() {
@@ -186,7 +181,20 @@ if (reportBtn) {
     const partner = recentPartners[index];
     const reason = prompt("Motif du signalement :");
 
-    if (!reason || !partner) return;
+    if (!reason) {
+      alert("❌ Aucun motif saisi.");
+      return;
+    }
+
+    if (!partner) {
+      alert("❌ Aucun partenaire sélectionné.");
+      return;
+    }
+
+    alert("🚀 Envoi du signalement...\n" +
+          "ID signalé : " + partner.remoteId + "\n" +
+          "IP : " + partner.ip + "\n" +
+          "Motif : " + reason);
 
     fetch("/api/report", {
       method: "POST",
@@ -197,7 +205,9 @@ if (reportBtn) {
         reporterId: socket.id
       })
     }).then(res => {
-      alert(res.ok ? "✅ Signalement transmis" : "❌ Échec du signalement");
+      alert(res.ok ? "✅ Signalement transmis au serveur" : "❌ Échec du signalement");
+    }).catch(err => {
+      alert("❌ Erreur réseau : " + err.message);
     });
   });
 }
