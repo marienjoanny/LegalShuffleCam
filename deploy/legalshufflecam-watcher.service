@@ -1,0 +1,11 @@
+[Unit]
+Description=Watcher for legalshufflecam server.js
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/watch-server-reload.sh
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

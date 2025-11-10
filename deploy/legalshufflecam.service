@@ -1,0 +1,13 @@
+[Unit]
+Description=LegalShuffleCam Node Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /var/www/legalshufflecam/server.js
+WorkingDirectory=/var/www/legalshufflecam
+Restart=always
+User=root
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
