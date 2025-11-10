@@ -130,7 +130,6 @@
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
       <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
-      <button id="btnGames" class="blue">🎮 Jeux</button>
     </div>
   </div>
 
