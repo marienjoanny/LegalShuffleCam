@@ -13,8 +13,12 @@
     }
     .top-bar {
       padding: 12px; background: #111827;
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; flex-direction: column;
       border-bottom: 1px solid #1f2937;
+    }
+    .tab-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
     }
     .tabs {
       display: flex; gap: 12px;
@@ -25,6 +29,7 @@
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
+      color: #e6e8ee;
     }
     .tab.active {
       background: #2563eb;
@@ -100,10 +105,12 @@
 </head>
 <body>
   <div class="top-bar">
-    <div class="loader-ring" id="loaderRing"></div>
-    <div class="tabs">
-      <div class="tab active" id="tabCam">CAM</div>
-      <div class="tab" id="tabGames">JEUX</div>
+    <div class="tab-bar">
+      <div class="tabs">
+        <div class="tab active" id="tabCam">CAM</div>
+        <div class="tab" id="tabGames">JEUX</div>
+      </div>
+      <div class="loader-ring" id="loaderRing"></div>
     </div>
     <span id="topBar">Chargement de la détection de visage...</span>
   </div>
