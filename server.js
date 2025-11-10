@@ -91,9 +91,23 @@ io.on('connection', socket => {
         console.warn('[MATCHMAKING] ⚠ Tentative d’appariement avec soi-même ignorée :', socket.id);
         return;
       }
+
       console.log('[MATCHMAKING] Mise en relation entre', socket.id, 'et', waitingClient.id);
+
+      // 🔁 Envoi des infos à chacun pour capture côté client
+      socket.emit("partner-info", {
+        remoteId: waitingClient.id,
+        ip: waitingClient.handshake.address
+      });
+
+      waitingClient.emit("partner-info", {
+        remoteId: socket.id,
+        ip: socket.handshake.address
+      });
+
       socket.emit("partner", { id: waitingClient.id });
       waitingClient.emit("partner", { id: socket.id });
+
       waitingClient = null;
     } else {
       console.log('[MATCHMAKING] Aucun client en attente. Mise en file :', socket.id);
