@@ -2,9 +2,13 @@ const fs = require('fs');
 const https = require('https');
 const express = require('express');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
+
+// Middleware JSON
+app.use(express.json());
 
 // Sert les fichiers statiques
 app.use(express.static('public'));
@@ -12,6 +16,44 @@ app.use('/socket.io', express.static(__dirname + '/node_modules/socket.io-client
 
 // Endpoint de santé
 app.get('/healthz', (_req, res) => res.type('text/plain').send('OK'));
+
+// 📁 Dossier de stockage des signalements
+const REPORTS_DIR = path.join(__dirname, 'api', 'logs', 'reports');
+if (!fs.existsSync(REPORTS_DIR)) {
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+}
+
+// 🛡️ Route API pour recevoir les signalements
+app.post('/api/report', (req, res) => {
+  const report = req.body;
+
+  if (!report || !report.remoteId || !report.reason || !report.image) {
+    console.warn("❌ Signalement incomplet :", report);
+    return res.status(400).send({ error: 'Signalement incomplet' });
+  }
+
+  const enrichedReport = {
+    timestamp: report.timestamp || new Date().toISOString(),
+    reporterId: report.reporterId || 'inconnu',
+    reportedId: report.remoteId,
+    ip: report.ip || 'N/A',
+    reason: report.reason,
+    sessionId: report.sessionId || null,
+    imageBase64: report.image
+  };
+
+  const filename = `report-${Date.now()}.json`;
+  const filepath = path.join(REPORTS_DIR, filename);
+
+  fs.writeFile(filepath, JSON.stringify(enrichedReport, null, 2), 'utf8', (err) => {
+    if (err) {
+      console.error("❌ Erreur écriture signalement :", err);
+      return res.sendStatus(500);
+    }
+    console.log("✅ Signalement enregistré :", filename);
+    res.sendStatus(200);
+  });
+});
 
 // Certificats SSL
 const options = {
@@ -36,7 +78,6 @@ let waitingClient = null;
 io.on('connection', socket => {
   console.log('[LSC] Nouveau client connecté :', socket.id);
 
-  // 🔍 Traçage global des événements
   socket.onAny((event, ...args) => {
     console.log(`[TRACE] Événement reçu : ${event}`, args);
   });
