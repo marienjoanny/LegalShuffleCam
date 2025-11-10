@@ -124,9 +124,9 @@
     <div class="warning">⚠ Votre IP est visible et loguée. Visage visible et navigation privée requis !</div>
 
     <div class="actions">
-      <button id="btnConsent" class="yellow">🔓 Consentement</button>
+      <button id="btnConsent" class="green">👍 Consentement</button>
       <button id="btnVibrate" class="purple">🔔 Vibre</button>
-      <button id="btnReport" class="red">Signaler</button>
+      <button id="btnReport" class="red">🚩 Signaler</button>
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
       <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
