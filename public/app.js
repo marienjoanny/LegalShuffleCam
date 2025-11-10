@@ -23,6 +23,7 @@ const rtcConfig = {
       credential: '6945ea1ef73a87ff45116ae305ae019c36945d4d455a0f5bf44f24ad9efdb82c'
     }
   ],
+  iceTransportPolicy: 'all',
   sdpSemantics: 'unified-plan'
 };
 
@@ -156,6 +157,19 @@ window.connectSocketAndWebRTC = function (stream, config) {
         updateTopBar("📡 Connexion directe");
       }
     }
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    alert("🔄 État WebRTC : " + peerConnection.connectionState);
+  };
+
+  peerConnection.oniceconnectionstatechange = () => {
+    alert("❄️ ICE state : " + peerConnection.iceConnectionState);
+  };
+
+  peerConnection.ontrack = (event) => {
+    alert("📺 Flux reçu !");
+    remoteVideo.srcObject = event.streams[0];
   };
 
   stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
