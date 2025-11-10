@@ -10,9 +10,13 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    {
+      urls: 'turn:legalshufflecam.ovh:3478?transport=udp',
+      username: 'user',
+      credential: '6945ea1ef73a87ff45116ae305ae019c36945d4d455a0f5bf44f24ad9efdb82c'
+    }
   ],
-  // Force le plan unifié pour une meilleure compatibilité
   sdpSemantics: 'unified-plan'
 };
 
