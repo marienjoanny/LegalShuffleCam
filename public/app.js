@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (version optimisée avec fallback caméra)
+// LegalShuffleCam • app.js (version optimisée avec fallback caméra + TURN coturn)
 // Gère la caméra, l’audio, la détection faciale et la logique de "Next".
 
 let currentStream = null;
@@ -11,6 +11,18 @@ const cameraSelect = document.getElementById('cameraSelect');
 
 window.faceVisible = false;
 window.trackerInitialized = false;
+
+// 🔐 Configuration TURN/STUN
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    {
+      urls: 'turn:legalshufflecam.ovh:3478?transport=udp',
+      username: 'user',
+      credential: '6945ea1ef73a87ff45116ae305ae019c36945d4d455a0f5bf44f24ad9efdb82c'
+    }
+  ]
+};
 
 function updateTopBar(message) {
   if (topBar) topBar.textContent = message;
@@ -70,7 +82,6 @@ async function startCamera(deviceId) {
       currentStream.getTracks().forEach(track => track.stop());
     }
 
-    // Tentative stricte avec deviceId exact
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId } },
       audio: true
@@ -83,8 +94,9 @@ async function startCamera(deviceId) {
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
     }
+
     if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
-      window.connectSocketAndWebRTC(currentStream);
+      window.connectSocketAndWebRTC(currentStream, rtcConfig);
     }
 
   } catch (err) {
@@ -103,8 +115,9 @@ async function startCamera(deviceId) {
       if (typeof window.initFaceVisible === "function") {
         window.initFaceVisible(localVideo);
       }
+
       if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
-        window.connectSocketAndWebRTC(currentStream);
+        window.connectSocketAndWebRTC(currentStream, rtcConfig);
       }
 
     } catch (fallbackErr) {
@@ -113,6 +126,27 @@ async function startCamera(deviceId) {
     }
   }
 }
+
+// 🎯 Ajout du listener TURN/STUN dans la fonction WebRTC
+window.connectSocketAndWebRTC = function (stream, config) {
+  const peerConnection = new RTCPeerConnection(config);
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      const cand = event.candidate.candidate;
+      if (cand.includes('typ relay')) {
+        updateTopBar("🔐 Connexion sécurisée via TURN");
+      } else if (cand.includes('typ srflx')) {
+        updateTopBar("🌐 Connexion STUN");
+      } else if (cand.includes('typ host')) {
+        updateTopBar("📡 Connexion directe");
+      }
+    }
+  };
+
+  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+  // Ajoute ici ton signaling (offer/answer via socket)
+};
 
 if (cameraSelect) {
   cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
