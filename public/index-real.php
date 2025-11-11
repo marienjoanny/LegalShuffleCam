@@ -102,6 +102,19 @@
       border-radius: 12px;
       padding: 12px 16px;
     }
+.red-select {
+  background: #dc2626;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: none;
+  margin-top: 8px;
+}
+.red-select.visible {
+  display: block;
+}
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
     }

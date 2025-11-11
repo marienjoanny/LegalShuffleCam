@@ -255,3 +255,42 @@ window.addEventListener('load', () => {
 });
 
 updateNextButtonState();
+// 🚩 Signalement fusionné avec menu déroulant
+if (reportBtn && reportSelect) {
+  reportBtn.addEventListener("click", () => {
+    reportSelect.classList.toggle("visible");
+  });
+
+  reportSelect.addEventListener("change", () => {
+    const index = reportSelect.value;
+    const partner = recentPartners[index];
+    const reason = prompt("Motif du signalement :");
+
+    if (!reason || !partner) {
+      alert("❌ Signalement annulé.");
+      return;
+    }
+
+    alert("🚀 Envoi du signalement...\n" +
+          "ID signalé : " + partner.remoteId + "\n" +
+          "IP : " + partner.ip + "\n" +
+          "Motif : " + reason);
+
+    fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...partner,
+        reason,
+        reporterId: socket.id
+      })
+    }).then(res => {
+      alert(res.ok ? "✅ Signalement transmis au serveur" : "❌ Échec du signalement");
+    }).catch(err => {
+      alert("❌ Erreur réseau : " + err.message);
+    });
+
+    reportSelect.classList.remove("visible");
+    reportSelect.selectedIndex = 0;
+  });
+}
