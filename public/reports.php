@@ -1,5 +1,5 @@
 <?php
-$reportDir = __DIR__ . '/api/logs/reports';
+$reportDir = '/var/www/legalshufflecam/api/logs/reports';
 $reports = [];
 
 foreach (glob("$reportDir/*.json") as $file) {
