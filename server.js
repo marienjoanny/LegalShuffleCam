@@ -1,5 +1,5 @@
 const fs = require('fs');
-const https = require('https');
+const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -12,7 +12,7 @@ app.use(express.json());
 
 // Sert les fichiers statiques
 app.use(express.static('public'));
-app.use('/socket.io', express.static(__dirname + '/node_modules/socket.io-client/dist'));
+app.use('/socket.io', express.static(path.join(__dirname, 'node_modules', 'socket.io-client', 'dist')));
 
 // Endpoint de santé
 app.get('/healthz', (_req, res) => res.type('text/plain').send('OK'));
@@ -36,7 +36,7 @@ app.post('/api/report', (req, res) => {
     timestamp: report.timestamp || new Date().toISOString(),
     reporterId: report.reporterId || 'inconnu',
     reportedId: report.remoteId,
-    ip: report.ip || 'N/A',
+    ip: report.ip || req.ip || 'N/A',
     reason: report.reason,
     sessionId: report.sessionId || null,
     imageBase64: report.image
@@ -55,14 +55,8 @@ app.post('/api/report', (req, res) => {
   });
 });
 
-// Certificats SSL
-const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/legalshufflecam.ovh/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/legalshufflecam.ovh/fullchain.pem')
-};
-
-// Serveur HTTPS
-const server = https.createServer(options, app);
+// Serveur HTTP
+const server = http.createServer(app);
 
 // Initialisation Socket.IO
 const io = new Server(server, {
@@ -74,7 +68,7 @@ const io = new Server(server, {
 
 let waitingClient = null;
 
-// Gestion des connexions
+// 🎮 Gestion des connexions Socket.IO
 io.on('connection', socket => {
   console.log('[LSC] Nouveau client connecté :', socket.id);
 
@@ -84,7 +78,7 @@ io.on('connection', socket => {
 
   socket.on('ready-for-match', () => {
     console.log('[MATCHMAKING] Client prêt :', socket.id);
-    console.log('[MATCHMAKING] État de waitingClient :', waitingClient && waitingClient.id, 'connecté =', waitingClient && waitingClient.connected);
+    console.log('[MATCHMAKING] État de waitingClient :', waitingClient?.id, 'connecté =', waitingClient?.connected);
 
     if (waitingClient && waitingClient.connected !== false) {
       if (waitingClient.id === socket.id) {
@@ -94,7 +88,6 @@ io.on('connection', socket => {
 
       console.log('[MATCHMAKING] Mise en relation entre', socket.id, 'et', waitingClient.id);
 
-      // 🔁 Envoi des infos à chacun pour capture côté client
       socket.emit("partner-info", {
         remoteId: waitingClient.id,
         ip: waitingClient.handshake.address
@@ -149,7 +142,7 @@ io.on('connection', socket => {
   });
 });
 
-// Démarrage du serveur
+// 🚀 Démarrage du serveur
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[LSC] Serveur HTTPS démarré sur le port ${PORT}`);
+  console.log(`[LSC] Serveur HTTP démarré sur le port ${PORT}`);
 });
