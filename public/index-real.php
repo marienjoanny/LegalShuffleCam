@@ -146,25 +146,26 @@
   </div>
 
   <footer>
-    <p>
-      <a href="/accessibilite.html">Accessibilité</a> •
-      <a href="/cgu.html">CGU</a> •
-      <a href="/contact.html">Contact</a> •
-      <a href="/confidentialite.html">Confidentialité</a> •
-      <a href="/cookies.html">Cookies</a> •
-      <a href="/mentions-legales.html">Mentions légales</a> •
-      <a href="/moderation.html">Modération</a> •
-      <a href="/reglement.html">Règlement</a> •
-      <a href="/sitemap.html">Plan du site</a>
-    </p>
-    <p style="margin-top:8px;">
-      🔗 <a href="https://github.com/marienjoanny/LegalShuffleCam/tree/main/public" target="_blank">Voir le dépôt GitHub</a>
-    </p>
-    <p style="font-size:11px; margin-top:8px;">
-      IP : <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?> •
-      UA : <?php echo $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'; ?>
-    </p>
-  </footer>
+  <p>
+    <a href="/accessibilite.html">Accessibilité</a> •
+    <a href="/cgu.html">CGU</a> •
+    <a href="/contact.html">Contact</a> •
+    <a href="/confidentialite.html">Confidentialité</a> •
+    <a href="/cookies.html">Cookies</a> •
+    <a href="/mentions-legales.html">Mentions légales</a> •
+    <a href="/moderation.html">Modération</a> •
+    <a href="/reglement.html">Règlement</a> •
+    <a href="/sitemap.html">Plan du site</a> •
+    <a href="/reports.php">Signalements</a>
+  </p>
+  <p style="margin-top:8px;">
+    🔗 <a href="https://github.com/marienjoanny/LegalShuffleCam/tree/main/public" target="_blank">Voir le dépôt GitHub</a>
+  </p>
+  <p style="font-size:11px; margin-top:8px;">
+    IP : <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?> •
+    UA : <?php echo $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'; ?>
+  </p>
+</footer>
 
   <!-- Librairies externes -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
