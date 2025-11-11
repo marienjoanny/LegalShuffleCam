@@ -1,32 +1,54 @@
-# === Fichiers sensibles ===
+# 🔐 Sécurité et configuration
 .env
-config.php
-
-# === Logs et fichiers temporaires ===
-*.log
+*.pem
+*.key
+*.crt
+*.conf
 *.bak
-*.tmp
-*.swp
 
-# === Sauvegardes horodatées ===
-index-real.html.bak_*
-index.php.bak_*
-
-# === Répertoires spécifiques à la prod ===
-avs/
-avs-debug.log
-
-# === Node.js (si utilisé) ===
+# 📦 Dépendances
 node_modules/
-npm-debug.log
-yarn-error.log
+vendor/
 
-# === Fichiers système ===
+# 🗃️ Logs et rapports
+logs/
+*.log
+api/logs/reports/
+*.json
+
+# 🧪 Tests et snapshots
+*.test.js
+*.snapshot.*
+*.diff
+*.patch.*
+
+# ⚙️ Systèmes et IDE
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.swp
 
-# === Autres fichiers à ne pas versionner ===
-public/test.php
-/var/log/legalshufflecam-denied.log
-/var/log/legalshufflecam-denied.log
-app.js
+# 🧼 Fichiers temporaires
+*.tmp
+*.cache
+*.pid
+
+# 🚀 Déploiement
+build/
+dist/
+coverage/
+
+# 🧪 Cookies et sessions
+cookies.txt
+session.txt
+
+# 🧩 Scripts injectés ou générés
+public/EOF
+public/echo
+public/fi
+public/else
+mkdir
+npm
+rm
+udo journalctl -xeu nginx
