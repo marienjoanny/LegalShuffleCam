@@ -18,9 +18,12 @@ const recentPartners = [];
 const rtcConfig = {
   iceServers: [
     {
-      urls: 'turn:legalshufflecam.ovh:3478?transport=udp',
-      username: 'user',
-      credential: '6945ea1ef73a87ff45116ae305ae019c36945d4d455a0f5bf44f24ad9efdb82c'
+      urls: 'turns:legalshufflecam.ovh:5349',
+      username: 'gandalfshuffle@webRTC',
+      credential: 'd6e1ef7a83f7f116ea305ae0191c36945d44d5f0'
+    },
+    {
+      urls: 'stun:stun.l.google.com:19302'
     }
   ],
   iceTransportPolicy: 'all',
