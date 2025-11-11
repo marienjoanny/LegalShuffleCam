@@ -93,5 +93,70 @@ $url = $avs->toUrl();
     'REMOTE_ADDR'     => $_SERVER['REMOTE_ADDR'] ?? '',
   ]); ?>
   </pre>
+<!-- 🧪 Bouton de test de signalement -->
+
+<button id="simulateReportBtn">📩 Simuler un signalement</button>
+
+<p id="status"></p>
+
+<script>
+
+document.getElementById("simulateReportBtn").addEventListener("click", () => {
+
+  fetch("/api/report", {
+
+    method: "POST",
+
+    headers: { "Content-Type": "application/json" },
+
+    body: JSON.stringify({
+
+      remoteId: "simu-browser",
+
+      reason: "test depuis navigateur",
+
+      image: "data:image/jpeg;base64,TESTBASE64",
+
+      reporterId: "admin",
+
+      sessionId: "session-browser",
+
+      ip: "127.0.0.1"
+
+    })
+
+  })
+
+  .then(res => {
+
+    const status = document.getElementById("status");
+
+    if (res.ok) {
+
+      status.textContent = "✅ Signalement simulé avec succès !";
+
+      status.style.color = "green";
+
+    } else {
+
+      status.textContent = "❌ Échec du signalement : " + res.status;
+
+      status.style.color = "red";
+
+    }
+
+  })
+
+  .catch(err => {
+
+    console.error("Erreur réseau :", err);
+
+    document.getElementById("status").textContent = "❌ Erreur réseau";
+
+  });
+
+});
+
+</script>
 </body>
 </html>
