@@ -294,3 +294,15 @@ if (reportBtn && reportSelect) {
     reportSelect.selectedIndex = 0;
   });
 }
+
+// 🧠 Réception des infos partenaire et mise à jour du menu déroulant
+const recentPartners = [];
+
+socket.on("partner-info", (data) => {
+  recentPartners.push(data);
+
+  const option = document.createElement("option");
+  option.value = recentPartners.length - 1;
+  option.textContent = `${data.remoteId} (${data.ip})`;
+  reportSelect.appendChild(option);
+});
