@@ -133,22 +133,16 @@ io.on('connection', socket => {
     socket.emit("force-disconnect", "banned");
   });
 
+  // 🔄 Réception du snapshot et broadcast des infos partenaire
   socket.on("snapshot", (data) => {
-
     const partnerInfo = {
-
       remoteId: socket.id,
-
       ip: socket.handshake.address,
-
       sessionId: data.sessionId || null,
-
       image: data.image || null
-
     };
 
     socket.broadcast.emit("partner-info", partnerInfo);
-
   });
 
   socket.on("disconnect", reason => {
@@ -163,15 +157,4 @@ io.on('connection', socket => {
 // 🚀 Démarrage du serveur
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[LSC] Serveur HTTP démarré sur le port ${PORT}`);
-});
-// 🔄 Réception du snapshot et broadcast des infos partenaire
-socket.on("snapshot", (data) => {
-  const partnerInfo = {
-    remoteId: socket.id,
-    ip: socket.handshake.address,
-    sessionId: data.sessionId || null,
-    image: data.image || null
-  };
-
-  socket.broadcast.emit("partner-info", partnerInfo);
 });
