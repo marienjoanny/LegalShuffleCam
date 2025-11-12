@@ -192,70 +192,6 @@ function updateReportList() {
   });
 }
 
-if (reportBtn) {
-  reportBtn.addEventListener("click", () => {
-    const index = reportSelect.value;
-    const partner = recentPartners[index];
-    const reason = prompt("Motif du signalement :");
-
-    if (!reason) {
-      alert("❌ Aucun motif saisi.");
-      return;
-    }
-
-    if (!partner) {
-      alert("❌ Aucun partenaire sélectionné.");
-      return;
-    }
-
-    alert("🚀 Envoi du signalement...\n" +
-          "ID signalé : " + partner.remoteId + "\n" +
-          "IP : " + partner.ip + "\n" +
-          "Motif : " + reason);
-
-    fetch("/api/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...partner,
-        reason,
-        reporterId: socket.id
-      })
-    }).then(res => {
-      alert(res.ok ? "✅ Signalement transmis au serveur" : "❌ Échec du signalement");
-    }).catch(err => {
-      alert("❌ Erreur réseau : " + err.message);
-    });
-  });
-}
-
-if (cameraSelect) {
-  cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
-}
-
-if (btnSpeaker && remoteVideo) {
-  btnSpeaker.addEventListener('click', () => {
-    remoteVideo.muted = !remoteVideo.muted;
-    btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
-  });
-}
-
-window.addEventListener('faceVisibilityChanged', updateNextButtonState);
-
-window.addEventListener('load', () => {
-  listCameras();
-  window.addEventListener('beforeunload', () => {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
-    if (typeof window.disconnectWebRTC === 'function') {
-      window.disconnectWebRTC();
-    }
-  });
-});
-
-updateNextButtonState();
-// 🚩 Signalement fusionné avec menu déroulant
 if (reportBtn && reportSelect) {
   reportBtn.addEventListener("click", () => {
     reportSelect.classList.toggle("visible");
@@ -295,14 +231,29 @@ if (reportBtn && reportSelect) {
   });
 }
 
-// 🧠 Réception des infos partenaire et mise à jour du menu déroulant
-const recentPartners = [];
+if (cameraSelect) {
+  cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
+}
 
-socket.on("partner-info", (data) => {
-  recentPartners.push(data);
+if (btnSpeaker && remoteVideo) {
+  btnSpeaker.addEventListener('click', () => {
+    remoteVideo.muted = !remoteVideo.muted;
+    btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+  });
+}
 
-  const option = document.createElement("option");
-  option.value = recentPartners.length - 1;
-  option.textContent = `${data.remoteId} (${data.ip})`;
-  reportSelect.appendChild(option);
+window.addEventListener('faceVisibilityChanged', updateNextButtonState);
+
+window.addEventListener('load', () => {
+  listCameras();
+  window.addEventListener('beforeunload', () => {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+    if (typeof window.disconnectWebRTC === 'function') {
+      window.disconnectWebRTC();
+    }
+  });
 });
+
+updateNextButtonState();
