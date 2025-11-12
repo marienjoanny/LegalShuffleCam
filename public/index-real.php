@@ -174,6 +174,7 @@
       <a href="/confidentialite.html">Confidentialité</a> •
       <a href="/cookies.html">Cookies</a> •
       <a href="/mentions-legales.html">Mentions légales</a> •
+      <a href="/fonctionnement.html">Fonctionnement</a> •
       <a href="/moderation.html">Modération</a> •
       <a href="/reglement.html">Règlement</a> •
       <a href="/sitemap.html">Plan du site</a> •
