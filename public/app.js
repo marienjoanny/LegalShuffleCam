@@ -17,15 +17,10 @@ const recentPartners = [];
 
 const rtcConfig = {
   iceServers: [
-  { urls: 'turns:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
-    {
-      urls: 'turns:legalshufflecam.ovh:5349',
-      username: 'gandalfshuffle@webRTC',
-      credential: 'd6e1ef7a83f7f116ea305ae0191c36945d44d5f0'
-    },
-    {
-      urls: 'stun:stun.l.google.com:19302'
-    }
+    { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
+    { urls: 'turn:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
+    { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
+    { urls: 'stun:stun.l.google.com:19302' }
   ],
   iceTransportPolicy: 'all',
   sdpSemantics: 'unified-plan'
@@ -153,6 +148,7 @@ window.connectSocketAndWebRTC = function (stream, config) {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       const cand = event.candidate.candidate;
+      console.log('[ICE] Candidate:', cand);
       if (cand.includes('typ relay')) {
         updateTopBar("🔐 Connexion sécurisée via TURN");
       } else if (cand.includes('typ srflx')) {
