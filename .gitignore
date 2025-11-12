@@ -52,3 +52,4 @@ mkdir
 npm
 rm
 udo journalctl -xeu nginx
+*.sh
