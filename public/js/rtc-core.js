@@ -8,6 +8,7 @@
 // --- Configuration WebRTC ---
 const RTC_CONFIG = {
   iceServers: [
+  { urls: 'turns:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },

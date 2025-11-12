@@ -17,6 +17,7 @@ const recentPartners = [];
 
 const rtcConfig = {
   iceServers: [
+  { urls: 'turns:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
     {
       urls: 'turns:legalshufflecam.ovh:5349',
       username: 'gandalfshuffle@webRTC',
