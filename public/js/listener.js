@@ -1,4 +1,4 @@
-// LegalShuffleCam • listener.js (version corrigée avec délai et socket global)
+let isMatching = false;
 
 window.connectSocketAndWebRTC = function(stream, config) {
   if (!stream) {
@@ -12,25 +12,30 @@ window.connectSocketAndWebRTC = function(stream, config) {
   window.initSocket();
 
   window.socket.on("partner", async (data) => {
+    if (isMatching) return;
+    isMatching = true;
+
     console.log(`[LISTENER-DIAG] Événement "partner" reçu :`, data);
     if (!data || !data.id || typeof data.id !== 'string') {
-      console.error("[LISTENER-DIAG] ERREUR : Données partenaire invalides ou manquantes.");
+      console.error("[LISTENER-DIAG] ERREUR : Données partenaire invalides.");
       window.dispatchEvent(new CustomEvent('rtcError', {
         detail: { message: "Données partenaire invalides." }
       }));
+      isMatching = false;
       return;
     }
 
     try {
-      console.log(`[LISTENER-DIAG] Appel de startCall avec partnerId: ${data.id}`);
       setTimeout(() => {
         window.startCall(data.id);
-      }, 500); // délai pour stabiliser ICE
+        isMatching = false;
+      }, 500);
     } catch (err) {
       console.error("[LISTENER-DIAG] Erreur dans startCall :", err);
       window.dispatchEvent(new CustomEvent('rtcError', {
-        detail: { message: "Échec du démarrage de l'appel.", error: err }
+        detail: { message: "Erreur WebRTC : erreur de l'application", error: err }
       }));
+      isMatching = false;
     }
   });
 
@@ -97,6 +102,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
 
   window.addEventListener('rtcError', (event) => {
     console.error("[LISTENER-DIAG] Erreur WebRTC :", event.detail.message);
+    console.trace("🔍 Trace complète de l'erreur WebRTC");
     if (window.topBar) {
       window.topBar.textContent = `⚠ ${event.detail.message}`;
     }
