@@ -25,18 +25,27 @@ window.connectSocketAndWebRTC = function(stream, config) {
       return;
     }
 
-    try {
-      setTimeout(() => {
-        window.startCall(data.id);
+    const partnerId = data.id;
+
+    setTimeout(() => {
+      try {
+        if (window.socket?.connected) {
+          window.startCall(partnerId);
+        } else {
+          console.warn("[LISTENER-DIAG] Socket.IO déconnecté avant startCall.");
+          window.dispatchEvent(new CustomEvent('rtcError', {
+            detail: { message: "Connexion perdue avant l'appel." }
+          }));
+        }
+      } catch (err) {
+        console.error("[LISTENER-DIAG] Erreur dans startCall :", err);
+        window.dispatchEvent(new CustomEvent('rtcError', {
+          detail: { message: "Erreur WebRTC : erreur de l'application", error: err }
+        }));
+      } finally {
         isMatching = false;
-      }, 500);
-    } catch (err) {
-      console.error("[LISTENER-DIAG] Erreur dans startCall :", err);
-      window.dispatchEvent(new CustomEvent('rtcError', {
-        detail: { message: "Erreur WebRTC : erreur de l'application", error: err }
-      }));
-      isMatching = false;
-    }
+      }
+    }, 500);
   });
 
   window.socket.on("offer", (data) => {
