@@ -89,13 +89,19 @@ io.on('connection', socket => {
         ip: socket.handshake.address
       });
 
+      const partnerSocket = waitingClient;
+      waitingClient = null;
+
       setTimeout(() => {
-        socket.emit("partner", { id: waitingClient.id });
-        waitingClient.emit("partner", { id: socket.id });
-        console.log(`[MATCHMAKING] Appariement réussi : ${socket.id} ↔ ${waitingClient.id}`);
+        if (partnerSocket?.connected && socket.connected) {
+          socket.emit("partner", { id: partnerSocket.id });
+          partnerSocket.emit("partner", { id: socket.id });
+          console.log(`[MATCHMAKING] Appariement réussi : ${socket.id} ↔ ${partnerSocket.id}`);
+        } else {
+          console.warn("[MATCHMAKING] ❌ Appariement annulé : un des deux clients est déconnecté");
+        }
       }, 300);
 
-      waitingClient = null;
     } else {
       console.log('[MATCHMAKING] Aucun client en attente. Mise en file :', socket.id);
       waitingClient = socket;
