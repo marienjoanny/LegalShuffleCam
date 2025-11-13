@@ -1,4 +1,4 @@
-// LegalShuffleCam • rtc-core.js (version fonctionnelle minimale)
+// LegalShuffleCam • rtc-core.js (version corrigée avec fixSDPOrder)
 
 let localStream;
 let peerConnection;
@@ -7,6 +7,15 @@ let remoteId;
 window.initSocket = function () {
   window.socket = io();
 };
+
+// 🔧 Corrige l’ordre des m-lines SDP (audio → vidéo)
+function fixSDPOrder(sdp) {
+  const sections = sdp.split('m=');
+  const header = sections.shift();
+  const ordered = ['audio', 'video'];
+  const sorted = ordered.map(kind => sections.find(s => s.startsWith(kind))).filter(Boolean);
+  return [header, ...sorted.map(s => 'm=' + s)].join('');
+}
 
 window.startCall = async function (partnerId) {
   remoteId = partnerId;
@@ -28,6 +37,7 @@ window.startCall = async function (partnerId) {
   };
 
   const offer = await peerConnection.createOffer();
+  offer.sdp = fixSDPOrder(offer.sdp);
   await peerConnection.setLocalDescription(offer);
   window.socket.emit("offer", { to: remoteId, sdp: offer.sdp });
 };
@@ -53,6 +63,7 @@ window.handleOffer = async function ({ from, sdp }) {
 
   await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp }));
   const answer = await peerConnection.createAnswer();
+  answer.sdp = fixSDPOrder(answer.sdp);
   await peerConnection.setLocalDescription(answer);
   window.socket.emit("answer", { to: remoteId, sdp: answer.sdp });
 };
