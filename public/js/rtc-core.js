@@ -3,21 +3,9 @@
 let localStream;
 let peerConnection;
 let remoteId;
-let socket;
-
-const rtcConfig = {
-  iceServers: [
-    { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
-    { urls: 'turn:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
-    { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
-    { urls: 'stun:stun.l.google.com:19302' }
-  ],
-  iceTransportPolicy: 'all',
-  sdpSemantics: 'unified-plan'
-};
 
 window.initSocket = function () {
-  socket = io();
+  window.socket = io();
 };
 
 window.startCall = async function (partnerId) {
@@ -28,7 +16,7 @@ window.startCall = async function (partnerId) {
 
   peerConnection.onicecandidate = e => {
     if (e.candidate) {
-      socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
+      window.socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
     }
   };
 
@@ -41,7 +29,7 @@ window.startCall = async function (partnerId) {
 
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
-  socket.emit("offer", { to: remoteId, sdp: offer.sdp });
+  window.socket.emit("offer", { to: remoteId, sdp: offer.sdp });
 };
 
 window.handleOffer = async function ({ from, sdp }) {
@@ -52,7 +40,7 @@ window.handleOffer = async function ({ from, sdp }) {
 
   peerConnection.onicecandidate = e => {
     if (e.candidate) {
-      socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
+      window.socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
     }
   };
 
@@ -66,7 +54,7 @@ window.handleOffer = async function ({ from, sdp }) {
   await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp }));
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
-  socket.emit("answer", { to: remoteId, sdp: answer.sdp });
+  window.socket.emit("answer", { to: remoteId, sdp: answer.sdp });
 };
 
 window.handleAnswer = async function ({ sdp }) {
@@ -96,3 +84,15 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream =>
   localStream = stream;
   document.getElementById('localVideo').srcObject = stream;
 });
+
+// Configuration RTC globale
+const rtcConfig = {
+  iceServers: [
+    { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
+    { urls: 'turn:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
+    { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
+    { urls: 'stun:stun.l.google.com:19302' }
+  ],
+  iceTransportPolicy: 'all',
+  sdpSemantics: 'unified-plan'
+};
