@@ -1,5 +1,3 @@
-// LegalShuffleCam • rtc-core.js (version corrigée avec fixSDPOrder)
-
 let localStream;
 let peerConnection;
 let remoteId;
@@ -15,6 +13,19 @@ function fixSDPOrder(sdp) {
   const ordered = ['audio', 'video'];
   const sorted = ordered.map(kind => sections.find(s => s.startsWith(kind))).filter(Boolean);
   return [header, ...sorted.map(s => 'm=' + s)].join('');
+}
+
+// 🧹 Simplifie le SDP pour éviter les codecs instables
+function simplifySDP(sdp) {
+  return sdp
+    .split('\r\n')
+    .filter(line => {
+      if (line.includes('rtpmap') && !line.includes('VP8') && !line.includes('H264/90000')) return false;
+      if (line.includes('rtpmap') && (line.includes('VP9') || line.includes('red') || line.includes('ulpfec') || line.includes('rtx'))) return false;
+      if (line.includes('rtcp-fb') && line.includes('goog-remb')) return false;
+      return true;
+    })
+    .join('\r\n');
 }
 
 window.startCall = async function (partnerId) {
@@ -37,7 +48,7 @@ window.startCall = async function (partnerId) {
   };
 
   const offer = await peerConnection.createOffer();
-  offer.sdp = fixSDPOrder(offer.sdp);
+  offer.sdp = simplifySDP(fixSDPOrder(offer.sdp));
   await peerConnection.setLocalDescription(offer);
   window.socket.emit("offer", { to: remoteId, sdp: offer.sdp });
 };
@@ -61,16 +72,16 @@ window.handleOffer = async function ({ from, sdp }) {
     }));
   };
 
-  await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp }));
+  await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: simplifySDP(sdp) }));
   const answer = await peerConnection.createAnswer();
-  answer.sdp = fixSDPOrder(answer.sdp);
+  answer.sdp = simplifySDP(fixSDPOrder(answer.sdp));
   await peerConnection.setLocalDescription(answer);
   window.socket.emit("answer", { to: remoteId, sdp: answer.sdp });
 };
 
 window.handleAnswer = async function ({ sdp }) {
   console.log("🧠 SignalingState avant setRemoteDescription:", peerConnection.signalingState);
-  await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
+  await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: simplifySDP(sdp) }));
 };
 
 window.handleICECandidate = async function ({ candidate }) {
