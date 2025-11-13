@@ -15,14 +15,15 @@ function fixSDPOrder(sdp) {
   return [header, ...sorted.map(s => 'm=' + s)].join('');
 }
 
-// 🧹 Simplifie le SDP pour éviter les codecs instables
+// 🧹 Simplifie le SDP pour éviter les codecs et extensions instables
 function simplifySDP(sdp) {
   return sdp
     .split('\r\n')
     .filter(line => {
       if (line.includes('rtpmap') && !line.includes('VP8') && !line.includes('H264/90000')) return false;
-      if (line.includes('rtpmap') && (line.includes('VP9') || line.includes('red') || line.includes('ulpfec') || line.includes('rtx'))) return false;
-      if (line.includes('rtcp-fb') && line.includes('goog-remb')) return false;
+      if (line.includes('rtpmap') && /(VP9|rtx|red|ulpfec)/.test(line)) return false;
+      if (line.includes('rtcp-fb') && /(goog-remb|transport-cc)/.test(line)) return false;
+      if (line.startsWith('a=extmap:')) return false;
       return true;
     })
     .join('\r\n');
@@ -106,9 +107,23 @@ window.disconnectWebRTC = function () {
 navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
   localStream = stream;
   document.getElementById('localVideo').srcObject = stream;
+
+  if (stream.getVideoTracks().length === 0) {
+    console.warn("⚠️ Aucun flux vidéo détecté.");
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Caméra non détectée. Activez-la pour continuer." }
+    }));
+  }
+
+  setInterval(() => {
+    const video = document.getElementById('localVideo');
+    const visible = video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
+    window.dispatchEvent(new CustomEvent('faceCheck', {
+      detail: { visible }
+    }));
+  }, 3000);
 });
 
-// Configuration RTC globale
 const rtcConfig = {
   iceServers: [
     { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
