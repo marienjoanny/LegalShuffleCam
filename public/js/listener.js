@@ -123,4 +123,11 @@ window.connectSocketAndWebRTC = function(stream, config) {
       window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
     }
   });
+
+  window.addEventListener('faceCheck', (event) => {
+    const visible = event.detail.visible;
+    if (window.topBar) {
+      window.topBar.textContent = visible ? "🟢 Visage détecté" : "🔴 Visage non détecté";
+    }
+  });
 };
