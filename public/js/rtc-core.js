@@ -69,6 +69,7 @@ window.handleOffer = async function ({ from, sdp }) {
 };
 
 window.handleAnswer = async function ({ sdp }) {
+  console.log("🧠 SignalingState avant setRemoteDescription:", peerConnection.signalingState);
   await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
 };
 
