@@ -1,11 +1,12 @@
-// LegalShuffleCam • listener.js (version optimisée avec diagnostics)
+// LegalShuffleCam • listener.js (version corrigée avec socket global)
 // Gestion des événements Socket.IO, intégration avec WebRTC et diagnostics avancés.
 
 /**
  * Initialise la connexion Socket.IO et configure les écouteurs pour WebRTC.
  * @param {MediaStream} stream - Flux local à partager via WebRTC.
+ * @param {Object} config - Configuration RTC (iceServers, etc.)
  */
-window.connectSocketAndWebRTC = function(stream) {
+window.connectSocketAndWebRTC = function(stream, config) {
   if (!stream) {
     console.error("[LISTENER] Aucun flux fourni pour initialiser WebRTC.");
     window.dispatchEvent(new CustomEvent('rtcError', {
@@ -18,7 +19,7 @@ window.connectSocketAndWebRTC = function(stream) {
   window.initSocket();
 
   // Écoute l'événement "partner" pour démarrer un appel
-  socket.on("partner", async (data) => {
+  window.socket.on("partner", async (data) => {
     console.log(`[LISTENER-DIAG] Événement "partner" reçu :`, data);
     if (!data || !data.id || typeof data.id !== 'string') {
       console.error("[LISTENER-DIAG] ERREUR : Données partenaire invalides ou manquantes.");
@@ -40,7 +41,7 @@ window.connectSocketAndWebRTC = function(stream) {
   });
 
   // Écoute les offres WebRTC entrantes
-  socket.on("offer", (data) => {
+  window.socket.on("offer", (data) => {
     console.log(`[LISTENER-DIAG] Offre reçue :`, data);
     if (!data || !data.sdp || !data.from) {
       console.error("[LISTENER-DIAG] ERREUR : Données d'offre invalides.");
@@ -50,7 +51,7 @@ window.connectSocketAndWebRTC = function(stream) {
   });
 
   // Écoute les réponses WebRTC entrantes
-  socket.on("answer", (data) => {
+  window.socket.on("answer", (data) => {
     console.log(`[LISTENER-DIAG] Réponse reçue :`, data);
     if (!data || !data.sdp) {
       console.error("[LISTENER-DIAG] ERREUR : Données de réponse invalides.");
@@ -60,7 +61,7 @@ window.connectSocketAndWebRTC = function(stream) {
   });
 
   // Écoute les candidats ICE entrants
-  socket.on("ice-candidate", (data) => {
+  window.socket.on("ice-candidate", (data) => {
     console.log(`[LISTENER-DIAG] Candidat ICE reçu :`, data);
     if (!data || !data.candidate) {
       console.error("[LISTENER-DIAG] ERREUR : Candidat ICE invalide.");
@@ -70,7 +71,7 @@ window.connectSocketAndWebRTC = function(stream) {
   });
 
   // Écoute les erreurs Socket.IO
-  socket.on("connect_error", (err) => {
+  window.socket.on("connect_error", (err) => {
     console.error("[LISTENER-DIAG] Erreur de connexion Socket.IO :", err);
     window.dispatchEvent(new CustomEvent('rtcError', {
       detail: { message: "Erreur Socket.IO.", error: err }
@@ -78,21 +79,21 @@ window.connectSocketAndWebRTC = function(stream) {
   });
 
   // Écoute la connexion Socket.IO
-  socket.on("connect", () => {
-    console.log(`[LISTENER-DIAG] Connecté à Socket.IO (id: ${socket.id}).`);
-    socket.emit("ready-for-match");
-    console.log(`[LISTENER-DIAG] "ready-for-match" émis par ${socket.id}.`);
+  window.socket.on("connect", () => {
+    console.log(`[LISTENER-DIAG] Connecté à Socket.IO (id: ${window.socket.id}).`);
+    window.socket.emit("ready-for-match");
+    console.log(`[LISTENER-DIAG] "ready-for-match" émis par ${window.socket.id}.`);
   });
 
   // Écoute la déconnexion Socket.IO
-  socket.on("disconnect", (reason) => {
+  window.socket.on("disconnect", (reason) => {
     console.log(`[LISTENER-DIAG] Déconnecté de Socket.IO (raison: ${reason}).`);
     window.dispatchEvent(new CustomEvent('rtcError', {
       detail: { message: `Déconnecté de Socket.IO : ${reason}` }
     }));
   });
 
-  // Écoute les événements personnalisés pour mettre à jour l'UI
+  // Événements personnalisés pour l'UI
   window.addEventListener('rtcConnected', (event) => {
     console.log("[LISTENER-DIAG] Connexion WebRTC établie :", event.detail.message);
     if (window.topBar) {
