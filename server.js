@@ -7,23 +7,17 @@ const path = require('path');
 const app = express();
 const PORT = 3000;
 
-// Middleware JSON
 app.use(express.json());
-
-// Sert les fichiers statiques
 app.use(express.static('public'));
 app.use('/socket.io', express.static(path.join(__dirname, 'node_modules', 'socket.io-client', 'dist')));
 
-// Endpoint de santé
 app.get('/healthz', (_req, res) => res.type('text/plain').send('OK'));
 
-// 📁 Dossier de stockage des signalements
 const REPORTS_DIR = path.join(__dirname, 'api', 'logs', 'reports');
 if (!fs.existsSync(REPORTS_DIR)) {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
 
-// 🛡️ Route API pour recevoir les signalements
 app.post('/api/report', (req, res) => {
   const report = req.body;
 
@@ -55,10 +49,8 @@ app.post('/api/report', (req, res) => {
   });
 });
 
-// Serveur HTTP
 const server = http.createServer(app);
 
-// Initialisation Socket.IO
 const io = new Server(server, {
   cors: {
     origin: "https://legalshufflecam.ovh",
@@ -68,7 +60,6 @@ const io = new Server(server, {
 
 let waitingClient = null;
 
-// 🎮 Gestion des connexions Socket.IO
 io.on('connection', socket => {
   console.log('[LSC] Nouveau client connecté :', socket.id);
 
@@ -98,8 +89,11 @@ io.on('connection', socket => {
         ip: socket.handshake.address
       });
 
-      socket.emit("partner", { id: waitingClient.id });
-      waitingClient.emit("partner", { id: socket.id });
+      setTimeout(() => {
+        socket.emit("partner", { id: waitingClient.id });
+        waitingClient.emit("partner", { id: socket.id });
+        console.log(`[MATCHMAKING] Appariement réussi : ${socket.id} ↔ ${waitingClient.id}`);
+      }, 300);
 
       waitingClient = null;
     } else {
@@ -109,18 +103,33 @@ io.on('connection', socket => {
   });
 
   socket.on("offer", data => {
-    console.log('[RTC] Offre envoyée à', data.to);
-    io.to(data.to).emit("offer", { from: socket.id, sdp: data.sdp });
+    const target = io.sockets.sockets.get(data.to);
+    if (target?.connected) {
+      console.log('[RTC] Offre envoyée à', data.to);
+      target.emit("offer", { from: socket.id, sdp: data.sdp });
+    } else {
+      console.warn('[RTC] ❌ Offre ignorée, destinataire déconnecté :', data.to);
+    }
   });
 
   socket.on("answer", data => {
-    console.log('[RTC] Réponse envoyée à', data.to);
-    io.to(data.to).emit("answer", { from: socket.id, sdp: data.sdp });
+    const target = io.sockets.sockets.get(data.to);
+    if (target?.connected) {
+      console.log('[RTC] Réponse envoyée à', data.to);
+      target.emit("answer", { from: socket.id, sdp: data.sdp });
+    } else {
+      console.warn('[RTC] ❌ Réponse ignorée, destinataire déconnecté :', data.to);
+    }
   });
 
   socket.on("ice-candidate", data => {
-    console.log('[RTC] ICE envoyé à', data.to);
-    io.to(data.to).emit("ice-candidate", { from: socket.id, candidate: data.candidate });
+    const target = io.sockets.sockets.get(data.to);
+    if (target?.connected) {
+      console.log('[RTC] ICE envoyé à', data.to);
+      target.emit("ice-candidate", { from: socket.id, candidate: data.candidate });
+    } else {
+      console.warn('[RTC] ❌ ICE ignoré, destinataire déconnecté :', data.to);
+    }
   });
 
   socket.on("report", () => {
@@ -133,7 +142,6 @@ io.on('connection', socket => {
     socket.emit("force-disconnect", "banned");
   });
 
-  // 🔄 Réception du snapshot et broadcast des infos partenaire
   socket.on("snapshot", (data) => {
     const partnerInfo = {
       remoteId: socket.id,
@@ -154,7 +162,6 @@ io.on('connection', socket => {
   });
 });
 
-// 🚀 Démarrage du serveur
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[LSC] Serveur HTTP démarré sur le port ${PORT}`);
 });
