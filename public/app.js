@@ -10,7 +10,7 @@ const cameraSelect = document.getElementById('cameraSelect');
 const reportSelect = document.getElementById('reportTarget');
 const reportBtn = document.getElementById('btnReport');
 
-window.faceVisible = false;
+window.faceVisible = true; // 👈 Visage toujours considéré comme visible
 window.trackerInitialized = false;
 
 const recentPartners = [];
@@ -31,11 +31,11 @@ function updateTopBar(message) {
 }
 
 function updateNextButtonState() {
-  const visible = window.faceVisible === true;
+  const visible = true; // 👈 forcé à toujours vrai
   if (btnNext) {
-    btnNext.disabled = !visible;
-    btnNext.textContent = visible ? '➡️ Interlocuteur suivant' : '🚫 Visage requis';
-    btnNext.onclick = visible ? handleNextClick : null;
+    btnNext.disabled = false;
+    btnNext.textContent = '➡️ Interlocuteur suivant';
+    btnNext.onclick = handleNextClick;
   }
 }
 
@@ -49,6 +49,8 @@ function handleNextClick() {
     if (typeof socket !== 'undefined' && socket.connected) {
       socket.emit("ready-for-match");
       updateTopBar("🔍 Recherche d’un partenaire...");
+    } else {
+      updateTopBar("❌ Connexion perdue. Rechargez la page.");
     }
   }, 1500);
 }
@@ -99,6 +101,9 @@ async function startCamera(deviceId) {
       window.connectSocketAndWebRTC(currentStream, rtcConfig);
     }
 
+    window.faceVisible = true;
+    window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
+
   } catch (err) {
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
@@ -117,6 +122,9 @@ async function startCamera(deviceId) {
       if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
         window.connectSocketAndWebRTC(currentStream, rtcConfig);
       }
+
+      window.faceVisible = true;
+      window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
 
     } catch (fallbackErr) {
       updateTopBar("❌ Caméra refusée ou indisponible.");
