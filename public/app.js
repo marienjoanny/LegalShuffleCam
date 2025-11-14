@@ -1,5 +1,7 @@
-// LegalShuffleCam • app.js (TURN + signaling + debug + signalement)
+// LegalShuffleCam • app.js
+// Gestion des flux vidéo, des interactions utilisateur et des signalements
 
+// Éléments DOM
 let currentStream = null;
 let peerConnection = null;
 const topBar = document.getElementById('topBar');
@@ -11,11 +13,12 @@ const cameraSelect = document.getElementById('cameraSelect');
 const reportSelect = document.getElementById('reportTarget');
 const reportBtn = document.getElementById('btnReport');
 
+// Variables globales
 window.faceVisible = true;
 window.trackerInitialized = false;
-
 const recentPartners = [];
 
+// Configuration WebRTC
 const rtcConfig = {
   iceServers: [
     { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
@@ -27,6 +30,7 @@ const rtcConfig = {
   sdpSemantics: 'unified-plan'
 };
 
+// Fonctions utilitaires
 function updateTopBar(message) {
   if (topBar) topBar.textContent = message;
 }
@@ -46,15 +50,18 @@ function handleNextClick() {
   if (remoteVideo) remoteVideo.srcObject = null;
   updateNextButtonState();
   setTimeout(() => {
-    if (typeof socket !== 'undefined' && socket.connected) {
+    if (typeof socket !== 'undefined' && socket.connected && currentStream) {
+      console.log('[APP] Envoi de ready-for-match avec un flux valide.');
       socket.emit("ready-for-match");
       updateTopBar("🔍 Recherche d’un partenaire...");
     } else {
-      updateTopBar("❌ Connexion perdue. Rechargez la page.");
+      console.error('[APP] Erreur : currentStream est null ou socket non connecté.');
+      updateTopBar("❌ Connexion perdue ou flux manquant. Rechargez la page.");
     }
   }, 1500);
 }
 
+// Gestion des caméras
 async function listCameras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -74,6 +81,7 @@ async function listCameras() {
       updateTopBar("❌ Aucune caméra détectée.");
     }
   } catch (err) {
+    console.error("Erreur lors de la liste des caméras :", err);
     updateTopBar("❌ Erreur caméra. Vérifiez les permissions.");
   }
 }
@@ -85,26 +93,30 @@ async function startCamera(deviceId) {
     }
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
+      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true
     });
 
     currentStream = stream;
     if (localVideo) localVideo.srcObject = stream;
-    updateTopBar("✅ Caméra active. Détection en cours...");
+    console.log('[APP] Flux média local initialisé avec succès :', currentStream);
 
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
     }
 
     if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
+      console.log('[APP] Appel de connectSocketAndWebRTC avec un flux valide.');
       window.connectSocketAndWebRTC(currentStream, rtcConfig);
+    } else {
+      console.error('[APP] Erreur : currentStream est null ou undefined.');
     }
 
     window.faceVisible = true;
     window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
 
   } catch (err) {
+    console.error("Erreur lors de l'accès à la caméra :", err);
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -113,13 +125,14 @@ async function startCamera(deviceId) {
 
       currentStream = fallbackStream;
       if (localVideo) localVideo.srcObject = fallbackStream;
-      updateTopBar("✅ Caméra fallback active.");
+      console.log('[APP] Flux média fallback initialisé avec succès :', currentStream);
 
       if (typeof window.initFaceVisible === "function") {
         window.initFaceVisible(localVideo);
       }
 
       if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
+        console.log('[APP] Appel de connectSocketAndWebRTC avec un flux fallback valide.');
         window.connectSocketAndWebRTC(currentStream, rtcConfig);
       }
 
@@ -127,11 +140,34 @@ async function startCamera(deviceId) {
       window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
 
     } catch (fallbackErr) {
+      console.error("Erreur lors de l'accès à la caméra de secours :", fallbackErr);
       updateTopBar("❌ Caméra refusée ou indisponible.");
     }
   }
 }
 
+// Capture d'un instantané du partenaire
+function capturePartnerSnapshot(remoteId, ip) {
+  if (!remoteVideo) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = remoteVideo.videoWidth;
+  canvas.height = remoteVideo.videoHeight;
+  canvas.getContext("2d").drawImage(remoteVideo, 0, 0);
+  const imageData = canvas.toDataURL("image/jpeg");
+
+  recentPartners.unshift({
+    remoteId,
+    ip,
+    image: imageData,
+    timestamp: new Date().toISOString()
+  });
+
+  if (recentPartners.length > 5) recentPartners.pop();
+  updateReportList();
+}
+
+// Mise à jour de la liste des signalements
 function updateReportList() {
   if (!reportSelect) return;
   reportSelect.innerHTML = '<option disabled selected>Choisir un interlocuteur</option>';
@@ -140,6 +176,7 @@ function updateReportList() {
   });
 }
 
+// Gestion des signalements
 if (reportBtn && reportSelect) {
   reportBtn.addEventListener("click", () => {
     reportSelect.classList.toggle("visible");
@@ -179,19 +216,41 @@ if (reportBtn && reportSelect) {
   });
 }
 
+// Gestion des événements DOM
 if (cameraSelect) {
   cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
 }
 
 if (btnSpeaker && remoteVideo) {
   btnSpeaker.addEventListener('click', () => {
-    remoteVideo.muted = !remoteVideo.muted;
-    btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+    if (remoteVideo) {
+      remoteVideo.muted = !remoteVideo.muted;
+      btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+    }
   });
 }
 
+// Écouteurs d'événements
 window.addEventListener('faceVisibilityChanged', updateNextButtonState);
 
+window.addEventListener('rtcError', (event) => {
+  console.error("[APP] Erreur WebRTC :", event.detail.message);
+  if (event.detail.error) {
+    console.trace("[APP] Trace de l'erreur :", event.detail.error);
+  }
+  if (window.topBar) {
+    window.topBar.textContent = `⚠ ${event.detail.message}`;
+  }
+});
+
+window.addEventListener('rtcDisconnected', (event) => {
+  console.log("[APP] Déconnexion WebRTC :", event.detail.message);
+  if (window.topBar) {
+    window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
+  }
+});
+
+// Initialisation
 window.addEventListener('load', () => {
   listCameras();
   window.addEventListener('beforeunload', () => {
