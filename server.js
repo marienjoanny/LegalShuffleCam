@@ -3,9 +3,39 @@ const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
 const path = require('path');
+const crypto = require('crypto'); // <-- NOUVEAU : Nécessaire pour l'authentification TURN
 
 const app = express();
 const PORT = 3000;
+
+// --- Authentification Coturn LT-Cred ---
+// **IMPORTANT : Le secret doit correspondre à la clé 'secret' dans /etc/turnserver.conf**
+const TURN_SECRET = 'secret'; 
+const TURN_LIFETIME = 60 * 60; // Durée de validité du mot de passe (1 heure)
+
+/**
+ * Génère le nom d'utilisateur (timestamp d'expiration) et le mot de passe (HMAC-SHA1)
+ * nécessaires pour l'authentification LT-Cred de Coturn.
+ * @returns {{username: string, password: string}} Les identifiants LT-Cred.
+ */
+function generateTurnCredentials() {
+    // Le nom d'utilisateur est le timestamp d'expiration (en secondes)
+    const timestamp = Math.floor(Date.now() / 1000) + TURN_LIFETIME; 
+    const username = timestamp.toString();
+
+    // Calcul du mot de passe = Base64(HMAC-SHA1(SECRET, USERNAME))
+    const hmac = crypto.createHmac('sha1', TURN_SECRET);
+    hmac.setEncoding('base64');
+    hmac.write(username);
+    hmac.end();
+    const password = hmac.read();
+
+    return {
+        username: username,
+        password: password
+    };
+}
+// ----------------------------------------
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -63,6 +93,13 @@ let waitingClient = null;
 io.on('connection', socket => {
   console.log('[LSC] Nouveau client connecté :', socket.id);
 
+  // NOUVEL ÉCOUTEUR : Le client demande les identifiants TURN LT-Cred
+  socket.on('request-turn-credentials', (callback) => {
+      const credentials = generateTurnCredentials();
+      console.log(`[TURN] Envoi des identifiants temp. à ${socket.id}. Expiration: ${credentials.username}`);
+      callback(credentials); // Renvoie les identifiants au client via le callback
+  });
+  
   socket.onAny((event, ...args) => {
     console.log(`[TRACE] Événement reçu : ${event}`, args);
   });
