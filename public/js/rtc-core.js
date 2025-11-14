@@ -1,20 +1,6 @@
 // LegalShuffleCam • rtc-core.js
 // Configuration WebRTC optimisée pour Coturn
 
-// Fonction pour simplifier les SDP et supprimer les codecs non essentiels
-function simplifySDP(sdp) {
-  return sdp
-    .split('\r\n')
-    .filter(line => {
-      if (line.includes('rtpmap') && !line.includes('VP8') && !line.includes('opus/48000')) return false;
-      if (line.includes('rtpmap') && /(VP9|rtx|red|ulpfec)/.test(line)) return false;
-      if (line.includes('rtcp-fb') && !line.includes('nack') && !line.includes('goog-remb')) return false;
-      if (line.startsWith('a=extmap:') && !line.includes('urn:ietf:params:rtp-hdrext:sdes:mid')) return false;
-      return true;
-    })
-    .join('\r\n');
-}
-
 // Configuration WebRTC avec Coturn
 const rtcConfig = {
   iceServers: [
@@ -32,7 +18,7 @@ const rtcConfig = {
       credentialType: 'password'
     }
   ],
-  iceTransportPolicy: 'relay', // Force l'utilisation de TURN
+  iceTransportPolicy: 'all', // Utilisation de 'all' pour plus de flexibilité
   sdpSemantics: 'unified-plan'
 };
 
@@ -103,7 +89,6 @@ window.startCall = async function(partnerId) {
 
     // Crée une offre
     const offer = await peerConnection.createOffer();
-    offer.sdp = simplifySDP(offer.sdp);
     await peerConnection.setLocalDescription(offer);
     console.log('[RTC] Offre créée et envoyée à', remoteId);
     window.socket.emit("offer", { to: remoteId, sdp: offer.sdp });
@@ -165,9 +150,8 @@ window.handleOffer = async function({ from, sdp }) {
       console.log('[RTC] État ICE:', peerConnection.iceConnectionState);
     };
 
-    await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: simplifySDP(sdp) }));
+    await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: sdp }));
     const answer = await peerConnection.createAnswer();
-    answer.sdp = simplifySDP(answer.sdp);
     await peerConnection.setLocalDescription(answer);
     console.log('[RTC] Réponse créée et envoyée à', remoteId);
     window.socket.emit("answer", { to: remoteId, sdp: answer.sdp });
@@ -185,7 +169,7 @@ window.handleOffer = async function({ from, sdp }) {
 window.handleAnswer = async function({ sdp }) {
   try {
     console.log('[RTC] Réponse reçue.');
-    await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: simplifySDP(sdp) }));
+    await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: sdp }));
     clearTimeout(negotiationTimeout);
   } catch (err) {
     console.error('[RTC] Erreur lors de la gestion de la réponse :', err);
