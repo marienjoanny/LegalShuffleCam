@@ -1,6 +1,7 @@
-// LegalShuffleCam • app.js (version enrichie avec signalement rétroactif + TURN coturn + alertes debug)
+// LegalShuffleCam • app.js (TURN + signaling + debug + signalement)
 
 let currentStream = null;
+let peerConnection = null;
 const topBar = document.getElementById('topBar');
 const remoteVideo = document.getElementById('remoteVideo');
 const localVideo = document.getElementById('localVideo');
@@ -10,7 +11,7 @@ const cameraSelect = document.getElementById('cameraSelect');
 const reportSelect = document.getElementById('reportTarget');
 const reportBtn = document.getElementById('btnReport');
 
-window.faceVisible = true; // 👈 Visage toujours considéré comme visible
+window.faceVisible = true;
 window.trackerInitialized = false;
 
 const recentPartners = [];
@@ -22,7 +23,7 @@ const rtcConfig = {
     { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
     { urls: 'stun:stun.l.google.com:19302' }
   ],
-  iceTransportPolicy: 'all',
+  iceTransportPolicy: 'relay',
   sdpSemantics: 'unified-plan'
 };
 
@@ -31,7 +32,6 @@ function updateTopBar(message) {
 }
 
 function updateNextButtonState() {
-  const visible = true; // 👈 forcé à toujours vrai
   if (btnNext) {
     btnNext.disabled = false;
     btnNext.textContent = '➡️ Interlocuteur suivant';
@@ -131,63 +131,6 @@ async function startCamera(deviceId) {
     }
   }
 }
-
-function capturePartnerSnapshot(remoteId, ip) {
-  const canvas = document.createElement("canvas");
-  canvas.width = remoteVideo.videoWidth;
-  canvas.height = remoteVideo.videoHeight;
-  canvas.getContext("2d").drawImage(remoteVideo, 0, 0);
-  const imageData = canvas.toDataURL("image/jpeg");
-
-  recentPartners.unshift({
-    remoteId,
-    ip,
-    image: imageData,
-    timestamp: new Date().toISOString()
-  });
-
-  if (recentPartners.length > 5) recentPartners.pop();
-  updateReportList();
-}
-
-window.connectSocketAndWebRTC = function (stream, config) {
-  const peerConnection = new RTCPeerConnection(config);
-
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      const cand = event.candidate.candidate;
-      console.log('[ICE] Candidate:', cand);
-      if (cand.includes('typ relay')) {
-        updateTopBar("🔐 Connexion sécurisée via TURN");
-      } else if (cand.includes('typ srflx')) {
-        updateTopBar("🌐 Connexion STUN");
-      } else if (cand.includes('typ host')) {
-        updateTopBar("📡 Connexion directe");
-      }
-    }
-  };
-
-  peerConnection.onconnectionstatechange = () => {
-    alert("🔄 État WebRTC : " + peerConnection.connectionState);
-  };
-
-  peerConnection.oniceconnectionstatechange = () => {
-    alert("❄️ ICE state : " + peerConnection.iceConnectionState);
-  };
-
-  peerConnection.ontrack = (event) => {
-    alert("📺 Flux reçu !");
-    remoteVideo.srcObject = event.streams[0];
-  };
-
-  stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-
-  socket.on("partner-info", ({ remoteId, ip }) => {
-    capturePartnerSnapshot(remoteId, ip);
-  });
-
-  // Signaling offer/answer à ajouter ici
-};
 
 function updateReportList() {
   if (!reportSelect) return;
