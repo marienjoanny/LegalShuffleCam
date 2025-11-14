@@ -97,21 +97,34 @@ async function listCameras() {
 // Nouvelle fonction d'initialisation WebRTC qui gère la récupération des credentials
 function initiateWebRTC(stream) {
     if (typeof window.connectSocketAndWebRTC !== "function") {
-        console.error('[APP] Erreur : connectSocketAndWebRTC non défini.');
+        console.error('[APP] Erreur : connectSocketAndWebRTC non défini (rtc-core.js).');
         return;
+    }
+
+    const setupRTC = (credentials) => {
+        // 1. Configure WebRTC Core avec les identifiants
+        window.connectSocketAndWebRTC(stream, credentials);
+        
+        // 2. IMPORTANT : Initialise les écouteurs Socket.IO (listener.js)
+        if (typeof window.initSocketAndListeners === 'function') {
+            window.initSocketAndListeners();
+        } else {
+            console.error('[APP] Erreur : initSocketAndListeners non défini (listener.js).');
+        }
     }
 
     if (turnCredentials) {
         console.log('[APP] Appel de connectSocketAndWebRTC avec flux et LT-Cred valide.');
-        window.connectSocketAndWebRTC(stream, turnCredentials);
+        setupRTC(turnCredentials);
         return;
     }
 
     // Récupère les identifiants pour la première fois
+    console.log('[APP] Demande initiale des identifiants TURN au serveur...');
     socket.emit('request-turn-credentials', (credentials) => {
         turnCredentials = credentials;
         console.log('[APP] Identifiants TURN LT-Cred reçus à l\'initialisation.');
-        window.connectSocketAndWebRTC(stream, turnCredentials);
+        setupRTC(turnCredentials);
     });
 }
 
@@ -136,6 +149,13 @@ async function startCamera(deviceId) {
     
     // REMPLACEMENT DE L'APPEL STATIQUE
     if (currentStream) {
+      // Le socket doit être défini ici, car initiateWebRTC l'utilise
+      if (typeof socket === 'undefined') {
+          // Si le socket n'est pas encore globalement initialisé, nous ne pouvons pas appeler initiateWebRTC
+          console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
+          updateTopBar("❌ Erreur d'initialisation du socket.");
+          return;
+      }
       initiateWebRTC(currentStream);
     } else {
       console.error('[APP] Erreur : currentStream est null ou undefined.');
@@ -162,6 +182,12 @@ async function startCamera(deviceId) {
       
       // REMPLACEMENT DE L'APPEL STATIQUE
       if (currentStream) {
+        // Le socket doit être défini ici, car initiateWebRTC l'utilise
+        if (typeof socket === 'undefined') {
+          console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
+          updateTopBar("❌ Erreur d'initialisation du socket.");
+          return;
+        }
         initiateWebRTC(currentStream);
       }
 
@@ -214,14 +240,17 @@ if (reportBtn && reportSelect) {
   reportSelect.addEventListener("change", () => {
     const index = reportSelect.value;
     const partner = recentPartners[index];
-    const reason = prompt("Motif du signalement :");
+    // Remplacement de 'alert' par une fonction utilitaire (ou un modal custom en production)
+    const reason = prompt("Motif du signalement :"); 
 
     if (!reason || !partner) {
-      alert("❌ Signalement annulé.");
+      // Remplacement de 'alert'
+      console.log("❌ Signalement annulé.");
       return;
     }
 
-    alert("🚀 Envoi du signalement...\n" +
+    // Remplacement de 'alert'
+    console.log("🚀 Envoi du signalement...\n" +
           "ID signalé : " + partner.remoteId + "\n" +
           "IP : " + partner.ip + "\n" +
           "Motif : " + reason);
@@ -235,9 +264,15 @@ if (reportBtn && reportSelect) {
         reporterId: socket.id
       })
     }).then(res => {
-      alert(res.ok ? "✅ Signalement transmis au serveur" : "❌ Échec du signalement");
+      // Remplacement de 'alert'
+      if (res.ok) {
+        console.log("✅ Signalement transmis au serveur");
+      } else {
+        console.error("❌ Échec du signalement");
+      }
     }).catch(err => {
-      alert("❌ Erreur réseau : " + err.message);
+      // Remplacement de 'alert'
+      console.error("❌ Erreur réseau : " + err.message);
     });
 
     reportSelect.classList.remove("visible");
