@@ -23,12 +23,13 @@ function generateTurnCredentials() {
     const timestamp = Math.floor(Date.now() / 1000) + TURN_LIFETIME; 
     const username = timestamp.toString();
 
-    // Calcul du mot de passe = Base64(HMAC-SHA1(SECRET, USERNAME))
+    // Calcul du mot de passe = HEX(HMAC-SHA1(SECRET, USERNAME))
+    // Coturn s'attend à un hash en format hexadécimal.
     const hmac = crypto.createHmac('sha1', TURN_SECRET);
-    hmac.setEncoding('base64');
-    hmac.write(username);
-    hmac.end();
-    const password = hmac.read();
+    // On hache le nom d'utilisateur (timestamp)
+    hmac.update(username); 
+    // On extrait le résultat en format hexadécimal
+    const password = hmac.digest('hex'); // <-- CORRECTION CRITIQUE ICI : 'hex' au lieu de Base64
 
     return {
         username: username,
@@ -97,7 +98,23 @@ io.on('connection', socket => {
   socket.on('request-turn-credentials', (callback) => {
       const credentials = generateTurnCredentials();
       console.log(`[TURN] Envoi des identifiants temp. à ${socket.id}. Expiration: ${credentials.username}`);
-      callback(credentials); // Renvoie les identifiants au client via le callback
+      // L'objet renvoyé doit être un objet complet de configuration TURN, 
+      // y compris les URLs pour le client (app.js/rtc-core.js)
+      const iceServersConfig = {
+          iceServers: [
+              // STUN (facultatif si TURN est utilisé, mais bon pour le fallback)
+              { urls: 'stun:legalshufflecam.ovh:3478' },
+              
+              // TURN avec les identifiants LT-Cred
+              // Nous devons utiliser le port sécurisé (5349) pour TURN/TLS
+              { 
+                  urls: 'turns:legalshufflecam.ovh:5349?transport=tcp', // Utilisation de turns: et du port TLS
+                  username: credentials.username,
+                  credential: credentials.password
+              }
+          ]
+      };
+      callback(iceServersConfig); // Renvoie la configuration complète au client
   });
   
   socket.onAny((event, ...args) => {
