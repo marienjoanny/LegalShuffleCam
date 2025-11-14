@@ -20,6 +20,7 @@ const recentPartners = [];
 
 // NOUVELLE VARIABLE GLOBALE pour stocker les identifiants TURN dynamiques
 let turnCredentials = null; 
+let isWebRTCInitialized = false; // Flag pour s'assurer que l'initialisation ne se fait qu'une fois
 
 // Fonctions utilitaires
 function updateTopBar(message) {
@@ -29,9 +30,9 @@ function updateTopBar(message) {
 function updateNextButtonState() {
   if (btnNext) {
     // Le bouton n'est activé que si la caméra est prête (currentStream) ET le visage est visible
-    const isReady = currentStream && window.faceVisible;
+    const isReady = currentStream && window.faceVisible && isWebRTCInitialized;
     btnNext.disabled = !isReady;
-    btnNext.textContent = isReady ? '➡️ Interlocuteur suivant' : '... Visage requis ...';
+    btnNext.textContent = isReady ? '➡️ Interlocuteur suivant' : '... Préparation ...';
     btnNext.onclick = handleNextClick;
   }
 }
@@ -61,10 +62,10 @@ function handleNextClick() {
       if (turnCredentials) {
         startMatching();
       } else {
-        // Demande les identifiants au serveur
+        // Normalement, ceci ne devrait pas arriver après l'initialisation, mais on sécurise
+        console.warn('[APP] Les identifiants TURN manquent pour le Next. Redemande au serveur...');
         socket.emit('request-turn-credentials', (credentials) => {
             turnCredentials = credentials;
-            console.log('[APP] Identifiants TURN LT-Cred reçus après Next.');
             startMatching();
         });
       }
@@ -82,6 +83,7 @@ async function listCameras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoInputs = devices.filter(d => d.kind === 'videoinput');
+    
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
       videoInputs.forEach((device, index) => {
@@ -91,6 +93,7 @@ async function listCameras() {
         cameraSelect.appendChild(option);
       });
     }
+    
     if (videoInputs.length > 0) {
       // Démarrer la première caméra trouvée
       await startCamera(videoInputs[0].deviceId);
@@ -107,12 +110,20 @@ async function listCameras() {
 
 // Nouvelle fonction d'initialisation WebRTC qui gère la récupération des credentials
 function initiateWebRTC(stream) {
+    if (isWebRTCInitialized) {
+        console.log('[APP] WebRTC déjà initialisé, skipping credential request.');
+        return;
+    }
+
     if (typeof window.connectSocketAndWebRTC !== "function") {
         console.error('[APP] Erreur : connectSocketAndWebRTC non défini (rtc-core.js).');
         return;
     }
 
     const setupRTC = (credentials) => {
+        turnCredentials = credentials; // Stocke les credentials pour les futurs appels Next
+        isWebRTCInitialized = true;
+
         // 1. Configure WebRTC Core avec les identifiants
         window.connectSocketAndWebRTC(stream, credentials);
         
@@ -122,21 +133,23 @@ function initiateWebRTC(stream) {
         } else {
             console.error('[APP] Erreur : initSocketAndListeners non défini (listener.js).');
         }
-        updateNextButtonState(); // Mettre à jour l'état du bouton après l'initialisation RTC
-    }
-
-    if (turnCredentials) {
-        console.log('[APP] Appel de connectSocketAndWebRTC avec flux et LT-Cred valide.');
-        setupRTC(turnCredentials);
-        return;
+        updateNextButtonState(); // Active le bouton 'Next'
+        updateTopBar("Détection de visage...");
     }
 
     // Récupère les identifiants pour la première fois
     console.log('[APP] Demande initiale des identifiants TURN au serveur...');
+    
+    if (typeof socket === 'undefined' || !socket.connected) {
+        console.error("[APP] Le socket n'est pas prêt. Initialisation RTC reportée.");
+        updateTopBar("❌ Le socket n'est pas connecté.");
+        updateNextButtonState();
+        return;
+    }
+
     socket.emit('request-turn-credentials', (credentials) => {
-        turnCredentials = credentials;
         console.log('[APP] Identifiants TURN LT-Cred reçus à l\'initialisation.');
-        setupRTC(turnCredentials);
+        setupRTC(credentials);
     });
 }
 
@@ -157,26 +170,18 @@ async function startCamera(deviceId) {
     currentStream = stream;
     if (localVideo) localVideo.srcObject = stream;
     console.log('[APP] Flux média local initialisé avec succès :', currentStream);
-    updateTopBar("Détection de visage...");
-
+    
     // Initialisation de la détection de visage
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
-    } else {
-        console.warn("[APP] initFaceVisible (tracker.js) non trouvé. Le bouton Next ne s'activera que par flux.");
-    }
+    } 
     
-    // Le socket doit être défini ici (assumé globalement par listener.js)
-    if (typeof socket !== 'undefined') {
+    // L'ancienne version appelait ici directement la connexion RTC.
+    // La nouvelle version appelle l'initialisation LT-Cred/RTC
+    if (currentStream) {
       initiateWebRTC(currentStream);
-    } else {
-      console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
-      updateTopBar("❌ Erreur d'initialisation du socket.");
-      updateNextButtonState();
-      return;
     }
 
-    // Mettre à jour l'état local initial (sera réajusté par le tracker)
     window.faceVisible = true; 
     window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
 
@@ -184,6 +189,7 @@ async function startCamera(deviceId) {
     console.error("Erreur lors de l'accès à la caméra :", err);
     updateTopBar("❌ Caméra refusée ou indisponible. Rechargez après avoir autorisé.");
     currentStream = null;
+    isWebRTCInitialized = false; // Réinitialiser le flag
     updateNextButtonState(); // Désactiver le bouton Next
   }
 }
@@ -305,7 +311,6 @@ window.addEventListener('rtcDisconnected', (event) => {
 
 // Initialisation au chargement de la page
 window.addEventListener('load', () => {
-  // 📸 C'est ici que la détection de caméra locale et le démarrage du flux sont appelés.
   listCameras(); 
   
   // Logique de nettoyage à la fermeture
