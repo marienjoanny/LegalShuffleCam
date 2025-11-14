@@ -5,18 +5,26 @@ let isMatching = false;
 let currentPartnerId = null;
 let isCallInProgress = false; // État pour suivre si un appel est en cours
 
-// Initialisation de Socket.IO et des écouteurs
-window.connectSocketAndWebRTC = function(stream, config) {
-  if (!stream) {
-    console.error("[LISTENER] Aucun flux fourni pour initialiser WebRTC.");
-    window.dispatchEvent(new CustomEvent('rtcError', {
-      detail: { message: "Flux local manquant pour initialiser WebRTC." }
-    }));
+/**
+ * Initialise Socket.IO et configure tous les écouteurs de signalisation.
+ * Cette fonction est appelée par app.js après la configuration WebRTC.
+ */
+window.initSocketAndListeners = function() {
+  
+  // 1. Initialisation de Socket.IO
+  if (typeof window.initSocket === 'function') {
+      window.initSocket();
+      console.log("[LISTENER] Socket.IO initialisé.");
+  } else {
+      console.warn("[LISTENER] window.initSocket() non défini. Assurez-vous que socket.io.js est chargé.");
+      // L'objet window.socket doit exister avant de configurer les écouteurs
+  }
+  
+  // Vérification de la disponibilité du socket
+  if (typeof window.socket === 'undefined') {
+    console.error("[LISTENER] L'objet Socket.IO est manquant après l'initialisation.");
     return;
   }
-
-  // Initialisation de Socket.IO
-  window.initSocket();
 
   // Écouteur pour la connexion Socket.IO
   window.socket.on("connect", () => {
@@ -72,7 +80,12 @@ window.connectSocketAndWebRTC = function(stream, config) {
       try {
         if (window.socket?.connected) {
           console.log(`[LISTENER] Démarrage de l'appel avec ${currentPartnerId}.`);
-          window.startCall(currentPartnerId);
+          // Vérification de l'existence de la fonction rtc-core.js
+          if (typeof window.startCall === 'function') {
+            window.startCall(currentPartnerId);
+          } else {
+            console.error("[LISTENER] window.startCall non défini. rtc-core.js est-il chargé ?");
+          }
         } else {
           console.warn("[LISTENER] Socket.IO déconnecté avant startCall.");
           window.dispatchEvent(new CustomEvent('rtcError', {
@@ -100,10 +113,10 @@ window.connectSocketAndWebRTC = function(stream, config) {
       return;
     }
 
-    if (data.from === currentPartnerId) {
+    if (data.from === currentPartnerId && typeof window.handleOffer === 'function') {
       window.handleOffer(data);
     } else {
-      console.warn("[LISTENER] Offre reçue d'un partenaire non actuel. Ignoré.");
+      console.warn("[LISTENER] Offre reçue d'un partenaire non actuel ou handleOffer manquant. Ignoré.");
     }
   });
 
@@ -115,29 +128,30 @@ window.connectSocketAndWebRTC = function(stream, config) {
       return;
     }
 
-    if (data.from === currentPartnerId) {
+    if (data.from === currentPartnerId && typeof window.handleAnswer === 'function') {
       window.handleAnswer(data);
     } else {
-      console.warn("[LISTENER] Réponse reçue d'un partenaire non actuel. Ignoré.");
+      console.warn("[LISTENER] Réponse reçue d'un partenaire non actuel ou handleAnswer manquant. Ignoré.");
     }
   });
 
   // Écouteur pour les candidats ICE
   window.socket.on("ice-candidate", (data) => {
-    console.log(`[LISTENER] Candidat ICE reçu :`, data);
+    // console.log(`[LISTENER] Candidat ICE reçu :`, data); // Moins verbeux
     if (!data || !data.candidate) {
       console.error("[LISTENER] ERREUR : Candidat ICE invalide.");
       return;
     }
 
-    if (data.from === currentPartnerId) {
+    if (data.from === currentPartnerId && typeof window.handleICECandidate === 'function') {
       window.handleICECandidate(data);
     } else {
-      console.warn("[LISTENER] Candidat ICE reçu d'un partenaire non actuel. Ignoré.");
+      // console.warn("[LISTENER] Candidat ICE reçu d'un partenaire non actuel ou handleICECandidate manquant. Ignoré."); // Moins verbeux
     }
   });
 
-  // Écouteur pour les événements personnalisés
+  // Écouteur pour les événements personnalisés (RTC/Déconnexion gérés par app.js pour le DOM)
+  
   window.addEventListener('rtcConnected', (event) => {
     console.log("[LISTENER] Connexion WebRTC établie :", event.detail.message);
     if (window.topBar) {
@@ -153,7 +167,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
     if (window.topBar) {
       window.topBar.textContent = `⚠ ${event.detail.message}`;
     }
-    isCallInProgress = false; // Réinitialiser l'état en cas d'erreur
+    isCallInProgress = false; 
   });
 
   window.addEventListener('rtcDisconnected', (event) => {
@@ -161,7 +175,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
     if (window.topBar) {
       window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
     }
-    isCallInProgress = false; // Réinitialiser l'état en cas de déconnexion
+    isCallInProgress = false; 
   });
 
   // Écouteur pour l'événement "partner-info"
@@ -173,7 +187,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
   });
 };
 
-// Fonction pour gérer l'événement "ready-for-match"
+// Fonction pour gérer l'événement "ready-for-match" (gardée pour la compatibilité)
 window.sendReadyForMatch = function() {
   if (isCallInProgress) {
     console.warn("[LISTENER] Un appel est déjà en cours. Ignoré.");
