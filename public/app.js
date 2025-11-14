@@ -1,5 +1,5 @@
 // LegalShuffleCam • app.js
-// Version finale fonctionnelle avec caméra + WebRTC
+// Version corrigée avec liste des caméras + affichage + WebRTC
 
 // Éléments DOM
 let currentStream = null;
@@ -35,6 +35,8 @@ async function listCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoInputs = devices.filter(d => d.kind === 'videoinput');
 
+    console.log('Caméras disponibles:', videoInputs);
+
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
       videoInputs.forEach((device, index) => {
@@ -49,38 +51,44 @@ async function listCameras() {
       await startCamera(videoInputs[0].deviceId);
     } else {
       updateTopBar("❌ Aucune caméra détectée.");
+      updateNextButtonState();
     }
   } catch (err) {
     console.error("Erreur lors de la liste des caméras :", err);
     updateTopBar("❌ Erreur lors de la détection des caméras.");
+    updateNextButtonState();
   }
 }
 
 // Fonction pour démarrer une caméra
 async function startCamera(deviceId) {
   try {
+    // Arrêter le flux actuel s'il existe
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
 
     updateTopBar("📷 Demande d'accès à la caméra...");
 
+    // Demander l'accès à la caméra
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true
     });
 
+    // Stocker le flux et l'afficher
     currentStream = stream;
     if (localVideo) {
       localVideo.srcObject = stream;
       console.log('[APP] Flux vidéo local affiché avec succès.');
-      updateTopBar("✅ Caméra active. Initialisation WebRTC...");
+      updateTopBar("✅ Caméra active.");
     } else {
       console.error('[APP] Erreur : élément localVideo introuvable dans le DOM.');
       updateTopBar("❌ Élément vidéo introuvable.");
       return;
     }
 
+    // Initialiser la détection de visage si disponible
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
     }
@@ -183,12 +191,30 @@ function handleNextClick() {
 
 // Gestion des événements DOM
 if (cameraSelect) {
-  cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
+  cameraSelect.addEventListener('change', (e) => {
+    console.log('Changement de caméra demandé:', e.target.value);
+    startCamera(e.target.value);
+  });
 }
 
 if (btnNext) {
   btnNext.onclick = handleNextClick;
 }
+
+// Initialisation au chargement de la page
+window.addEventListener('load', () => {
+  console.log('Page chargée, démarrage de la détection des caméras...');
+  listCameras();
+
+  window.addEventListener('beforeunload', () => {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+    if (typeof window.disconnectWebRTC === 'function') {
+      window.disconnectWebRTC();
+    }
+  });
+});
 
 // Écouteurs d'événements
 window.addEventListener('rtcError', (event) => {
@@ -209,18 +235,4 @@ window.addEventListener('rtcDisconnected', (event) => {
   }
   isWebRTCInitialized = false;
   updateNextButtonState();
-});
-
-// Initialisation au chargement de la page
-window.addEventListener('load', () => {
-  listCameras();
-
-  window.addEventListener('beforeunload', () => {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
-    if (typeof window.disconnectWebRTC === 'function') {
-      window.disconnectWebRTC();
-    }
-  });
 });
