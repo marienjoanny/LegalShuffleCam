@@ -53,7 +53,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://legalshufflecam.ovh",
+    origin: ["https://legalshufflecam.ovh", "http://localhost:3000"],
     methods: ["GET", "POST"]
   }
 });
@@ -71,7 +71,7 @@ io.on('connection', socket => {
     console.log('[MATCHMAKING] Client prêt :', socket.id);
     console.log('[MATCHMAKING] État de waitingClient :', waitingClient?.id, 'connecté =', waitingClient?.connected);
 
-    if (waitingClient && waitingClient.connected !== false) {
+    if (waitingClient && waitingClient.connected) {
       if (waitingClient.id === socket.id) {
         console.warn('[MATCHMAKING] ⚠ Tentative d’appariement avec soi-même ignorée :', socket.id);
         return;
@@ -115,6 +115,7 @@ io.on('connection', socket => {
       target.emit("offer", { from: socket.id, sdp: data.sdp });
     } else {
       console.warn('[RTC] ❌ Offre ignorée, destinataire déconnecté :', data.to);
+      socket.emit("rtc-error", { message: "Destinataire déconnecté" });
     }
   });
 
@@ -125,6 +126,7 @@ io.on('connection', socket => {
       target.emit("answer", { from: socket.id, sdp: data.sdp });
     } else {
       console.warn('[RTC] ❌ Réponse ignorée, destinataire déconnecté :', data.to);
+      socket.emit("rtc-error", { message: "Destinataire déconnecté" });
     }
   });
 
