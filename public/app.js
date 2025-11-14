@@ -18,17 +18,8 @@ window.faceVisible = true;
 window.trackerInitialized = false;
 const recentPartners = [];
 
-// Configuration WebRTC
-const rtcConfig = {
-  iceServers: [
-    { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' },
-    { urls: 'turn:legalshufflecam.ovh:5349?transport=tcp', username: 'webrtc', credential: 'secret' },
-    { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
-    { urls: 'stun:stun.l.google.com:19302' }
-  ],
-  iceTransportPolicy: 'relay',
-  sdpSemantics: 'unified-plan'
-};
+// NOUVELLE VARIABLE GLOBALE pour stocker les identifiants TURN dynamiques
+let turnCredentials = null; 
 
 // Fonctions utilitaires
 function updateTopBar(message) {
@@ -49,11 +40,28 @@ function handleNextClick() {
   }
   if (remoteVideo) remoteVideo.srcObject = null;
   updateNextButtonState();
+  
   setTimeout(() => {
     if (typeof socket !== 'undefined' && socket.connected && currentStream) {
-      console.log('[APP] Envoi de ready-for-match avec un flux valide.');
-      socket.emit("ready-for-match");
       updateTopBar("🔍 Recherche d’un partenaire...");
+
+      // LOGIQUE LT-CRED : S'assurer que les identifiants sont là avant de demander un match
+      const startMatching = () => {
+        console.log('[APP] Envoi de ready-for-match avec un flux valide.');
+        socket.emit("ready-for-match");
+      };
+
+      if (turnCredentials) {
+        startMatching();
+      } else {
+        // Demande les identifiants au serveur
+        socket.emit('request-turn-credentials', (credentials) => {
+            turnCredentials = credentials;
+            console.log('[APP] Identifiants TURN LT-Cred reçus après Next.');
+            startMatching();
+        });
+      }
+
     } else {
       console.error('[APP] Erreur : currentStream est null ou socket non connecté.');
       updateTopBar("❌ Connexion perdue ou flux manquant. Rechargez la page.");
@@ -86,6 +94,27 @@ async function listCameras() {
   }
 }
 
+// Nouvelle fonction d'initialisation WebRTC qui gère la récupération des credentials
+function initiateWebRTC(stream) {
+    if (typeof window.connectSocketAndWebRTC !== "function") {
+        console.error('[APP] Erreur : connectSocketAndWebRTC non défini.');
+        return;
+    }
+
+    if (turnCredentials) {
+        console.log('[APP] Appel de connectSocketAndWebRTC avec flux et LT-Cred valide.');
+        window.connectSocketAndWebRTC(stream, turnCredentials);
+        return;
+    }
+
+    // Récupère les identifiants pour la première fois
+    socket.emit('request-turn-credentials', (credentials) => {
+        turnCredentials = credentials;
+        console.log('[APP] Identifiants TURN LT-Cred reçus à l\'initialisation.');
+        window.connectSocketAndWebRTC(stream, turnCredentials);
+    });
+}
+
 async function startCamera(deviceId) {
   try {
     if (currentStream) {
@@ -104,10 +133,10 @@ async function startCamera(deviceId) {
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
     }
-
-    if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
-      console.log('[APP] Appel de connectSocketAndWebRTC avec un flux valide.');
-      window.connectSocketAndWebRTC(currentStream, rtcConfig);
+    
+    // REMPLACEMENT DE L'APPEL STATIQUE
+    if (currentStream) {
+      initiateWebRTC(currentStream);
     } else {
       console.error('[APP] Erreur : currentStream est null ou undefined.');
     }
@@ -130,10 +159,10 @@ async function startCamera(deviceId) {
       if (typeof window.initFaceVisible === "function") {
         window.initFaceVisible(localVideo);
       }
-
-      if (typeof window.connectSocketAndWebRTC === "function" && currentStream) {
-        console.log('[APP] Appel de connectSocketAndWebRTC avec un flux fallback valide.');
-        window.connectSocketAndWebRTC(currentStream, rtcConfig);
+      
+      // REMPLACEMENT DE L'APPEL STATIQUE
+      if (currentStream) {
+        initiateWebRTC(currentStream);
       }
 
       window.faceVisible = true;
