@@ -3,6 +3,7 @@
 
 let isMatching = false;
 let currentPartnerId = null;
+let isCallInProgress = false; // État pour suivre si un appel est en cours
 
 // Initialisation de Socket.IO et des écouteurs
 window.connectSocketAndWebRTC = function(stream, config) {
@@ -39,12 +40,13 @@ window.connectSocketAndWebRTC = function(stream, config) {
     window.dispatchEvent(new CustomEvent('rtcError', {
       detail: { message: `Déconnecté du serveur : ${reason}` }
     }));
+    isCallInProgress = false; // Réinitialiser l'état en cas de déconnexion
   });
 
   // Écouteur pour l'événement "partner" (appariement)
   window.socket.on("partner", async (data) => {
-    if (isMatching) {
-      console.warn("[LISTENER] Appariement déjà en cours. Ignoré.");
+    if (isMatching || isCallInProgress) {
+      console.warn("[LISTENER] Appariement déjà en cours ou appel en cours. Ignoré.");
       return;
     }
 
@@ -61,8 +63,12 @@ window.connectSocketAndWebRTC = function(stream, config) {
     }
 
     currentPartnerId = data.id;
+    isCallInProgress = true; // Mettre à jour l'état pour indiquer qu'un appel est en cours
 
-    setTimeout(() => {
+    console.log(`[LISTENER] Partenaire trouvé : ${currentPartnerId}. En attente de l'offre SDP ou envoi d'une offre.`);
+
+    // Seuls les clients initiateurs (ceux avec un ID de socket inférieur) appellent startCall.
+    if (window.socket.id < currentPartnerId) {
       try {
         if (window.socket?.connected) {
           console.log(`[LISTENER] Démarrage de l'appel avec ${currentPartnerId}.`);
@@ -78,10 +84,12 @@ window.connectSocketAndWebRTC = function(stream, config) {
         window.dispatchEvent(new CustomEvent('rtcError', {
           detail: { message: "Erreur WebRTC : échec de l'appel.", error: err }
         }));
-      } finally {
-        isMatching = false;
       }
-    }, 500);
+    } else {
+      console.log(`[LISTENER] En attente de l'offre SDP de ${currentPartnerId}.`);
+    }
+
+    isMatching = false;
   });
 
   // Écouteur pour les offres WebRTC
@@ -145,6 +153,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
     if (window.topBar) {
       window.topBar.textContent = `⚠ ${event.detail.message}`;
     }
+    isCallInProgress = false; // Réinitialiser l'état en cas d'erreur
   });
 
   window.addEventListener('rtcDisconnected', (event) => {
@@ -152,6 +161,7 @@ window.connectSocketAndWebRTC = function(stream, config) {
     if (window.topBar) {
       window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
     }
+    isCallInProgress = false; // Réinitialiser l'état en cas de déconnexion
   });
 
   // Écouteur pour l'événement "partner-info"
@@ -161,4 +171,22 @@ window.connectSocketAndWebRTC = function(stream, config) {
       console.log(`[LISTENER] Partenaire : ${data.remoteId}, IP : ${data.ip}`);
     }
   });
+};
+
+// Fonction pour gérer l'événement "ready-for-match"
+window.sendReadyForMatch = function() {
+  if (isCallInProgress) {
+    console.warn("[LISTENER] Un appel est déjà en cours. Ignoré.");
+    return;
+  }
+
+  if (window.socket?.connected) {
+    console.log("[LISTENER] Envoi de ready-for-match.");
+    window.socket.emit("ready-for-match");
+  } else {
+    console.warn("[LISTENER] Socket.IO non connecté.");
+    window.dispatchEvent(new CustomEvent('rtcError', {
+      detail: { message: "Socket.IO non connecté." }
+    }));
+  }
 };
