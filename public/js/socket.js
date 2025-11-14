@@ -1,20 +1,23 @@
-// 🔌 Initialisation socket.js
-const socket = io();
+// LegalShuffleCam • socket.js
+// 🔌 Initialisation de la connexion Socket.IO et exposition à l'objet global 'window'
 
-socket.on("partner-found", (data) => {
-  console.log("[RTC] 🎯 Partenaire reçu :", data);
+/**
+ * Initialise la connexion Socket.IO.
+ * L'objet créé est stocké dans 'window.socket' pour être accessible par 
+ * rtc-core.js, listener.js et app.js pour la signalisation.
+ * * NOTE: Ce fichier DOIT être chargé après la bibliothèque cliente Socket.IO (io.js).
+ */
+(function() {
+    // Tente de se connecter au même hôte/port que la page actuelle
+    if (typeof io !== 'undefined') {
+        window.socket = io({
+            // Vous pouvez ajouter des options ici si nécessaire (ex: transport: ['websocket'])
+        });
+        console.log("[SOCKET] Objet Socket.IO créé et exposé à window.socket.");
+    } else {
+        console.error("[SOCKET] La fonction 'io' est introuvable. Avez-vous chargé socket.io.js ?");
+    }
+})();
 
-  if (!localStream) {
-    console.warn("[RTC] ⏳ Flux local non prêt — attente avant initiateCall");
-    const waitForStream = setInterval(() => {
-      if (localStream) {
-        clearInterval(waitForStream);
-        console.log("[RTC] ✅ Flux local prêt — appel initiateCall");
-        initiateCall();
-      }
-    }, 100);
-    return;
-  }
-
-  initiateCall();
-});
+// Les événements de signalisation comme 'offer', 'answer', et 'partner'
+// sont gérés par le fichier 'listener.js' via window.initSocketAndListeners().
