@@ -18,7 +18,7 @@ const rtcConfig = {
       credentialType: 'password'
     }
   ],
-  iceTransportPolicy: 'all', // Utilisation de 'all' pour plus de flexibilité
+  iceTransportPolicy: 'all', // Autorise tous les types de candidats (STUN, p2p, TURN)
   sdpSemantics: 'unified-plan'
 };
 
@@ -33,12 +33,19 @@ window.startCall = async function(partnerId) {
   console.log('[RTC] Démarrage d\'un appel avec', remoteId);
 
   try {
+    if (!window.currentStream) {
+      console.error('[RTC] Erreur : currentStream est null ou undefined.');
+      window.dispatchEvent(new CustomEvent('rtcError', {
+        detail: { message: "Flux média local manquant." }
+      }));
+      return;
+    }
+
     peerConnection = new RTCPeerConnection(rtcConfig);
 
     // Ajoute les pistes locales
-    if (window.currentStream) {
-      window.currentStream.getTracks().forEach(track => peerConnection.addTrack(track, window.currentStream));
-    }
+    console.log('[RTC] Ajout des pistes locales :', window.currentStream.getTracks());
+    window.currentStream.getTracks().forEach(track => peerConnection.addTrack(track, window.currentStream));
 
     // Gestion des candidats ICE
     peerConnection.onicecandidate = e => {
@@ -46,8 +53,14 @@ window.startCall = async function(partnerId) {
         console.log('[RTC] Nouveau candidat ICE :', e.candidate.candidate);
         if (e.candidate.candidate.includes('typ relay')) {
           console.log('[RTC] ✅ Candidat RELAY trouvé !');
+        } else if (e.candidate.candidate.includes('typ srflx')) {
+          console.log('[RTC] Candidat SRFLX (STUN) trouvé.');
+        } else if (e.candidate.candidate.includes('typ host')) {
+          console.log('[RTC] Candidat HOST trouvé.');
         }
         window.socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
+      } else {
+        console.log('[RTC] Fin de la collecte des candidats ICE.');
       }
     };
 
@@ -74,6 +87,8 @@ window.startCall = async function(partnerId) {
         window.dispatchEvent(new CustomEvent('rtcError', {
           detail: { message: "Échec de la connexion WebRTC." }
         }));
+      } else if (peerConnection.connectionState === 'checking') {
+        console.log('[RTC] Vérification de la connexion en cours...');
       }
     };
 
@@ -84,6 +99,10 @@ window.startCall = async function(partnerId) {
         window.dispatchEvent(new CustomEvent('rtcError', {
           detail: { message: "Échec de la connexion WebRTC. Vérifiez votre réseau." }
         }));
+      } else if (peerConnection.iceConnectionState === 'checking') {
+        console.log('[RTC] Vérification de la connexion ICE en cours...');
+      } else if (peerConnection.iceConnectionState === 'connected') {
+        console.log('[RTC] Connexion ICE établie.');
       }
     };
 
@@ -115,18 +134,34 @@ window.handleOffer = async function({ from, sdp }) {
   console.log('[RTC] Offre reçue de', remoteId);
 
   try {
+    if (!window.currentStream) {
+      console.error('[RTC] Erreur : currentStream est null ou undefined.');
+      window.dispatchEvent(new CustomEvent('rtcError', {
+        detail: { message: "Flux média local manquant." }
+      }));
+      return;
+    }
+
     peerConnection = new RTCPeerConnection(rtcConfig);
 
     // Ajoute les pistes locales
-    if (window.currentStream) {
-      window.currentStream.getTracks().forEach(track => peerConnection.addTrack(track, window.currentStream));
-    }
+    console.log('[RTC] Ajout des pistes locales :', window.currentStream.getTracks());
+    window.currentStream.getTracks().forEach(track => peerConnection.addTrack(track, window.currentStream));
 
     // Gestion des candidats ICE
     peerConnection.onicecandidate = e => {
       if (e.candidate) {
         console.log('[RTC] Nouveau candidat ICE :', e.candidate.candidate);
+        if (e.candidate.candidate.includes('typ relay')) {
+          console.log('[RTC] ✅ Candidat RELAY trouvé !');
+        } else if (e.candidate.candidate.includes('typ srflx')) {
+          console.log('[RTC] Candidat SRFLX (STUN) trouvé.');
+        } else if (e.candidate.candidate.includes('typ host')) {
+          console.log('[RTC] Candidat HOST trouvé.');
+        }
         window.socket.emit("ice-candidate", { to: remoteId, candidate: e.candidate });
+      } else {
+        console.log('[RTC] Fin de la collecte des candidats ICE.');
       }
     };
 
@@ -144,10 +179,32 @@ window.handleOffer = async function({ from, sdp }) {
     // Gestion des changements d'état
     peerConnection.onconnectionstatechange = () => {
       console.log('[RTC] État de la connexion:', peerConnection.connectionState);
+      if (peerConnection.connectionState === 'connected') {
+        window.dispatchEvent(new CustomEvent('rtcConnected', {
+          detail: { message: "Connexion WebRTC établie." }
+        }));
+      } else if (peerConnection.connectionState === 'failed') {
+        console.error('[RTC] Échec de la connexion WebRTC.');
+        window.dispatchEvent(new CustomEvent('rtcError', {
+          detail: { message: "Échec de la connexion WebRTC." }
+        }));
+      } else if (peerConnection.connectionState === 'checking') {
+        console.log('[RTC] Vérification de la connexion en cours...');
+      }
     };
 
     peerConnection.oniceconnectionstatechange = () => {
       console.log('[RTC] État ICE:', peerConnection.iceConnectionState);
+      if (peerConnection.iceConnectionState === 'failed') {
+        console.error('[RTC] Échec de la connexion ICE.');
+        window.dispatchEvent(new CustomEvent('rtcError', {
+          detail: { message: "Échec de la connexion WebRTC. Vérifiez votre réseau." }
+        }));
+      } else if (peerConnection.iceConnectionState === 'checking') {
+        console.log('[RTC] Vérification de la connexion ICE en cours...');
+      } else if (peerConnection.iceConnectionState === 'connected') {
+        console.log('[RTC] Connexion ICE établie.');
+      }
     };
 
     await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: sdp }));
