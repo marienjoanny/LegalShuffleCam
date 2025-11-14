@@ -28,8 +28,10 @@ function updateTopBar(message) {
 
 function updateNextButtonState() {
   if (btnNext) {
-    btnNext.disabled = false;
-    btnNext.textContent = '➡️ Interlocuteur suivant';
+    // Le bouton n'est activé que si la caméra est prête (currentStream) ET le visage est visible
+    const isReady = currentStream && window.faceVisible;
+    btnNext.disabled = !isReady;
+    btnNext.textContent = isReady ? '➡️ Interlocuteur suivant' : '... Visage requis ...';
     btnNext.onclick = handleNextClick;
   }
 }
@@ -39,8 +41,13 @@ function handleNextClick() {
     window.disconnectWebRTC();
   }
   if (remoteVideo) remoteVideo.srcObject = null;
-  updateNextButtonState();
   
+  // Désactiver immédiatement le bouton Next en attente de match
+  if (btnNext) {
+    btnNext.disabled = true;
+    btnNext.textContent = '⏳ Connexion...';
+  }
+
   setTimeout(() => {
     if (typeof socket !== 'undefined' && socket.connected && currentStream) {
       updateTopBar("🔍 Recherche d’un partenaire...");
@@ -65,6 +72,7 @@ function handleNextClick() {
     } else {
       console.error('[APP] Erreur : currentStream est null ou socket non connecté.');
       updateTopBar("❌ Connexion perdue ou flux manquant. Rechargez la page.");
+      updateNextButtonState(); // Réactiver si échec de connexion
     }
   }, 1500);
 }
@@ -84,13 +92,16 @@ async function listCameras() {
       });
     }
     if (videoInputs.length > 0) {
+      // Démarrer la première caméra trouvée
       await startCamera(videoInputs[0].deviceId);
     } else {
       updateTopBar("❌ Aucune caméra détectée.");
+      updateNextButtonState();
     }
   } catch (err) {
     console.error("Erreur lors de la liste des caméras :", err);
     updateTopBar("❌ Erreur caméra. Vérifiez les permissions.");
+    updateNextButtonState();
   }
 }
 
@@ -111,6 +122,7 @@ function initiateWebRTC(stream) {
         } else {
             console.error('[APP] Erreur : initSocketAndListeners non défini (listener.js).');
         }
+        updateNextButtonState(); // Mettre à jour l'état du bouton après l'initialisation RTC
     }
 
     if (turnCredentials) {
@@ -134,6 +146,9 @@ async function startCamera(deviceId) {
       currentStream.getTracks().forEach(track => track.stop());
     }
 
+    // Mettre à jour l'état avant de demander les permissions
+    updateTopBar("📷 Demande de permissions caméra...");
+
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true
@@ -142,62 +157,34 @@ async function startCamera(deviceId) {
     currentStream = stream;
     if (localVideo) localVideo.srcObject = stream;
     console.log('[APP] Flux média local initialisé avec succès :', currentStream);
+    updateTopBar("Détection de visage...");
 
+    // Initialisation de la détection de visage
     if (typeof window.initFaceVisible === "function") {
       window.initFaceVisible(localVideo);
+    } else {
+        console.warn("[APP] initFaceVisible (tracker.js) non trouvé. Le bouton Next ne s'activera que par flux.");
     }
     
-    // REMPLACEMENT DE L'APPEL STATIQUE
-    if (currentStream) {
-      // Le socket doit être défini ici, car initiateWebRTC l'utilise
-      if (typeof socket === 'undefined') {
-          // Si le socket n'est pas encore globalement initialisé, nous ne pouvons pas appeler initiateWebRTC
-          console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
-          updateTopBar("❌ Erreur d'initialisation du socket.");
-          return;
-      }
+    // Le socket doit être défini ici (assumé globalement par listener.js)
+    if (typeof socket !== 'undefined') {
       initiateWebRTC(currentStream);
     } else {
-      console.error('[APP] Erreur : currentStream est null ou undefined.');
+      console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
+      updateTopBar("❌ Erreur d'initialisation du socket.");
+      updateNextButtonState();
+      return;
     }
 
-    window.faceVisible = true;
+    // Mettre à jour l'état local initial (sera réajusté par le tracker)
+    window.faceVisible = true; 
     window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
 
   } catch (err) {
     console.error("Erreur lors de l'accès à la caméra :", err);
-    try {
-      const fallbackStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-
-      currentStream = fallbackStream;
-      if (localVideo) localVideo.srcObject = fallbackStream;
-      console.log('[APP] Flux média fallback initialisé avec succès :', currentStream);
-
-      if (typeof window.initFaceVisible === "function") {
-        window.initFaceVisible(localVideo);
-      }
-      
-      // REMPLACEMENT DE L'APPEL STATIQUE
-      if (currentStream) {
-        // Le socket doit être défini ici, car initiateWebRTC l'utilise
-        if (typeof socket === 'undefined') {
-          console.error("[APP] Le socket n'est pas défini. Assurez-vous qu'il est initialisé avant d'appeler initiateWebRTC.");
-          updateTopBar("❌ Erreur d'initialisation du socket.");
-          return;
-        }
-        initiateWebRTC(currentStream);
-      }
-
-      window.faceVisible = true;
-      window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
-
-    } catch (fallbackErr) {
-      console.error("Erreur lors de l'accès à la caméra de secours :", fallbackErr);
-      updateTopBar("❌ Caméra refusée ou indisponible.");
-    }
+    updateTopBar("❌ Caméra refusée ou indisponible. Rechargez après avoir autorisé.");
+    currentStream = null;
+    updateNextButtonState(); // Désactiver le bouton Next
   }
 }
 
@@ -305,6 +292,7 @@ window.addEventListener('rtcError', (event) => {
   if (window.topBar) {
     window.topBar.textContent = `⚠ ${event.detail.message}`;
   }
+  updateNextButtonState();
 });
 
 window.addEventListener('rtcDisconnected', (event) => {
@@ -312,11 +300,15 @@ window.addEventListener('rtcDisconnected', (event) => {
   if (window.topBar) {
     window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
   }
+  updateNextButtonState();
 });
 
-// Initialisation
+// Initialisation au chargement de la page
 window.addEventListener('load', () => {
-  listCameras();
+  // 📸 C'est ici que la détection de caméra locale et le démarrage du flux sont appelés.
+  listCameras(); 
+  
+  // Logique de nettoyage à la fermeture
   window.addEventListener('beforeunload', () => {
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
@@ -326,5 +318,3 @@ window.addEventListener('load', () => {
     }
   });
 });
-
-updateNextButtonState();
