@@ -153,4 +153,12 @@ window.connectSocketAndWebRTC = function(stream, config) {
       window.topBar.textContent = "🔍 Prêt pour une nouvelle connexion.";
     }
   });
+
+  // Écouteur pour l'événement "partner-info"
+  window.socket.on("partner-info", (data) => {
+    console.log(`[LISTENER] Informations partenaire reçues :`, data);
+    if (data && data.remoteId && data.ip) {
+      console.log(`[LISTENER] Partenaire : ${data.remoteId}, IP : ${data.ip}`);
+    }
+  });
 };
