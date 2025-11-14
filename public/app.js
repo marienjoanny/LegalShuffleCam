@@ -1,5 +1,5 @@
 // LegalShuffleCam • app.js
-// Version corrigée avec gestion améliorée des états
+// Version corrigée avec gestion améliorée des états et vérification Socket.IO
 
 // Éléments DOM
 let currentStream = null;
@@ -14,6 +14,7 @@ window.faceVisible = true;
 let isWebRTCInitialized = false;
 let isSocketConnected = false;
 let turnCredentials = null;
+let socketRetryCount = 0;
 
 // Fonction pour mettre à jour la barre supérieure
 function updateTopBar(message) {
@@ -32,7 +33,12 @@ function updateNextButtonState() {
     } else if (!currentStream) {
         btnNext.textContent = '... En attente de la caméra ...';
     } else if (!isSocketConnected) {
-        btnNext.textContent = '... En attente du serveur de signalisation ...';
+        // Nouvelle vérification pour mieux cibler le problème
+        if (typeof window.socket === 'undefined' || window.socket.disconnected) {
+             btnNext.textContent = '... En attente du serveur de signalisation (Déconnecté)...';
+        } else {
+             btnNext.textContent = '... Préparation WebRTC ...';
+        }
     } else {
         btnNext.textContent = '... Préparation WebRTC ...';
     }
@@ -219,7 +225,6 @@ function handleNextClick() {
   // Déconnecter et nettoyer l'ancien appel
   if (typeof window.disconnectWebRTC === 'function') {
     window.disconnectWebRTC();
-    // NOTE: isWebRTCInitialized reste true si la déconnexion est propre, pour permettre une nouvelle recherche.
   }
   if (remoteVideo) remoteVideo.srcObject = null;
 
@@ -248,9 +253,7 @@ function handleNextClick() {
     }
     console.error('[NextButton] ' + errorMessage);
     updateTopBar(errorMessage);
-    btnNext.disabled = true;
-    // Tenter de rafraîchir l'état si l'erreur n'est pas critique (ex: socket déconnecté)
-    setTimeout(updateNextButtonState, 2000);
+    updateNextButtonState(); // Réinitialiser l'état du bouton après l'erreur
   }
 }
 
@@ -278,35 +281,76 @@ window.addEventListener('rtcDisconnected', (event) => {
   updateNextButtonState();
 });
 
-// Écouteur pour la connexion socket
-if (typeof window.socket !== 'undefined') {
-  window.socket.on('connect', () => {
-    isSocketConnected = true;
-    console.log('[Socket] Connecté. Tentative d\'initialisation WebRTC.');
-    // Tente d'initialiser WebRTC si le flux est déjà prêt
-    if (currentStream && !isWebRTCInitialized) {
-      initWebRTC(currentStream);
+/**
+ * Configure les écouteurs de connexion/déconnexion Socket.IO.
+ * Elle tente de s'assurer que window.socket est défini.
+ */
+function setupSocketListeners() {
+    // Si nous avons retenté 5 fois sans succès, nous arrêtons.
+    if (socketRetryCount > 5) {
+        console.error("[APP] 🚨 Abandon de la configuration du Socket après 5 tentatives.");
+        updateTopBar("❌ Erreur critique : Échec de la connexion Socket.IO au démarrage.");
+        return;
     }
-    updateNextButtonState();
-  });
+    
+    if (typeof window.socket !== 'undefined') {
+        isSocketConnected = window.socket.connected;
+        console.log('[Socket] window.socket détecté. Configuration des écouteurs.');
 
-  window.socket.on('disconnect', () => {
-    isSocketConnected = false;
-    isWebRTCInitialized = false; // Une déconnexion socket est critique
-    console.log('[Socket] Déconnecté');
-    updateTopBar("⚠ Déconnecté du serveur de signalisation.");
-    // Forcer la déconnexion WebRTC si elle était en cours
-    if (typeof window.disconnectWebRTC === 'function') {
-        window.disconnectWebRTC();
+        window.socket.on('connect', () => {
+            isSocketConnected = true;
+            console.log('[Socket] Connecté.');
+            // Tente d'initialiser WebRTC si le flux est déjà prêt
+            if (currentStream && !isWebRTCInitialized) {
+                initWebRTC(currentStream);
+            }
+            updateTopBar("✅ Caméra active. En attente d'initialisation WebRTC.");
+            updateNextButtonState();
+        });
+
+        window.socket.on('disconnect', (reason) => {
+            isSocketConnected = false;
+            isWebRTCInitialized = false; 
+            console.log(`[Socket] Déconnecté. Raison: ${reason}`);
+            updateTopBar("⚠ Déconnecté du serveur de signalisation.");
+            if (typeof window.disconnectWebRTC === 'function') {
+                window.disconnectWebRTC();
+            }
+            updateNextButtonState();
+        });
+        
+        // Gérer le cas où le socket est déjà connecté au moment du chargement de app.js
+        if (window.socket.connected) {
+             isSocketConnected = true;
+             console.log('[Socket] Déjà connecté à la configuration des écouteurs. Tentative WebRTC.');
+             if (currentStream && !isWebRTCInitialized) {
+                initWebRTC(currentStream);
+            } else {
+                 updateTopBar("✅ Caméra active. En attente d'initialisation WebRTC.");
+            }
+             updateNextButtonState();
+        } else {
+             console.log('[Socket] window.socket n\'est pas encore connecté. En attente...');
+             updateTopBar("✅ Caméra active. En attente de connexion au serveur...");
+             updateNextButtonState();
+        }
+        
+    } else {
+        socketRetryCount++;
+        console.warn(`[APP] ⏳ window.socket n'est pas défini (Tentative ${socketRetryCount}). Ré-essai dans 500ms...`);
+        // Réessayer plus tard, au cas où socket.js n'aurait pas encore fini de charger
+        setTimeout(setupSocketListeners, 500);
     }
-    updateNextButtonState();
-  });
 }
+
 
 // Initialisation au chargement de la page
 window.addEventListener('load', () => {
   console.log('Page chargée, démarrage de la détection des caméras...');
   listCameras();
+  
+  // Démarrer la surveillance de la connexion Socket.IO avec ré-essais
+  setupSocketListeners();
 
   window.addEventListener('beforeunload', () => {
     if (currentStream) {
