@@ -1,55 +1,33 @@
 // LegalShuffleCam • app.js
-// Version corrigée avec détection des caméras et logs dans topBar
+// Version ultra-simplifiée avec PeerJS
 
-// Éléments DOM existants
+// Éléments DOM nécessaires
 let currentStream = null;
-let peerConnection = null;
 const topBar = document.getElementById('topBar');
-const remoteVideo = document.getElementById('remoteVideo');
 const localVideo = document.getElementById('localVideo');
-const btnSpeaker = document.getElementById('btnMic');
-const btnNext = document.getElementById('btnNext');
 const cameraSelect = document.getElementById('cameraSelect');
-const reportSelect = document.getElementById('reportTarget');
-const reportBtn = document.getElementById('btnReport');
+const btnNext = document.getElementById('btnNext');
+const remoteVideo = document.getElementById('remoteVideo');
 
-// Variables globales existantes
-window.faceVisible = true;
-window.trackerInitialized = false;
-const recentPartners = [];
-let turnCredentials = null;
+// Variables PeerJS
+let peer = null;
+let currentCall = null;
 
-// Fonction pour ajouter des logs dans la topBar avec timestamp
-function logToTopBar(message, isError = false) {
-  const timestamp = new Date().toLocaleTimeString();
-  const prefix = isError ? "❌ [" + timestamp + "] " : "📡 [" + timestamp + "] ";
-  topBar.textContent = prefix + message;
+// Fonction pour afficher les messages dans la topBar
+function showMessage(message, isError = false) {
+  topBar.textContent = (isError ? "❌ " : "📡 ") + message;
 }
 
-// Fonction pour lister les caméras avec logs détaillés
+// Fonction pour lister les caméras
 async function listCameras() {
   try {
-    logToTopBar("Détection des caméras en cours...");
+    showMessage("Détection des caméras...");
 
-    // Vérification des permissions
-    try {
-      const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-      logToTopBar(`Permissions caméra: ${permissionStatus.state}`);
-      if (permissionStatus.state === 'denied') {
-        logToTopBar("Accès caméra refusé. Autorisez dans les paramètres du navigateur.", true);
-        return;
-      }
-    } catch (permErr) {
-      logToTopBar("Impossible de vérifier les permissions: " + permErr.message, true);
-    }
-
-    // Détection des périphériques
+    // Obtenir la liste des périphériques
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoInputs = devices.filter(d => d.kind === 'videoinput');
 
-    logToTopBar(`Nombre de caméras détectées: ${videoInputs.length}`);
-
-    // Remplissage du sélecteur
+    // Remplir le sélecteur de caméras
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
       videoInputs.forEach((device, index) => {
@@ -57,201 +35,228 @@ async function listCameras() {
         option.value = device.deviceId;
         option.textContent = device.label || `Caméra ${index + 1}`;
         cameraSelect.appendChild(option);
-        logToTopBar(`Caméra ${index + 1}: ${device.label || 'Non nommée'} (ID: ${device.deviceId.substring(0, 8)}...)`);
       });
     }
 
     if (videoInputs.length > 0) {
-      logToTopBar(`✅ ${videoInputs.length} caméra(s) prête(s)`);
+      showMessage(`${videoInputs.length} caméra(s) détectée(s)`);
       startCamera(videoInputs[0].deviceId);
     } else {
-      logToTopBar("Aucune caméra détectée", true);
+      showMessage("Aucune caméra détectée", true);
     }
   } catch (err) {
-    logToTopBar(`Erreur détection caméras: ${err.name || 'Erreur'}: ${err.message}`, true);
+    showMessage(`Erreur: ${err.message}`, true);
   }
 }
 
-// Fonction pour démarrer une caméra avec logs
+// Fonction pour démarrer une caméra
 async function startCamera(deviceId) {
   try {
-    // Arrêter le flux actuel
+    // Arrêter le flux actuel s'il existe
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
 
-    logToTopBar(`Accès à la caméra ${deviceId ? deviceId.substring(0, 8) + "..." : 'par défaut'}...`);
+    showMessage("Activation de la caméra...");
 
     // Contraintes minimales
-    const constraints = {
+    const stream = await navigator.mediaDevices.getUserMedia({
       video: deviceId ? { deviceId: { exact: deviceId } } : true,
-      audio: true
-    };
+      audio: false
+    });
 
-    logToTopBar(`Contraintes: ${JSON.stringify(constraints)}`);
-
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
-
     if (localVideo) {
       localVideo.srcObject = stream;
-      logToTopBar("Caméra active ✅");
-
-      // Afficher les détails du flux
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        const settings = videoTrack.getSettings();
-        logToTopBar(`Résolution: ${settings.width || '?'}x${settings.height || '?'}`);
-      }
+      showMessage("Caméra active ✅");
     }
 
-    // Initialiser WebRTC si le socket est prêt
-    if (typeof socket !== 'undefined' && socket.connected) {
-      initiateWebRTC(currentStream);
-    } else {
-      logToTopBar("Socket non connecté. WebRTC sera initialisé plus tard.");
-      // Écouter la connexion socket pour initialiser WebRTC plus tard
-      if (typeof socket !== 'undefined') {
-        socket.once('connect', () => {
-          logToTopBar("Socket connecté. Initialisation WebRTC...");
-          initiateWebRTC(currentStream);
-        });
-      }
+    // Activer le bouton
+    if (btnNext) {
+      btnNext.disabled = false;
+      btnNext.textContent = "➡️ Interlocuteur suivant";
     }
 
-    window.faceVisible = true;
-    window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
-    updateNextButtonState();
+    // Initialiser PeerJS
+    initPeerJS();
 
   } catch (err) {
-    logToTopBar(`Erreur caméra: ${err.name || 'Erreur'}: ${err.message}`, true);
+    showMessage(`Erreur caméra: ${err.message}`, true);
 
     // Tentative de secours
     try {
-      const fallbackStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
       currentStream = fallbackStream;
       if (localVideo) localVideo.srcObject = fallbackStream;
-      logToTopBar("Caméra active (mode secours) ✅");
-
-      // Réessayer WebRTC si le socket est connecté
-      if (typeof socket !== 'undefined' && socket.connected) {
-        initiateWebRTC(fallbackStream);
-      }
+      showMessage("Caméra active (mode compatible) ✅");
+      initPeerJS();
     } catch (fallbackErr) {
-      logToTopBar(`Erreur mode secours: ${fallbackErr.name || 'Erreur'}: ${fallbackErr.message}`, true);
+      showMessage(`Erreur: ${fallbackErr.message}`, true);
     }
-
-    updateNextButtonState();
   }
 }
 
-// Fonction pour mettre à jour l'état du bouton
-function updateNextButtonState() {
-  if (btnNext) {
-    // Le bouton est activé uniquement si le flux local est disponible
-    btnNext.disabled = !currentStream;
-    btnNext.textContent = currentStream ? '➡️ Interlocuteur suivant' : '... Préparation ...';
-    btnNext.onclick = handleNextClick;
-  }
-}
+// Initialisation de PeerJS
+function initPeerJS() {
+  if (!currentStream) return;
 
-// Fonction pour gérer le clic sur le bouton "Interlocuteur suivant"
-function handleNextClick() {
-  if (typeof window.disconnectWebRTC === 'function') {
-    window.disconnectWebRTC();
-  }
-  if (remoteVideo) remoteVideo.srcObject = null;
+  showMessage("Initialisation de PeerJS...");
 
-  if (btnNext) {
-    btnNext.disabled = true;
-    btnNext.textContent = '⏳ Connexion...';
-  }
+  peer = new Peer(undefined, {
+    host: 'legalshufflecam.ovh',
+    port: 443,
+    path: '/peerjs',
+    secure: true,
+    debug: 2
+  });
 
-  setTimeout(() => {
-    if (typeof socket !== 'undefined' && socket.connected && currentStream) {
-      logToTopBar("Recherche d'un partenaire...");
+  peer.on('open', id => {
+    showMessage(`PeerJS connecté (ID: ${id})`);
+    registerPeer(id);
+  });
 
-      const startMatching = () => {
-        logToTopBar("Envoi de ready-for-match...");
-        socket.emit("ready-for-match");
-      };
+  peer.on('error', err => {
+    showMessage(`Erreur PeerJS: ${err.message}`, true);
+    setTimeout(initPeerJS, 5000); // Réessayer après 5 secondes
+  });
 
-      if (turnCredentials) {
-        startMatching();
-      } else {
-        socket.emit('request-turn-credentials', (credentials) => {
-          turnCredentials = credentials;
-          logToTopBar("Identifiants TURN reçus");
-          startMatching();
-        });
-      }
-    } else {
-      let errorMsg = "Conditions non remplies: ";
-      if (!currentStream) errorMsg += "Pas de flux vidéo";
-      else if (!socket?.connected) errorMsg += "Socket non connecté";
-      logToTopBar(errorMsg, true);
-      updateNextButtonState();
-    }
-  }, 1500);
-}
-
-// Fonction d'initialisation WebRTC (inchangée de ta version originale)
-function initiateWebRTC(stream) {
-  if (typeof window.connectSocketAndWebRTC !== "function") {
-    logToTopBar("Erreur: connectSocketAndWebRTC non défini", true);
-    return;
-  }
-
-  const setupRTC = (credentials) => {
-    window.connectSocketAndWebRTC(stream, credentials);
-    logToTopBar("WebRTC initialisé avec succès");
-  };
-
-  if (turnCredentials) {
-    logToTopBar("Utilisation des identifiants TURN existants");
-    setupRTC(turnCredentials);
-    return;
-  }
-
-  logToTopBar("Demande des identifiants TURN...");
-  socket.emit('request-turn-credentials', (credentials) => {
-    turnCredentials = credentials;
-    logToTopBar("Identifiants TURN reçus");
-    setupRTC(credentials);
+  peer.on('call', call => {
+    handleIncomingCall(call);
   });
 }
 
-// [Le reste de ton code existant pour les signalements, etc.]
-// (Garde toutes tes autres fonctions existantes)
+// Enregistrement du peer ID
+function registerPeer(peerId) {
+  fetch("register-peer.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `peerId=${encodeURIComponent(peerId)}`
+  })
+  .catch(err => {
+    showMessage(`Erreur enregistrement: ${err.message}`, true);
+  });
+}
+
+// Gestion des appels entrants
+function handleIncomingCall(call) {
+  if (!currentStream) {
+    call.close();
+    showMessage("Appel rejeté: pas de flux vidéo", true);
+    return;
+  }
+
+  call.answer(currentStream);
+  call.on('stream', remoteStream => {
+    remoteVideo.srcObject = remoteStream;
+    showMessage("Flux distant reçu ✅");
+  });
+
+  call.on('close', () => {
+    remoteVideo.srcObject = null;
+    showMessage("Appel terminé");
+  });
+
+  call.on('error', err => {
+    showMessage(`Erreur appel: ${err.message}`, true);
+  });
+
+  currentCall = call;
+}
+
+// Gestion du bouton "Interlocuteur suivant"
+function handleNextClick() {
+  if (!peer || !peer.id || !currentStream) {
+    showMessage("PeerJS ou caméra non prêt", true);
+    return;
+  }
+
+  if (btnNext) {
+    btnNext.disabled = true;
+    btnNext.textContent = "⏳ Recherche...";
+  }
+
+  // Fermer l'appel actuel s'il existe
+  if (currentCall) {
+    currentCall.close();
+    currentCall = null;
+  }
+
+  // Obtenir un partenaire
+  fetch("get-peers.php")
+    .then(res => res.json())
+    .then(data => {
+      if (data.partnerId && data.partnerId !== peer.id) {
+        showMessage(`Connexion à ${data.partnerId}...`);
+        callPeer(data.partnerId);
+      } else {
+        showMessage("Aucun partenaire disponible", true);
+        if (btnNext) {
+          btnNext.disabled = false;
+          btnNext.textContent = "➡️ Interlocuteur suivant";
+        }
+      }
+    })
+    .catch(err => {
+      showMessage(`Erreur: ${err.message}`, true);
+      if (btnNext) {
+        btnNext.disabled = false;
+        btnNext.textContent = "➡️ Interlocuteur suivant";
+      }
+    });
+}
+
+// Appeler un pair
+function callPeer(partnerId) {
+  if (!currentStream) {
+    showMessage("Impossible d'appeler sans flux vidéo", true);
+    return;
+  }
+
+  const call = peer.call(partnerId, currentStream);
+
+  call.on('stream', remoteStream => {
+    remoteVideo.srcObject = remoteStream;
+    showMessage("Flux distant reçu ✅");
+  });
+
+  call.on('close', () => {
+    remoteVideo.srcObject = null;
+    showMessage("Appel terminé");
+  });
+
+  call.on('error', err => {
+    showMessage(`Erreur appel: ${err.message}`, true);
+  });
+
+  currentCall = call;
+}
 
 // Initialisation au chargement
 window.addEventListener('load', () => {
-  logToTopBar("Initialisation de l'application...");
+  showMessage("Initialisation...");
   listCameras();
 
-  // Écouteurs d'événements existants
-  if (cameraSelect) {
-    cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
+  // Configurer les événements
+  if (btnNext) {
+    btnNext.onclick = handleNextClick;
   }
 
-  if (btnSpeaker && remoteVideo) {
-    btnSpeaker.addEventListener('click', () => {
-      if (remoteVideo) {
-        remoteVideo.muted = !remoteVideo.muted;
-        btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
-      }
+  if (cameraSelect) {
+    cameraSelect.addEventListener('change', (e) => {
+      startCamera(e.target.value);
     });
   }
 
+  // Nettoyage avant fermeture
   window.addEventListener('beforeunload', () => {
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
-    if (typeof window.disconnectWebRTC === 'function') {
-      window.disconnectWebRTC();
+    if (currentCall) {
+      currentCall.close();
+    }
+    if (peer) {
+      peer.destroy();
     }
   });
 });
