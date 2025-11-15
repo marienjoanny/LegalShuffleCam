@@ -11,9 +11,7 @@
       font-family: system-ui, sans-serif;
       display: flex; flex-direction: column;
     }
-    video {
-      object-fit: cover;
-    }
+    video { object-fit: cover; }
     .top-bar {
       padding: 12px; background: #111827;
       display: flex; flex-direction: column;
@@ -23,9 +21,7 @@
       display: flex; justify-content: space-between; align-items: center;
       margin-bottom: 8px;
     }
-    .tabs {
-      display: flex; gap: 12px;
-    }
+    .tabs { display: flex; gap: 12px; }
     .tab {
       padding: 8px 16px;
       background: #1f2937;
@@ -34,10 +30,7 @@
       cursor: pointer;
       color: #e6e8ee;
     }
-    .tab.active {
-      background: #2563eb;
-      color: #fff;
-    }
+    .tab.active { background: #2563eb; color: #fff; }
     .loader-ring {
       width: 20px; height: 20px;
       border: 3px solid #2563eb; border-top-color: transparent;
@@ -50,30 +43,22 @@
       padding: 16px; gap: 16px;
     }
     .video-zone {
-      width: 100%;
-      max-width: 100%;
+      width: 100%; max-width: 100%;
       aspect-ratio: 16 / 9;
       position: relative;
       background: #000;
       border-radius: 14px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex; justify-content: center; align-items: center;
     }
     #remoteVideo {
-      width: 100%;
-      height: auto;
-      max-width: 100%;
-      border-radius: 12px;
+      width: 100%; height: auto;
+      max-width: 100%; border-radius: 12px;
     }
     #localVideo {
       position: absolute;
-      bottom: 12px;
-      right: 12px;
-      width: 240px;
-      height: 180px;
-      border-radius: 8px;
-      background: #000;
+      bottom: 12px; right: 12px;
+      width: 240px; height: 180px;
+      border-radius: 8px; background: #000;
       box-shadow: 0 0 6px #000a;
     }
     .warning {
@@ -95,52 +80,23 @@
     button.purple { background: #7c3aed; }
     select.yellow { background: #fbbf24; color: #111827; }
     .red-select {
-      background: #dc2626;
-      color: #fff;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      display: none;
-      margin-top: 8px;
+      background: #dc2626; color: #fff;
+      font-weight: bold; border: none;
+      border-radius: 12px; padding: 12px 16px;
+      display: none; margin-top: 8px;
     }
-    .red-select.visible {
-      display: block;
-    }
+    .red-select.visible { display: block; }
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
     }
     footer {
-      background: #111827;
-      border-top: 1px solid #1f2937;
-      padding: 16px;
-      text-align: center;
-      font-size: 13px;
-      color: #94a3b8;
+      background: #111827; border-top: 1px solid #1f2937;
+      padding: 16px; text-align: center;
+      font-size: 13px; color: #94a3b8;
     }
     footer a {
-      color: #fbbf24;
-      text-decoration: none;
+      color: #fbbf24; text-decoration: none;
       margin: 0 6px;
-    }
-    /* Style pour le bouton flottant */
-    #cameraStartButton {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      font-size: 24px;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
   </style>
 </head>
@@ -200,27 +156,10 @@
     </p>
   </footer>
 
-  <!-- Bouton flottant pour mobile -->
-  <button id="cameraStartButton">📷</button>
-
-  <!-- Librairies externes OPTIMISÉES (PeerJS seulement) -->
+  <!-- Librairie PeerJS -->
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
-  <!-- Script pour gérer le bouton flottant -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const cameraStartButton = document.getElementById('cameraStartButton');
-
-      // Masquer le bouton flottant si la caméra est déjà active
-      cameraStartButton.addEventListener('click', function() {
-        // Déclencher la détection des caméras via l'événement personnalisé
-        document.dispatchEvent(new CustomEvent('startCameraDetection'));
-        this.style.display = 'none'; // Masquer après clic
-      });
-    });
-  </script>
-
-  <!-- Ton app.js optimisé pour PeerJS -->
+  <!-- Ton app.js optimisé -->
   <script src="/app.js" defer></script>
 </body>
 </html>
