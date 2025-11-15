@@ -15,10 +15,8 @@ let peer = null;
 let currentCall = null;
 
 function showMessage(msg, isError = false) {
-  if (topBar) {
-    topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
-    if (loaderRing) loaderRing.style.display = isError ? 'none' : 'block';
-  }
+  if (topBar) topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
+  if (loaderRing) loaderRing.style.display = isError ? 'none' : 'block';
   console.log((isError ? "[ERREUR] " : "[INFO] ") + msg);
 }
 
@@ -51,6 +49,8 @@ async function detectCameras() {
     } else {
       showMessage("Aucune caméra détectée", true);
     }
+
+    if (loaderRing) loaderRing.style.display = 'none';
   } catch (error) {
     showMessage(`Erreur: ${error.message}`, true);
     console.error("Erreur détection caméras:", error);
@@ -95,9 +95,11 @@ async function startCamera(deviceId) {
       currentStream = fallbackStream;
       localVideo.srcObject = fallbackStream;
       showMessage("Caméra active (mode secours) ✅");
+
       if (typeof initFaceVisible === 'function') {
         initFaceVisible(localVideo);
       }
+
       initPeerJS(fallbackStream);
     } catch (fallbackError) {
       showMessage(`Erreur mode secours: ${fallbackError.message}`, true);
@@ -239,6 +241,7 @@ window.addEventListener('load', () => {
 
   document.addEventListener('startCameraDetection', () => {
     detectCameras();
+
     if (cameraSelect) {
       cameraSelect.addEventListener('change', (e) => {
         if (currentStream) currentStream.getTracks().forEach(track => track.stop());
