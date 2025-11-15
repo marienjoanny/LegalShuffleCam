@@ -1,104 +1,102 @@
 // LegalShuffleCam • app.js
-// Version ultra-minimaliste pour diagnostiquer la détection des caméras
+// Version ultra-minimaliste pour la détection des caméras avec PeerJS
 
-// Éléments DOM minimaux
+// 1. Éléments DOM strictement nécessaires
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
+const localVideo = document.getElementById('localVideo');
 
-// Fonction pour afficher les messages
-function showMessage(message, isError = false) {
-  if (topBar) {
-    topBar.textContent = (isError ? "❌ " : "🔍 ") + message;
-  }
+// 2. Fonction pour afficher les messages
+function showMessage(msg, isError = false) {
+  topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
 }
 
-// Fonction de diagnostic complet
-async function diagnoseCameras() {
+// 3. Détection des caméras (version la plus simple possible)
+async function detectCameras() {
   try {
-    showMessage("Diagnostic des caméras en cours...");
+    showMessage("Détection des caméras...");
 
-    // 1. Vérifier si l'API est disponible
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-      showMessage("API mediaDevices non disponible", true);
+    // Vérification basique des permissions
+    const permission = await navigator.permissions.query({ name: 'camera' });
+    if (permission.state === 'denied') {
+      showMessage("Accès caméra refusé. Autorisez dans les paramètres.", true);
       return;
     }
-    showMessage("API mediaDevices disponible ✅");
 
-    // 2. Vérifier les permissions
-    try {
-      const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-      showMessage(`Permissions: ${permissionStatus.state}`);
-      if (permissionStatus.state === 'denied') {
-        showMessage("Accès caméra refusé - autorisez dans les paramètres", true);
-        return;
-      }
-    } catch (permErr) {
-      showMessage(`Impossible de vérifier les permissions: ${permErr.message}`, true);
-    }
-
-    // 3. Lister les périphériques
-    showMessage("Liste des périphériques en cours...");
+    // Liste des périphériques vidéo
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoInputs = devices.filter(d => d.kind === 'videoinput');
+    const cameras = devices.filter(d => d.kind === 'videoinput');
 
-    showMessage(`Nombre de caméras: ${videoInputs.length}`);
+    showMessage(`${cameras.length} caméra(s) détectée(s)`);
 
-    // 4. Afficher les caméras dans le sélecteur
+    // Remplissage du sélecteur
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
-      if (videoInputs.length > 0) {
-        videoInputs.forEach((device, index) => {
-          const option = document.createElement('option');
-          option.value = device.deviceId;
-          option.textContent = device.label || `Caméra ${index + 1}`;
-          cameraSelect.appendChild(option);
-        });
-        showMessage(`${videoInputs.length} caméra(s) détectée(s) ✅`);
-
-        // 5. Tester l'accès à la première caméra
-        testCameraAccess(videoInputs[0].deviceId);
-      } else {
-        showMessage("Aucune caméra détectée", true);
-      }
-    } else {
-      showMessage("Élément cameraSelect introuvable", true);
+      cameras.forEach((camera, i) => {
+        const option = document.createElement('option');
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Caméra ${i+1}`;
+        cameraSelect.appendChild(option);
+      });
     }
+
+    // Démarrer avec la première caméra si disponible
+    if (cameras.length > 0) {
+      startCamera(cameras[0].deviceId);
+    }
+
   } catch (err) {
-    showMessage(`Erreur: ${err.name}: ${err.message}`, true);
+    showMessage(`Erreur: ${err.message}`, true);
   }
 }
 
-// Fonction pour tester l'accès à une caméra
-async function testCameraAccess(deviceId) {
+// 4. Démarrage d'une caméra
+async function startCamera(deviceId) {
   try {
-    showMessage("Test d'accès à la caméra...");
+    showMessage("Activation de la caméra...");
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: deviceId } },
       audio: false
     });
 
-    showMessage("Accès caméra réussi ✅");
-    stream.getTracks().forEach(track => track.stop());
-  } catch (err) {
-    showMessage(`Échec accès caméra: ${err.name}: ${err.message}`, true);
+    localVideo.srcObject = stream;
+    showMessage("Caméra active ✅");
 
-    // Test avec des contraintes plus simples
-    try {
-      const fallbackStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false
-      });
-      showMessage("Accès caméra réussi en mode compatible ✅");
-      fallbackStream.getTracks().forEach(track => track.stop());
-    } catch (fallbackErr) {
-      showMessage(`Échec accès caméra (mode compatible): ${fallbackErr.name}: ${fallbackErr.message}`, true);
-    }
+    // Initialiser PeerJS uniquement après confirmation que la caméra fonctionne
+    initPeerJS(stream);
+
+  } catch (err) {
+    showMessage(`Erreur caméra: ${err.message}`, true);
   }
 }
 
-// Initialisation au chargement
+// 5. Initialisation de PeerJS (version minimale)
+function initPeerJS(stream) {
+  const peer = new Peer(undefined, {
+    host: 'legalshufflecam.ovh',
+    port: 443,
+    path: '/peerjs',
+    secure: true
+  });
+
+  peer.on('open', id => {
+    showMessage(`PeerJS connecté (ID: ${id})`);
+  });
+
+  peer.on('error', err => {
+    showMessage(`Erreur PeerJS: ${err.message}`, true);
+  });
+}
+
+// 6. Initialisation au chargement
 window.addEventListener('load', () => {
-  showMessage("Diagnostic en cours...");
-  diagnoseCameras();
+  detectCameras();
+
+  // Changement de caméra
+  if (cameraSelect) {
+    cameraSelect.addEventListener('change', (e) => {
+      startCamera(e.target.value);
+    });
+  }
 });
