@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (Version FINALE avec détection automatique)
+// LegalShuffleCam • app.js (Version FINALE avec logs visibles)
 
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
@@ -15,13 +15,20 @@ let peer = null;
 let currentCall = null;
 
 function showMessage(msg, isError = false) {
-  if (topBar) topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
-  if (loaderRing) loaderRing.style.display = isError ? 'none' : 'block';
-  console.log((isError ? "[ERREUR] " : "[INFO] ") + msg);
+  if (topBar) {
+    topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
+    if (loaderRing) loaderRing.style.display = isError ? 'none' : 'block';
+  }
 }
 
 async function detectCameras() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showMessage("getUserMedia non supporté sur ce navigateur", true);
+    return;
+  }
+
   showMessage("Détection des caméras...");
+
   try {
     const tempStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment' },
@@ -31,6 +38,10 @@ async function detectCameras() {
     showMessage("Permissions activées ✅");
 
     const devices = await navigator.mediaDevices.enumerateDevices();
+    devices.forEach((device, index) => {
+      showMessage(`[${index}] ${device.kind} — ${device.label || 'non nommé'}`);
+    });
+
     const cameras = devices.filter(device => device.kind === 'videoinput');
     showMessage(`${cameras.length} caméra(s) détectée(s)`);
 
@@ -52,8 +63,7 @@ async function detectCameras() {
 
     if (loaderRing) loaderRing.style.display = 'none';
   } catch (error) {
-    showMessage(`Erreur: ${error.message}`, true);
-    console.error("Erreur détection caméras:", error);
+    showMessage(`Erreur: ${error.name} — ${error.message}`, true);
   }
 }
 
@@ -77,6 +87,12 @@ async function startCamera(deviceId) {
     localVideo.srcObject = stream;
     showMessage("Caméra active ✅");
 
+    const track = stream.getVideoTracks()[0];
+    if (track && track.getSettings) {
+      const s = track.getSettings();
+      showMessage(`Résolution: ${s.width || '?'}x${s.height || '?'}`);
+    }
+
     if (typeof initFaceVisible === 'function') {
       initFaceVisible(localVideo);
     }
@@ -88,22 +104,15 @@ async function startCamera(deviceId) {
       btnNext.textContent = "➡️ Interlocuteur suivant";
     }
   } catch (error) {
-    showMessage(`Erreur caméra: ${error.message}`, true);
-    console.error("Erreur caméra:", error);
+    showMessage(`Erreur caméra: ${error.name} — ${error.message}`, true);
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       currentStream = fallbackStream;
       localVideo.srcObject = fallbackStream;
       showMessage("Caméra active (mode secours) ✅");
-
-      if (typeof initFaceVisible === 'function') {
-        initFaceVisible(localVideo);
-      }
-
       initPeerJS(fallbackStream);
     } catch (fallbackError) {
-      showMessage(`Erreur mode secours: ${fallbackError.message}`, true);
-      console.error("Erreur mode secours:", fallbackError);
+      showMessage(`Erreur mode secours: ${fallbackError.name} — ${fallbackError.message}`, true);
     }
   }
 }
@@ -126,7 +135,6 @@ function initPeerJS(stream) {
 
   peer.on('error', err => {
     showMessage(`Erreur PeerJS: ${err.message}`, true);
-    console.error("Erreur PeerJS:", err);
   });
 
   peer.on('call', call => {
@@ -140,7 +148,7 @@ function registerPeer(peerId) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `peerId=${encodeURIComponent(peerId)}`
   }).catch(err => {
-    console.error("Erreur enregistrement peer:", err);
+    showMessage("Erreur enregistrement peer", true);
   });
 }
 
@@ -164,7 +172,6 @@ function handleIncomingCall(call) {
 
   call.on('error', err => {
     showMessage(`Erreur appel: ${err.message}`, true);
-    console.error("Erreur appel:", err);
   });
 
   currentCall = call;
@@ -202,7 +209,6 @@ function handleNextClick() {
     })
     .catch(err => {
       showMessage(`Erreur: ${err.message}`, true);
-      console.error("Erreur recherche partenaire:", err);
       if (btnNext) {
         btnNext.disabled = false;
         btnNext.textContent = "➡️ Interlocuteur suivant";
@@ -230,7 +236,6 @@ function callPeer(partnerId) {
 
   call.on('error', err => {
     showMessage(`Erreur appel: ${err.message}`, true);
-    console.error("Erreur appel:", err);
   });
 
   currentCall = call;
@@ -238,7 +243,7 @@ function callPeer(partnerId) {
 
 window.addEventListener('load', () => {
   showMessage("Initialisation...");
-  detectCameras(); // 👈 déclenchement immédiat
+  detectCameras();
 
   if (cameraSelect) {
     cameraSelect.addEventListener('change', (e) => {
