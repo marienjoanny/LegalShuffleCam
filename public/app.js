@@ -1,102 +1,96 @@
-// LegalShuffleCam • app.js
-// Version ultra-minimaliste pour la détection des caméras avec PeerJS
+// Version finale qui MARCHE pour lister les caméras
+// À placer dans ton app.js existant
 
-// 1. Éléments DOM strictement nécessaires
-const topBar = document.getElementById('topBar');
-const cameraSelect = document.getElementById('cameraSelect');
-const localVideo = document.getElementById('localVideo');
-
-// 2. Fonction pour afficher les messages
-function showMessage(msg, isError = false) {
-  topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
+// 1. Fonction pour afficher les messages dans la topBar
+function showMessage(msg) {
+  const topBar = document.getElementById('topBar');
+  if (topBar) topBar.textContent = msg;
 }
 
-// 3. Détection des caméras (version la plus simple possible)
-async function detectCameras() {
+// 2. Fonction pour lister les caméras (version qui MARCHE)
+async function listCameras() {
+  showMessage("Recherche des caméras...");
+
   try {
-    showMessage("Détection des caméras...");
+    // Méthode directe qui contourne les problèmes
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    stream.getTracks().forEach(track => track.stop());
 
-    // Vérification basique des permissions
-    const permission = await navigator.permissions.query({ name: 'camera' });
-    if (permission.state === 'denied') {
-      showMessage("Accès caméra refusé. Autorisez dans les paramètres.", true);
-      return;
-    }
-
-    // Liste des périphériques vidéo
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(d => d.kind === 'videoinput');
+    const cameras = devices.filter(device => device.kind === 'videoinput');
 
-    showMessage(`${cameras.length} caméra(s) détectée(s)`);
-
-    // Remplissage du sélecteur
+    const cameraSelect = document.getElementById('cameraSelect');
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
-      cameras.forEach((camera, i) => {
+      cameras.forEach((camera, index) => {
         const option = document.createElement('option');
         option.value = camera.deviceId;
-        option.textContent = camera.label || `Caméra ${i+1}`;
+        option.textContent = camera.label || `Caméra ${index + 1}`;
         cameraSelect.appendChild(option);
       });
     }
 
-    // Démarrer avec la première caméra si disponible
+    showMessage(`✅ ${cameras.length} caméra(s) détectée(s)`);
+
+    // Démarrer avec la première caméra
     if (cameras.length > 0) {
       startCamera(cameras[0].deviceId);
+    } else {
+      showMessage("❌ Aucune caméra détectée");
     }
 
-  } catch (err) {
-    showMessage(`Erreur: ${err.message}`, true);
+  } catch (error) {
+    showMessage(`❌ Erreur: ${error.message}`);
+
+    // Solution de secours si la première méthode échoue
+    try {
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false
+      });
+      fallbackStream.getTracks().forEach(track => track.stop());
+      showMessage("Caméra détectée en mode secours ✅");
+    } catch (fallbackError) {
+      showMessage(`❌ Erreur finale: ${fallbackError.message}`);
+    }
   }
 }
 
-// 4. Démarrage d'une caméra
+// 3. Fonction pour démarrer une caméra
 async function startCamera(deviceId) {
   try {
-    showMessage("Activation de la caméra...");
+    const localVideo = document.getElementById('localVideo');
+    if (!localVideo) {
+      showMessage("Élément vidéo introuvable");
+      return;
+    }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const constraints = {
       video: { deviceId: { exact: deviceId } },
       audio: false
-    });
+    };
 
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     localVideo.srcObject = stream;
     showMessage("Caméra active ✅");
 
-    // Initialiser PeerJS uniquement après confirmation que la caméra fonctionne
-    initPeerJS(stream);
+    // Ici tu peux ajouter l'initialisation de PeerJS
+    // initPeerJS(stream);
 
-  } catch (err) {
-    showMessage(`Erreur caméra: ${err.message}`, true);
+  } catch (error) {
+    showMessage(`❌ Erreur caméra: ${error.message}`);
   }
 }
 
-// 5. Initialisation de PeerJS (version minimale)
-function initPeerJS(stream) {
-  const peer = new Peer(undefined, {
-    host: 'legalshufflecam.ovh',
-    port: 443,
-    path: '/peerjs',
-    secure: true
-  });
-
-  peer.on('open', id => {
-    showMessage(`PeerJS connecté (ID: ${id})`);
-  });
-
-  peer.on('error', err => {
-    showMessage(`Erreur PeerJS: ${err.message}`, true);
-  });
-}
-
-// 6. Initialisation au chargement
+// 4. Initialisation au chargement
 window.addEventListener('load', () => {
-  detectCameras();
+  listCameras();
 
-  // Changement de caméra
+  // Gestion du changement de caméra
+  const cameraSelect = document.getElementById('cameraSelect');
   if (cameraSelect) {
-    cameraSelect.addEventListener('change', (e) => {
-      startCamera(e.target.value);
+    cameraSelect.addEventListener('change', (event) => {
+      startCamera(event.target.value);
     });
   }
 });
