@@ -1,103 +1,137 @@
-// Version finale qui a marché hier, optimisée pour mobile
+// Version corrigée avec debug complet des périphériques
 
-// 1. Éléments DOM minimaux
+// 1. Éléments DOM
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
 const localVideo = document.getElementById('localVideo');
 
-// 2. Fonction d'affichage simple
-function showMessage(msg, isError = false) {
-  if (topBar) topBar.textContent = (isError ? "❌ " : "📷 ") + msg;
+// 2. Fonction d'affichage avec debug
+function debugLog(message, isError = false) {
+  const prefix = isError ? "[ERREUR] " : "[INFO] ";
+  console.log(prefix + message);
+  if (topBar) {
+    topBar.textContent = (isError ? "❌ " : "🔍 ") + message;
+  }
 }
 
-// 3. Fonction qui a marché hier (version mobile)
-async function setupCamera() {
-  showMessage("Initialisation caméra mobile...");
+// 3. Fonction de détection complète avec affichage brut
+async function detectAllDevices() {
+  debugLog("Début de la détection des périphériques...");
 
   try {
-    // Solution qui a fonctionné hier:
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' }, // Caméra arrière par défaut
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      },
-      audio: false
+    // 1. Afficher TOUS les périphériques sans filtre
+    const allDevices = await navigator.mediaDevices.enumerateDevices();
+    debugLog(`Nombre total de périphériques détectés: ${allDevices.length}`);
+
+    // Affichage brut dans la console
+    console.log("=== LISTE COMPLÈTE DES PÉRIPHÉRIQUES ===");
+    allDevices.forEach((device, index) => {
+      console.log(`[${index}] ${device.kind}: ${device.label || 'Non nommé'} (ID: ${device.deviceId})`);
     });
 
-    // Afficher le flux vidéo
-    localVideo.srcObject = stream;
-    showMessage("Caméra mobile active ✅");
+    // 2. Filtrer uniquement les caméras (videoinput)
+    const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
+    debugLog(`Nombre de caméras (videoinput): ${videoDevices.length}`);
 
-    // Lister les caméras disponibles
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(d => d.kind === 'videoinput');
-
-    // Remplir le sélecteur
+    // Affichage dans le sélecteur
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
-      cameras.forEach((camera, i) => {
+      videoDevices.forEach((device, index) => {
         const option = document.createElement('option');
-        option.value = camera.deviceId;
-        option.textContent = camera.label ||
-                          (i === 0 ? 'Caméra arrière' : 'Caméra avant');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Caméra ${index + 1}`;
         cameraSelect.appendChild(option);
+        debugLog(`Ajout caméra: ${device.label || `Caméra ${index + 1}`}`);
       });
     }
 
-    showMessage(`${cameras.length} caméra(s) détectée(s)`);
+    // 3. Démarrer avec la première caméra si disponible
+    if (videoDevices.length > 0) {
+      debugLog(`Démarrage avec la première caméra: ${videoDevices[0].label || 'Caméra 1'}`);
+      startCamera(videoDevices[0].deviceId);
+    } else {
+      debugLog("Aucune caméra videoinput détectée", true);
+    }
 
   } catch (error) {
-    showMessage(`Erreur: ${error.message}`, true);
+    debugLog(`Erreur lors de la détection: ${error.name}: ${error.message}`, true);
+  }
+}
 
-    // Solution de secours qui a marché hier:
+// 4. Fonction de démarrage de caméra avec debug
+async function startCamera(deviceId) {
+  debugLog(`Démarrage de la caméra ${deviceId ? deviceId.substring(0, 8) + "..." : "par défaut"}`);
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      audio: false
+    });
+
+    if (localVideo) {
+      localVideo.srcObject = stream;
+      debugLog("Caméra active ✅");
+
+      // Afficher les détails du flux
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        debugLog(`Résolution: ${settings.width || '?'}x${settings.height || '?'},
+                 FPS: ${settings.frameRate || '?'},
+                 DeviceId: ${settings.deviceId || '?'}`);
+      }
+    }
+
+  } catch (error) {
+    debugLog(`Erreur caméra: ${error.name}: ${error.message}`, true);
+
+    // Solution de secours
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false
       });
-      localVideo.srcObject = fallbackStream;
-      showMessage("Caméra active (mode secours) ✅");
+      if (localVideo) {
+        localVideo.srcObject = fallbackStream;
+        debugLog("Caméra active (mode secours) ✅");
+      }
     } catch (fallbackError) {
-      showMessage(`Erreur finale: ${fallbackError.message}`, true);
+      debugLog(`Erreur mode secours: ${fallbackError.message}`, true);
     }
   }
 }
 
-// 4. Initialisation au chargement
+// 5. Initialisation avec bouton manuel
 window.addEventListener('load', () => {
-  // Bouton pour déclencher manuellement (obligatoire sur mobile)
+  debugLog("Page chargée, initialisation...");
+
+  // Bouton de déclenchement manuel
   const startButton = document.createElement('button');
-  startButton.textContent = "Activer la caméra";
-  startButton.style.padding = "10px 20px";
-  startButton.style.margin = "10px 0";
+  startButton.textContent = "Démarrer la caméra";
+  startButton.style.cssText = `
+    padding: 12px 20px;
+    margin: 10px 0;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+  `;
   document.body.prepend(startButton);
 
   startButton.addEventListener('click', () => {
-    setupCamera();
+    debugLog("Bouton cliqué, détection des périphériques...");
+    detectAllDevices();
+  });
 
-    // Gestion du changement de caméra
-    if (cameraSelect) {
-      cameraSelect.addEventListener('change', (e) => {
-        if (localVideo.srcObject) {
-          localVideo.srcObject.getTracks().forEach(track => track.stop());
-        }
-        setupCameraWithId(e.target.value);
-      });
-    }
+  // Gestion du changement de caméra
+  if (cameraSelect) {
+    cameraSelect.addEventListener('change', (e) => {
+      debugLog(`Changement de caméra: ${e.target.value.substring(0, 8)}...`);
+      if (localVideo.srcObject) {
+        localVideo.srcObject.getTracks().forEach(track => track.stop());
+      }
+      startCamera(e.target.value);
+    });
   });
 });
-
-// Fonction pour changer de caméra
-async function setupCameraWithId(deviceId) {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
-      audio: false
-    });
-    localVideo.srcObject = stream;
-    showMessage("Caméra changée ✅");
-  } catch (error) {
-    showMessage(`Erreur: ${error.message}`, true);
-  }
-}
