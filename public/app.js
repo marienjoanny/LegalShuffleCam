@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (Version FINALE avec logs visibles)
+// LegalShuffleCam • app.js (Version FINALE avec logs visibles + patch JSON)
 
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
@@ -194,7 +194,15 @@ function handleNextClick() {
   }
 
   fetch("/api/get-peer")
-    .then(res => res.json())
+    .then(async res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        throw new Error("Réponse non JSON");
+      }
+    })
     .then(data => {
       if (data.partnerId && data.partnerId !== peer.id) {
         showMessage(`Connexion à ${data.partnerId}...`);
