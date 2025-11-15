@@ -101,20 +101,12 @@
       border: none;
       border-radius: 12px;
       padding: 12px 16px;
+      display: none;
+      margin-top: 8px;
     }
-.red-select {
-  background: #dc2626;
-  color: #fff;
-  font-weight: bold;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 16px;
-  display: none;
-  margin-top: 8px;
-}
-.red-select.visible {
-  display: block;
-}
+    .red-select.visible {
+      display: block;
+    }
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
     }
@@ -131,6 +123,25 @@
       text-decoration: none;
       margin: 0 6px;
     }
+    /* Style pour le bouton flottant */
+    #cameraStartButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -142,7 +153,7 @@
       </div>
       <div class="loader-ring" id="loaderRing"></div>
     </div>
-    <span id="topBar">Chargement de la détection de visage...</span>
+    <span id="topBar">Initialisation...</span>
   </div>
 
   <div class="main">
@@ -162,7 +173,7 @@
       </select>
       <select id="cameraSelect" class="yellow"></select>
       <button id="btnMic" class="green">🔊</button>
-      <button id="btnNext" class="blue">➡️ Interlocuteur suivant</button>
+      <button id="btnNext" class="blue" disabled>➡️ Interlocuteur suivant</button>
     </div>
   </div>
 
@@ -185,17 +196,31 @@
     </p>
     <p style="font-size:11px; margin-top:8px;">
       IP : <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?> •
-      UA : <?php echo $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'; ?>
+      UA : <?php echo substr($_SERVER['HTTP_USER_AGENT'] ?? 'N/A', 0, 50); ?>
     </p>
   </footer>
 
-  <!-- Librairies externes -->
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
-  <script src="/js/rtc-core.js" defer></script>
-  <script src="/js/face-visible.js" defer></script>
+  <!-- Bouton flottant pour mobile -->
+  <button id="cameraStartButton">📷</button>
+
+  <!-- Librairies externes OPTIMISÉES (PeerJS seulement) -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+  <!-- Script pour gérer le bouton flottant -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const cameraStartButton = document.getElementById('cameraStartButton');
+
+      // Masquer le bouton flottant si la caméra est déjà active
+      cameraStartButton.addEventListener('click', function() {
+        // Déclencher la détection des caméras via l'événement personnalisé
+        document.dispatchEvent(new CustomEvent('startCameraDetection'));
+        this.style.display = 'none'; // Masquer après clic
+      });
+    });
+  </script>
+
+  <!-- Ton app.js optimisé pour PeerJS -->
   <script src="/app.js" defer></script>
-  <script src="/js/listener.js" defer></script>
 </body>
 </html>
