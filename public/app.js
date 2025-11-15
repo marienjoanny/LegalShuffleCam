@@ -1,41 +1,55 @@
 // LegalShuffleCam • app.js
-// Version PeerJS avec détection des caméras fonctionnelle
+// Version corrigée avec détection des caméras et logs dans topBar
 
-// Éléments DOM
+// Éléments DOM existants
 let currentStream = null;
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
-const cameraSelect = document.getElementById('cameraSelect');
+let peerConnection = null;
 const topBar = document.getElementById('topBar');
+const remoteVideo = document.getElementById('remoteVideo');
+const localVideo = document.getElementById('localVideo');
+const btnSpeaker = document.getElementById('btnMic');
 const btnNext = document.getElementById('btnNext');
+const cameraSelect = document.getElementById('cameraSelect');
+const reportSelect = document.getElementById('reportTarget');
+const reportBtn = document.getElementById('btnReport');
 
-// Variables PeerJS
-let peer = null;
-let currentCall = null;
+// Variables globales existantes
+window.faceVisible = true;
+window.trackerInitialized = false;
+const recentPartners = [];
+let turnCredentials = null;
 
-// Fonction pour mettre à jour la barre supérieure et logger
-function updateStatus(message, isError = false) {
-  const prefix = isError ? "❌ " : "📡 ";
-  if (topBar) topBar.textContent = prefix + message;
-  console.log(prefix + message);
+// Fonction pour ajouter des logs dans la topBar avec timestamp
+function logToTopBar(message, isError = false) {
+  const timestamp = new Date().toLocaleTimeString();
+  const prefix = isError ? "❌ [" + timestamp + "] " : "📡 [" + timestamp + "] ";
+  topBar.textContent = prefix + message;
 }
 
-// 1. Détection des caméras (version ultra-stable)
-async function detectCameras() {
+// Fonction pour lister les caméras avec logs détaillés
+async function listCameras() {
   try {
-    updateStatus("Détection des caméras...");
+    logToTopBar("Détection des caméras en cours...");
 
-    // Vérifier les permissions d'abord
-    const permission = await navigator.permissions.query({ name: 'camera' });
-    if (permission.state === 'denied') {
-      updateStatus("Accès caméra refusé. Autorisez dans les paramètres du navigateur.", true);
-      return;
+    // Vérification des permissions
+    try {
+      const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+      logToTopBar(`Permissions caméra: ${permissionStatus.state}`);
+      if (permissionStatus.state === 'denied') {
+        logToTopBar("Accès caméra refusé. Autorisez dans les paramètres du navigateur.", true);
+        return;
+      }
+    } catch (permErr) {
+      logToTopBar("Impossible de vérifier les permissions: " + permErr.message, true);
     }
 
-    // Obtenir la liste des caméras
+    // Détection des périphériques
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoInputs = devices.filter(d => d.kind === 'videoinput');
 
+    logToTopBar(`Nombre de caméras détectées: ${videoInputs.length}`);
+
+    // Remplissage du sélecteur
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
       videoInputs.forEach((device, index) => {
@@ -43,262 +57,201 @@ async function detectCameras() {
         option.value = device.deviceId;
         option.textContent = device.label || `Caméra ${index + 1}`;
         cameraSelect.appendChild(option);
+        logToTopBar(`Caméra ${index + 1}: ${device.label || 'Non nommée'} (ID: ${device.deviceId.substring(0, 8)}...)`);
       });
     }
 
     if (videoInputs.length > 0) {
-      updateStatus("Caméras détectées");
+      logToTopBar(`✅ ${videoInputs.length} caméra(s) prête(s)`);
       startCamera(videoInputs[0].deviceId);
     } else {
-      updateStatus("Aucune caméra détectée", true);
+      logToTopBar("Aucune caméra détectée", true);
     }
   } catch (err) {
-    console.error("Erreur détection caméras:", err);
-    updateStatus("Erreur de détection des caméras", true);
+    logToTopBar(`Erreur détection caméras: ${err.name || 'Erreur'}: ${err.message}`, true);
   }
 }
 
-// 2. Démarrage de la caméra (version robuste)
+// Fonction pour démarrer une caméra avec logs
 async function startCamera(deviceId) {
   try {
-    // Arrêter le flux actuel s'il existe
+    // Arrêter le flux actuel
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
 
-    updateStatus("Accès à la caméra...");
+    logToTopBar(`Accès à la caméra ${deviceId ? deviceId.substring(0, 8) + "..." : 'par défaut'}...`);
 
-    // Contraintes minimales pour maximiser la compatibilité
+    // Contraintes minimales
     const constraints = {
       video: deviceId ? { deviceId: { exact: deviceId } } : true,
-      audio: false  // Désactivé pour simplifier
+      audio: true
     };
+
+    logToTopBar(`Contraintes: ${JSON.stringify(constraints)}`);
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
 
     if (localVideo) {
       localVideo.srcObject = stream;
-      updateStatus("Caméra active ✅");
+      logToTopBar("Caméra active ✅");
+
+      // Afficher les détails du flux
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        logToTopBar(`Résolution: ${settings.width || '?'}x${settings.height || '?'}`);
+      }
     }
 
-    // Activer le bouton
-    if (btnNext) {
-      btnNext.disabled = false;
-      btnNext.textContent = "➡️ Interlocuteur suivant";
+    // Initialiser WebRTC si le socket est prêt
+    if (typeof socket !== 'undefined' && socket.connected) {
+      initiateWebRTC(currentStream);
+    } else {
+      logToTopBar("Socket non connecté. WebRTC sera initialisé plus tard.");
+      // Écouter la connexion socket pour initialiser WebRTC plus tard
+      if (typeof socket !== 'undefined') {
+        socket.once('connect', () => {
+          logToTopBar("Socket connecté. Initialisation WebRTC...");
+          initiateWebRTC(currentStream);
+        });
+      }
     }
 
-    // Initialiser PeerJS si ce n'est pas déjà fait
-    if (!peer) {
-      initPeerJS();
-    }
+    window.faceVisible = true;
+    window.dispatchEvent(new CustomEvent('faceVisibilityChanged'));
+    updateNextButtonState();
 
   } catch (err) {
-    console.error("Erreur caméra:", err);
-    updateStatus("Erreur caméra: " + err.message, true);
+    logToTopBar(`Erreur caméra: ${err.name || 'Erreur'}: ${err.message}`, true);
 
     // Tentative de secours
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: false
+        audio: true
       });
       currentStream = fallbackStream;
       if (localVideo) localVideo.srcObject = fallbackStream;
-      updateStatus("Caméra active (mode compatible) ✅");
-    } catch (fallbackErr) {
-      console.error("Erreur mode compatible:", fallbackErr);
-      updateStatus("Impossible d'accéder à la caméra", true);
-    }
-  }
-}
+      logToTopBar("Caméra active (mode secours) ✅");
 
-// 3. Initialisation de PeerJS
-function initPeerJS() {
-  if (!currentStream) {
-    updateStatus("Impossible d'initialiser PeerJS sans flux vidéo", true);
-    return;
-  }
-
-  updateStatus("Initialisation de PeerJS...");
-
-  peer = new Peer(undefined, {
-    host: 'legalshufflecam.ovh',
-    port: 443,
-    path: '/peerjs',
-    secure: true,
-    debug: 2  // Niveau de log élevé pour le débogage
-  });
-
-  peer.on('open', id => {
-    updateStatus(`PeerJS connecté (ID: ${id})`);
-    registerPeer(id);
-  });
-
-  peer.on('error', err => {
-    console.error("Erreur PeerJS:", err);
-    updateStatus(`Erreur PeerJS: ${err.message}`, true);
-
-    // Réessayer après un délai
-    setTimeout(() => {
-      if (!peer || peer.disconnected) {
-        initPeerJS();
+      // Réessayer WebRTC si le socket est connecté
+      if (typeof socket !== 'undefined' && socket.connected) {
+        initiateWebRTC(fallbackStream);
       }
-    }, 5000);
-  });
-
-  peer.on('call', call => {
-    updateStatus(`Appel entrant de ${call.peer}`);
-    handleIncomingCall(call);
-  });
-
-  peer.on('connection', conn => {
-    conn.on('open', () => {
-      updateStatus(`Connexion data établie avec ${conn.peer}`);
-    });
-  });
-}
-
-// 4. Enregistrement du peer ID
-function registerPeer(peerId) {
-  fetch("register-peer.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `peerId=${encodeURIComponent(peerId)}`
-  })
-  .then(res => res.text())
-  .then(text => {
-    if (text !== "OK") {
-      updateStatus(`Erreur enregistrement peer: ${text}`, true);
+    } catch (fallbackErr) {
+      logToTopBar(`Erreur mode secours: ${fallbackErr.name || 'Erreur'}: ${fallbackErr.message}`, true);
     }
-  })
-  .catch(err => {
-    console.error("Erreur enregistrement:", err);
-    updateStatus("Erreur enregistrement peer", true);
-  });
-}
 
-// 5. Gestion des appels entrants
-function handleIncomingCall(call) {
-  if (!currentStream) {
-    call.close();
-    updateStatus("Appel rejeté: pas de flux vidéo", true);
-    return;
+    updateNextButtonState();
   }
-
-  call.answer(currentStream);
-  call.on('stream', remoteStream => {
-    remoteVideo.srcObject = remoteStream;
-    updateStatus("Flux distant reçu ✅");
-  });
-
-  call.on('close', () => {
-    remoteVideo.srcObject = null;
-    updateStatus("Appel terminé");
-  });
-
-  call.on('error', err => {
-    console.error("Erreur appel:", err);
-    updateStatus(`Erreur appel: ${err.message}`, true);
-  });
-
-  currentCall = call;
 }
 
-// 6. Gestion du bouton "Interlocuteur suivant"
+// Fonction pour mettre à jour l'état du bouton
+function updateNextButtonState() {
+  if (btnNext) {
+    // Le bouton est activé uniquement si le flux local est disponible
+    btnNext.disabled = !currentStream;
+    btnNext.textContent = currentStream ? '➡️ Interlocuteur suivant' : '... Préparation ...';
+    btnNext.onclick = handleNextClick;
+  }
+}
+
+// Fonction pour gérer le clic sur le bouton "Interlocuteur suivant"
 function handleNextClick() {
-  if (!peer || !peer.id || !currentStream) {
-    updateStatus("PeerJS ou caméra non prêt", true);
-    return;
+  if (typeof window.disconnectWebRTC === 'function') {
+    window.disconnectWebRTC();
   }
+  if (remoteVideo) remoteVideo.srcObject = null;
 
   if (btnNext) {
     btnNext.disabled = true;
-    btnNext.textContent = "⏳ Recherche...";
+    btnNext.textContent = '⏳ Connexion...';
   }
 
-  // Fermer l'appel actuel s'il existe
-  if (currentCall) {
-    currentCall.close();
-    currentCall = null;
-  }
+  setTimeout(() => {
+    if (typeof socket !== 'undefined' && socket.connected && currentStream) {
+      logToTopBar("Recherche d'un partenaire...");
 
-  // Obtenir un partenaire
-  fetch("get-peers.php")
-    .then(res => res.json())
-    .then(data => {
-      if (data.partnerId && data.partnerId !== peer.id) {
-        updateStatus(`Connexion à ${data.partnerId}...`);
-        callPeer(data.partnerId);
+      const startMatching = () => {
+        logToTopBar("Envoi de ready-for-match...");
+        socket.emit("ready-for-match");
+      };
+
+      if (turnCredentials) {
+        startMatching();
       } else {
-        updateStatus("Aucun partenaire disponible", true);
+        socket.emit('request-turn-credentials', (credentials) => {
+          turnCredentials = credentials;
+          logToTopBar("Identifiants TURN reçus");
+          startMatching();
+        });
       }
-    })
-    .catch(err => {
-      console.error("Erreur recherche partenaire:", err);
-      updateStatus("Erreur recherche partenaire", true);
-    })
-    .finally(() => {
-      if (btnNext) {
-        btnNext.disabled = false;
-        btnNext.textContent = "➡️ Interlocuteur suivant";
-      }
-    });
+    } else {
+      let errorMsg = "Conditions non remplies: ";
+      if (!currentStream) errorMsg += "Pas de flux vidéo";
+      else if (!socket?.connected) errorMsg += "Socket non connecté";
+      logToTopBar(errorMsg, true);
+      updateNextButtonState();
+    }
+  }, 1500);
 }
 
-// 7. Appeler un pair
-function callPeer(partnerId) {
-  if (!currentStream) {
-    updateStatus("Impossible d'appeler sans flux vidéo", true);
+// Fonction d'initialisation WebRTC (inchangée de ta version originale)
+function initiateWebRTC(stream) {
+  if (typeof window.connectSocketAndWebRTC !== "function") {
+    logToTopBar("Erreur: connectSocketAndWebRTC non défini", true);
     return;
   }
 
-  const call = peer.call(partnerId, currentStream);
+  const setupRTC = (credentials) => {
+    window.connectSocketAndWebRTC(stream, credentials);
+    logToTopBar("WebRTC initialisé avec succès");
+  };
 
-  call.on('stream', remoteStream => {
-    remoteVideo.srcObject = remoteStream;
-    updateStatus("Flux distant reçu ✅");
-  });
-
-  call.on('close', () => {
-    remoteVideo.srcObject = null;
-    updateStatus("Appel terminé");
-  });
-
-  call.on('error', err => {
-    console.error("Erreur appel:", err);
-    updateStatus(`Erreur appel: ${err.message}`, true);
-  });
-
-  currentCall = call;
-}
-
-// 8. Initialisation au chargement
-window.addEventListener('load', () => {
-  // Détecter les caméras
-  detectCameras();
-
-  // Configurer les événements
-  if (btnNext) {
-    btnNext.onclick = handleNextClick;
+  if (turnCredentials) {
+    logToTopBar("Utilisation des identifiants TURN existants");
+    setupRTC(turnCredentials);
+    return;
   }
 
+  logToTopBar("Demande des identifiants TURN...");
+  socket.emit('request-turn-credentials', (credentials) => {
+    turnCredentials = credentials;
+    logToTopBar("Identifiants TURN reçus");
+    setupRTC(credentials);
+  });
+}
+
+// [Le reste de ton code existant pour les signalements, etc.]
+// (Garde toutes tes autres fonctions existantes)
+
+// Initialisation au chargement
+window.addEventListener('load', () => {
+  logToTopBar("Initialisation de l'application...");
+  listCameras();
+
+  // Écouteurs d'événements existants
   if (cameraSelect) {
-    cameraSelect.addEventListener('change', (e) => {
-      startCamera(e.target.value);
+    cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
+  }
+
+  if (btnSpeaker && remoteVideo) {
+    btnSpeaker.addEventListener('click', () => {
+      if (remoteVideo) {
+        remoteVideo.muted = !remoteVideo.muted;
+        btnSpeaker.textContent = remoteVideo.muted ? '🔇' : '🔊';
+      }
     });
   }
 
-  // Nettoyage avant fermeture
   window.addEventListener('beforeunload', () => {
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
     }
-    if (currentCall) {
-      currentCall.close();
-    }
-    if (peer) {
-      peer.destroy();
+    if (typeof window.disconnectWebRTC === 'function') {
+      window.disconnectWebRTC();
     }
   });
 });
