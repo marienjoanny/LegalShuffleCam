@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (Version FINALE fonctionnelle)
+// LegalShuffleCam • app.js (Version FINALE avec détection automatique)
 
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
@@ -238,17 +238,14 @@ function callPeer(partnerId) {
 
 window.addEventListener('load', () => {
   showMessage("Initialisation...");
+  detectCameras(); // 👈 déclenchement immédiat
 
-  document.addEventListener('startCameraDetection', () => {
-    detectCameras();
-
-    if (cameraSelect) {
-      cameraSelect.addEventListener('change', (e) => {
-        if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-        startCamera(e.target.value);
-      });
-    }
-  });
+  if (cameraSelect) {
+    cameraSelect.addEventListener('change', (e) => {
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+      startCamera(e.target.value);
+    });
+  }
 
   if (btnMic) {
     btnMic.addEventListener('click', () => {
