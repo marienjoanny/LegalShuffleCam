@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="UTF-8">
+  <title>RTC FaceCheck GraphModel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    video { width: 640px; height: 480px; border: 1px solid black; }
+    #status { margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+    #errorlog { margin-top: 10px; color: red; white-space: pre-wrap; font-size: 0.9em; text-align: left; max-width: 640px; margin: auto; }
+  </style>
+</head>
+<body>
+  <h1>RTC FaceCheck GraphModel</h1>
+  <video id="webcam" autoplay muted playsinline></video>
+  <div id="status">Chargement du modèle…</div>
+  <pre id="errorlog"></pre>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      const status = document.getElementById('status');
+      const errorlog = document.getElementById('errorlog');
+      try {
+        status.textContent = '📦 tf.loadGraphModel…';
+        const model = await tf.loadGraphModel('https://storage.googleapis.com/tfjs-models/savedmodel/blazeface/model.json');
+        status.textContent = '✅ Modèle Graph chargé';
+        const video = document.getElementById('webcam');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.onloadeddata = () => detectLoop(model, video, status, errorlog);
+      } catch (err) {
+        console.error('[RTC] loader error:', err);
+        status.textContent = '❌ Erreur chargement modèle';
+        errorlog.textContent = err.message || String(err);
+      }
+    });
+
+    async function detectLoop(model, video, status, errorlog) {
+      while (true) {
+        try {
+          const input = tf.browser.fromPixels(video).toFloat().expandDims(0);
+          const result = await model.executeAsync(input);
+          status.textContent = '✅ Prediction brute';
+          errorlog.textContent = JSON.stringify(result.map(t => t.arraySync()), null, 2);
+          await tf.nextFrame();
+        } catch (err) {
+          status.textContent = '❌ Erreur prédiction';
+          errorlog.textContent = err.message || String(err);
+          break;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

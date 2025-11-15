@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fonctionnement du site LegalShuffleCam</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 2em; line-height: 1.6; }
+    h1, h2 { color: #333; }
+    h1 { font-size: 1.8em; margin-bottom: 0.5em; }
+    h2 { font-size: 1.4em; margin-top: 1.5em; }
+    p, li { margin-bottom: 1em; }
+    ul { padding-left: 1.2em; }
+    .meta { font-size: 0.9em; color: #666; margin-top: 2em; }
+  </style>
+</head>
+<body>
+  <h1>Fonctionnement du site LegalShuffleCam</h1>
+
+  <h2>📚 Sommaire</h2>
+  <ul>
+    <li>🎥 Webcam & détection de visage</li>
+    <li>🔁 Bouton "Interlocuteur suivant"</li>
+    <li>🚩 Signalement</li>
+    <li>👍 Consentement</li>
+    <li>🧠 Consentement mutuel</li>
+    <li>🔔 Fonction "Vibre"</li>
+    <li>🎮 Onglet "Jeux"</li>
+    <li>📡 Connexion WebRTC</li>
+    <li>📋 Page "Reports"</li>
+    <li>🧭 Parcours utilisateur</li>
+    <li>⚙️ Compatibilité & permissions</li>
+    <li>🔐 Sécurité & confidentialité</li>
+  </ul>
+
+  <h2>🎥 Webcam & détection de visage</h2>
+  <ul>
+    <li>La caméra est activée dès l’arrivée sur la page</li>
+    <li>La détection de visage est obligatoire pour passer à l’interlocuteur suivant</li>
+    <li>Elle est réalisée via la librairie tracking.js en local</li>
+  </ul>
+
+  <h2>🔁 Bouton "Interlocuteur suivant"</h2>
+  <ul>
+    <li>Disponible uniquement si un visage est détecté</li>
+    <li>Déclenche une recherche via WebRTC et WebSocket</li>
+  </ul>
+
+  <h2>🚩 Signalement</h2>
+  <ul>
+    <li>Tu peux signaler un des 5 derniers interlocuteurs</li>
+    <li>Une capture est enregistrée automatiquement</li>
+    <li>Le signalement inclut IP, motif, session, image</li>
+  </ul>
+
+  <h2>👍 Consentement</h2>
+  <ul>
+    <li>Chaque utilisateur peut cliquer sur le bouton "Consentement"</li>
+    <li>Le consentement est transmis au partenaire</li>
+  </ul>
+
+  <h2>🧠 Consentement mutuel</h2>
+  <ul>
+    <li>Quand les deux ont consenti :</li>
+    <ul>
+      <li>Le blocage visage est désactivé</li>
+      <li>Les fonctions "Vibre" et "Jeux" sont activées</li>
+      <li>Un log est envoyé au serveur</li>
+    </ul>
+  </ul>
+
+  <h2>🔔 Fonction "Vibre"</h2>
+  <ul>
+    <li>Active une notification Chrome locale</li>
+    <li>Peut déclencher une vibration sur un appareil connecté (ex. Mi Band)</li>
+  </ul>
+
+  <h2>🎮 Onglet "Jeux"</h2>
+  <ul>
+    <li>Accessible uniquement après consentement mutuel</li>
+    <li>Permet de lancer des mini-jeux synchronisés</li>
+  </ul>
+
+  <h2>📡 Connexion WebRTC</h2>
+  <ul>
+    <li>Connexion directe ou via STUN/TURN</li>
+    <li>Flux vidéo échangés entre clients</li>
+  </ul>
+
+  <h2>📋 Page "Reports"</h2>
+  <ul>
+    <li>Accessible via /reports.php</li>
+    <li>Affiche les signalements reçus</li>
+  </ul>
+
+  <h2>🧭 Parcours utilisateur</h2>
+  <ul>
+    <li>Vérification d’âge via go.cam</li>
+    <li>Appairage aléatoire</li>
+    <li>Navigation conditionnée à la détection de visage</li>
+  </ul>
+
+  <h2>⚙️ Compatibilité & permissions</h2>
+  <ul>
+    <li>Fonctionne sur Chrome, Edge, Firefox</li>
+    <li>Notifications et caméra doivent être autorisées</li>
+  </ul>
+
+  <h2>🔐 Sécurité & confidentialité</h2>
+  <ul>
+    <li>IP loguées pour modération</li>
+    <li>Flux non enregistrés</li>
+    <li>Captures utilisées uniquement pour les signalements</li>
+    <li>Respect des exigences RGPD</li>
+  </ul>
+
+  <p class="meta">Dernière mise à jour : 12 novembre 2025<br>
+  CGU · Mentions légales · Fonctionnement</p>
+</body>
+</html>

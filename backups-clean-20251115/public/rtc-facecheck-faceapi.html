@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="UTF-8">
+  <title>RTC FaceCheck face-api.js</title>
+  <script defer src="/vendor/faceapi/face-api.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    video { width: 640px; height: 480px; border: 1px solid black; }
+    #status { margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+    #errorlog { margin-top: 10px; color: red; white-space: pre-wrap; font-size: 0.9em; text-align: left; max-width: 640px; margin: auto; }
+  </style>
+</head>
+<body>
+  <h1>RTC FaceCheck face-api.js</h1>
+  <video id="webcam" autoplay muted playsinline></video>
+  <div id="status">Chargement du modèle…</div>
+  <pre id="errorlog"></pre>
+
+  <script>
+    const status = document.getElementById('status');
+    const errorlog = document.getElementById('errorlog');
+
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('/models')
+    ]).then(startVideo).catch(err => {
+      status.textContent = '❌ Erreur chargement modèle';
+      errorlog.textContent = err.message || String(err);
+    });
+
+    function startVideo() {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => {
+          const video = document.getElementById('webcam');
+          video.srcObject = stream;
+          video.onloadeddata = () => detectLoop(video);
+        })
+        .catch(err => {
+          status.textContent = '❌ Erreur accès webcam';
+          errorlog.textContent = err.message || String(err);
+        });
+    }
+
+    async function detectLoop(video) {
+      while (true) {
+        try {
+          const result = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+          status.textContent = result.length > 0 ? '✅ Détecte' : '❌ Détecte pas';
+          await new Promise(r => setTimeout(r, 100));
+        } catch (err) {
+          status.textContent = '❌ Erreur détection';
+          errorlog.textContent = err.message || String(err);
+          break;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

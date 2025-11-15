@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="UTF-8">
+  <title>RTC FaceCheck MediaPipe</title>
+  <script type="module">
+    import { FaceDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.width = 640;
+    video.height = 480;
+    document.body.appendChild(video);
+
+    const status = document.createElement('div');
+    status.id = 'status';
+    status.style = 'margin-top:20px;font-size:1.5em;font-weight:bold;text-align:center;';
+    status.textContent = 'Chargement du détecteur…';
+    document.body.appendChild(status);
+
+    async function setup() {
+      const filesetResolver = await FilesetResolver.forVisionTasks();
+      const detector = await FaceDetector.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: '/models/face_detector.task'
+        },
+        runningMode: 'VIDEO'
+      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+
+      video.onloadeddata = () => {
+        const loop = async () => {
+          const faces = await detector.detectForVideo(video, performance.now());
+          status.textContent = faces.detections.length > 0 ? '✅ Détecte' : '❌ Détecte pas';
+          requestAnimationFrame(loop);
+        };
+        loop();
+      };
+    }
+
+    setup().catch(err => {
+      status.textContent = '❌ Erreur détecteur';
+      console.error(err);
+    });
+  </script>
+</head>
+<body></body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta name="rating" content="adult">
+  <meta name="age-restriction" content="18+">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="googlebot" content="noindex,nosnippet">
+  <meta charset="utf-8" />
+  <title>Test Sélection Caméra</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f9fafb;
+      text-align: center;
+      padding: 20px;
+    }
+    #localVideo {
+      width: 320px;
+      height: 240px;
+      border: 3px solid #2563eb;
+      border-radius: 8px;
+      background: #000;
+      margin-bottom: 12px;
+    }
+    select {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    #status {
+      font-weight: bold;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎥 Test Sélection Caméra</h1>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <br />
+  <select id="cameraSelect"></select>
+  <div id="status">Chargement...</div>
+
+  <script>
+    const localVideo = document.getElementById('localVideo');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const status = document.getElementById('status');
+    let currentStream = null;
+
+    async function listCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+
+        videoInputs.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = `Caméra ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+
+        if (videoInputs.length > 0) {
+          startCamera(videoInputs[0].deviceId);
+        } else {
+          status.textContent = "❌ Aucune caméra détectée";
+        }
+      } catch (err) {
+        status.textContent = "❌ Erreur enumerateDevices: " + err.message;
+      }
+    }
+
+    async function startCamera(deviceId) {
+      try {
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } },
+          audio: false
+        });
+
+        currentStream = stream;
+        localVideo.srcObject = stream;
+        status.textContent = "✅ Caméra active";
+      } catch (err) {
+        status.textContent = "❌ Erreur getUserMedia: " + err.message;
+      }
+    }
+
+    cameraSelect.addEventListener('change', (e) => {
+      startCamera(e.target.value);
+    });
+
+    listCameras();
+  </script>
+</body>
+</html>

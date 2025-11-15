@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test WebRTC ICE</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    video { width: 300px; margin: 1em 0; }
+    pre { background: #eee; padding: 1em; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>🔍 Test WebRTC ICE</h2>
+  <button id="startBtn">🎥 Démarrer</button>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <pre id="log"></pre>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const localVideo = document.getElementById('localVideo');
+    const log = document.getElementById('log');
+
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:legalshufflecam.ovh:443?transport=tcp', username: 'webrtc', credential: 'secret' },
+        { urls: 'turn:legalshufflecam.ovh:3478?transport=udp', username: 'webrtc', credential: 'secret' }
+      ]
+    };
+
+    function logICE(message) {
+      log.textContent += message + '\\n';
+    }
+
+    startBtn.onclick = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      localVideo.srcObject = stream;
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.onicecandidate = event => {
+        if (event.candidate) {
+          const cand = event.candidate.candidate;
+          logICE('[ICE] ' + cand);
+          if (cand.includes('typ relay')) logICE('🔐 Connexion via TURN');
+          else if (cand.includes('typ srflx')) logICE('🌐 Connexion via STUN');
+          else if (cand.includes('typ host')) logICE('📡 Connexion directe');
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+    };
+  </script>
+</body>
+</html>
