@@ -1,96 +1,135 @@
-// Version finale qui MARCHE pour lister les caméras
-// À placer dans ton app.js existant
+// Solution ULTIME pour les caméras mobiles
+// À intégrer dans ton app.js existant
 
-// 1. Fonction pour afficher les messages dans la topBar
-function showMessage(msg) {
+// 1. Fonction d'affichage optimisée pour mobile
+function showMessage(msg, isError = false) {
   const topBar = document.getElementById('topBar');
-  if (topBar) topBar.textContent = msg;
+  if (topBar) {
+    topBar.textContent = (isError ? "❌ " : "📱 ") + msg;
+    console.log((isError ? "[ERREUR] " : "[INFO] ") + msg);
+  }
 }
 
-// 2. Fonction pour lister les caméras (version qui MARCHE)
-async function listCameras() {
-  showMessage("Recherche des caméras...");
+// 2. Détection des caméras pour mobile (version qui MARCHE)
+async function detectMobileCameras() {
+  showMessage("Détection des caméras mobiles...");
 
   try {
-    // Méthode directe qui contourne les problèmes
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    stream.getTracks().forEach(track => track.stop());
+    // Solution 1: Demande d'accès basique pour "réveiller" les caméras
+    const testStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+      audio: false
+    });
+    testStream.getTracks().forEach(track => track.stop());
+    showMessage("Accès caméra mobile autorisé ✅");
 
+    // Solution 2: Liste complète des périphériques
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(device => device.kind === 'videoinput');
+    const cameras = devices.filter(d => d.kind === 'videoinput');
 
     const cameraSelect = document.getElementById('cameraSelect');
     if (cameraSelect) {
       cameraSelect.innerHTML = '';
-      cameras.forEach((camera, index) => {
+      cameras.forEach((camera, i) => {
         const option = document.createElement('option');
         option.value = camera.deviceId;
-        option.textContent = camera.label || `Caméra ${index + 1}`;
+        option.textContent = camera.label ||
+                           (camera.label.includes('back') ? 'Caméra arrière' :
+                            camera.label.includes('front') ? 'Caméra avant' :
+                            `Caméra ${i+1}`);
         cameraSelect.appendChild(option);
       });
     }
 
-    showMessage(`✅ ${cameras.length} caméra(s) détectée(s)`);
+    showMessage(`✅ ${cameras.length} caméra(s) mobile(s) détectée(s)`);
 
-    // Démarrer avec la première caméra
-    if (cameras.length > 0) {
-      startCamera(cameras[0].deviceId);
-    } else {
-      showMessage("❌ Aucune caméra détectée");
-    }
+    // Démarrer avec la caméra arrière par défaut
+    const backCamera = cameras.find(c => c.label.includes('back')) ||
+                      cameras.find(c => c.label.includes('environment')) ||
+                      cameras[0];
+    if (backCamera) startMobileCamera(backCamera.deviceId);
 
   } catch (error) {
-    showMessage(`❌ Erreur: ${error.message}`);
+    showMessage(`Erreur mobile: ${error.name || 'Erreur'}: ${error.message}`, true);
 
-    // Solution de secours si la première méthode échoue
-    try {
-      const fallbackStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false
-      });
-      fallbackStream.getTracks().forEach(track => track.stop());
-      showMessage("Caméra détectée en mode secours ✅");
-    } catch (fallbackError) {
-      showMessage(`❌ Erreur finale: ${fallbackError.message}`);
+    // Solution de secours pour iOS
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      try {
+        const iosStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: 'environment' } },
+          audio: false
+        });
+        iosStream.getTracks().forEach(track => track.stop());
+        showMessage("Caméra iOS détectée en mode secours ✅");
+        detectMobileCameras(); // Réessayer
+      } catch (iosError) {
+        showMessage(`Erreur iOS: ${iosError.message}`, true);
+      }
     }
   }
 }
 
-// 3. Fonction pour démarrer une caméra
-async function startCamera(deviceId) {
+// 3. Démarrage d'une caméra mobile
+async function startMobileCamera(deviceId) {
   try {
     const localVideo = document.getElementById('localVideo');
     if (!localVideo) {
-      showMessage("Élément vidéo introuvable");
+      showMessage("Élément vidéo introuvable", true);
       return;
     }
 
+    // Contraintes optimisées pour mobile
     const constraints = {
-      video: { deviceId: { exact: deviceId } },
+      video: {
+        deviceId: { exact: deviceId },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: deviceId.includes('back') || deviceId.includes('environment') ? 'environment' : 'user'
+      },
       audio: false
     };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     localVideo.srcObject = stream;
-    showMessage("Caméra active ✅");
+    showMessage("Caméra mobile active ✅");
 
-    // Ici tu peux ajouter l'initialisation de PeerJS
+    // Initialisation PeerJS ici si besoin
     // initPeerJS(stream);
 
   } catch (error) {
-    showMessage(`❌ Erreur caméra: ${error.message}`);
+    showMessage(`Erreur caméra mobile: ${error.message}`, true);
+
+    // Solution ultime pour Android
+    if (/Android/i.test(navigator.userAgent)) {
+      try {
+        const androidStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
+        localVideo.srcObject = androidStream;
+        showMessage("Caméra Android active (mode secours) ✅");
+      } catch (androidError) {
+        showMessage(`Erreur Android: ${androidError.message}`, true);
+      }
+    }
   }
 }
 
-// 4. Initialisation au chargement
+// 4. Initialisation spécial mobile
 window.addEventListener('load', () => {
-  listCameras();
+  showMessage("Initialisation mobile...");
+
+  // Détection des caméras
+  detectMobileCameras();
 
   // Gestion du changement de caméra
   const cameraSelect = document.getElementById('cameraSelect');
   if (cameraSelect) {
-    cameraSelect.addEventListener('change', (event) => {
-      startCamera(event.target.value);
+    cameraSelect.addEventListener('change', (e) => {
+      startMobileCamera(e.target.value);
     });
   }
+
+  // Adaptation pour les touches tactiles
+  document.addEventListener('touchstart', () => {}, {passive: true});
 });
