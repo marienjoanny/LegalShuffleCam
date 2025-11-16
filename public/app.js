@@ -197,11 +197,10 @@ function handleNextClick() {
   }
 
   if (btnNext) {
-    btnNext.disabled = true;
-    btnNext.textContent = "⏳ Recherche...";
   }
 
   if (currentCall) {
+  remoteVideo.srcObject = null;
     currentCall.close();
     currentCall = null;
   }
