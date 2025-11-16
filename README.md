@@ -58,3 +58,14 @@ node server.js
 > Chaque modification est explicite, réversible, et documentée.  
 > Pas de dépendances inutiles. Pas de surprises visuelles.  
 > Juste du contrôle, de la clarté, et du respect utilisateur.
+
+---
+
+## 🔧 Endpoints API – Suite Partenaires
+
+- `POST /api/register-peer.php` → ajoute un partenaire
+- `GET /api/list-peers.php` → liste tous les partenaires
+- `GET /api/count-peers.php` → compte les partenaires
+- `POST /api/remove-peer.php` → supprime un partenaire spécifique
+- `POST /api/purge-peers.php` → vide la liste
+

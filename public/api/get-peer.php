@@ -1,5 +1,4 @@
 <?php
 header('Content-Type: application/json');
-echo json_encode([
-  "partnerId" => "test-partner-123"
-]);
+echo json_encode(["partnerId" => "test-partner-123"]);
+?>
