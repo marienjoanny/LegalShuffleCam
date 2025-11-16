@@ -323,3 +323,13 @@ window.startCall = handleDirectCall;
     if (peer) peer.destroy();
   });
 });
+setInterval(() => {
+  if (peer && peer.id) {
+    fetch("/api/register-peer.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partnerId: peer.id })
+    });
+  }
+}, 30000); // toutes les 30 secondes
+
