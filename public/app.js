@@ -333,3 +333,9 @@ setInterval(() => {
   }
 }, 30000); // toutes les 30 secondes
 
+
+// 🔗 Expose startCall au parent ET à l’iframe
+window.startCall = handleDirectCall;
+if (window !== window.parent) {
+  window.parent.startCall = handleDirectCall;
+}

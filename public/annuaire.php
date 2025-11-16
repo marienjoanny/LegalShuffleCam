@@ -3,7 +3,6 @@ $peersFile = '/tmp/peers.json';
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
 $now = time();
 
-// Filtre les peers actifs
 $activePeers = [];
 foreach ($peers as $id => $ts) {
   if ($now - $ts < 600) {
@@ -18,69 +17,102 @@ $count = count($activePeers);
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>📖 Annuaire des connectés</title>
+  <title>Annuaire des connectés</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f9f9f9;
-      color: #333;
-      padding: 20px;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 1em;
     }
     h1 {
-      color: #444;
+      font-size: 1.4em;
+      margin-bottom: 0.5em;
+    }
+    #refreshBtn {
+      background: #66ccff;
+      color: #111;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5em 1em;
+      font-size: 0.9em;
+      cursor: pointer;
+      margin-bottom: 1em;
+    }
+    #refreshBtn.loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
     table {
-      border-collapse: collapse;
       width: 100%;
-      max-width: 600px;
-      background: #fff;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
+      border-collapse: collapse;
+      background: #222;
     }
     th {
-      background: #eee;
+      background: #333;
+      font-weight: bold;
+    }
+    th, td {
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.95em;
     }
     a.call {
-      text-decoration: none;
-      color: #0077cc;
+      color: #66ccff;
       font-weight: bold;
+      text-decoration: none;
     }
     a.call::before {
       content: "📞 ";
+    }
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 0.85em;
+        padding: 0.4em;
+      }
     }
   </style>
 </head>
 <body>
   <h1>📖 Annuaire des connectés</h1>
-  <p>Total connectés : <?= $count ?></p>
-
-  <?php if ($count === 0): ?>
-    <p>Aucun partenaire connecté pour le moment.</p>
-  <?php else: ?>
-    <table>
-      <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th></tr>
-      <?php foreach ($activePeers as $id => $ts): ?>
-        <tr>
-          <td><?= htmlspecialchars($id) ?></td>
-          <td><?= $now - $ts ?></td>
-          <td><a class="call" href="javascript:callPeer('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
-        </tr>
-      <?php endforeach; ?>
-    </table>
-  <?php endif; ?>
+  <button id="refreshBtn" onclick="refreshAnnuaire()">🔄 Actualiser</button>
+  <div id="annuaireContent">
+    <p>Total connectés : <?= $count ?></p>
+    <?php if ($count === 0): ?>
+      <p>Aucun partenaire connecté pour le moment.</p>
+    <?php else: ?>
+      <table>
+        <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th></tr>
+        <?php foreach ($activePeers as $id => $ts): ?>
+          <tr>
+            <td><?= htmlspecialchars($id) ?></td>
+            <td><?= $now - $ts ?></td>
+            <td><a class="call" href="javascript:window.parent.startCall && window.parent.startCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
+          </tr>
+        <?php endforeach; ?>
+      </table>
+    <?php endif; ?>
+  </div>
 
   <script>
-    function callPeer(id) {
-      if (window.parent && typeof window.parent.startCall === 'function') {
-        window.parent.startCall(id);
-      } else {
-        alert("Fonction d'appel non disponible.");
-      }
+    function refreshAnnuaire() {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('loading');
+      fetch(location.href)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const newContent = doc.getElementById('annuaireContent');
+          document.getElementById('annuaireContent').innerHTML = newContent.innerHTML;
+        })
+        .catch(err => alert("Erreur actualisation : " + err))
+        .finally(() => btn.classList.remove('loading'));
     }
+
+    // 🔁 Auto-refresh toutes les 30 secondes
+    setInterval(refreshAnnuaire, 30000);
   </script>
 </body>
 </html>
