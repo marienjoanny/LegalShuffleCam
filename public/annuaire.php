@@ -3,6 +3,8 @@ $peersFile = '/tmp/peers.json';
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
 $now = time();
 $callerId = $_GET["callerId"] ?? null;
+$callerId = $_GET["callerId"] ?? null;
+$callerId = $_GET["callerId"] ?? null;
 
 $activePeers = [];
 foreach ($peers as $id => $ts) {
@@ -89,7 +91,7 @@ $count = count($activePeers);
           <tr>
             <td><?= htmlspecialchars($id) ?></td>
             <td><?= $now - $ts ?></td>
-            <td><a class="call" href="/index-real.php?callerId=<?= urlencode($callerId) ?><a class="call" href="javascript:void(0)"partnerId=<?= urlencode($id) ?>" target="_blank" onclick="openCall('<?= htmlspecialchars($id) ?>')" target="_blank">Appeler</a></td>
+<td><?php if ($callerId && $callerId !== $id): ?><a class="call" href="/index-real.php?callerId=<?= urlencode($callerId) ?>&partnerId=<?= urlencode($id) ?>" target="_blank">Appeler</a><?php else: ?><span style="opacity:0.5;">—</span><?php endif; ?></td>
           </tr>
         <?php endforeach; ?>
       </table>
