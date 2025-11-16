@@ -314,6 +314,9 @@ window.addEventListener('load', () => {
     });
   }
 
+window.startCall = handleDirectCall;
+
+
   window.addEventListener('beforeunload', () => {
     if (currentStream) currentStream.getTracks().forEach(track => track.stop());
     if (currentCall) currentCall.close();
