@@ -129,6 +129,7 @@ function initPeerJS(stream) {
   });
 
   peer.on('open', id => {
+    window.myPeerId = id;
     showMessage(`PeerJS connecté (ID: ${id})`);
     registerPeer(id);
   });

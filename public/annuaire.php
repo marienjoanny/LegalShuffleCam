@@ -2,6 +2,7 @@
 $peersFile = '/tmp/peers.json';
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
 $now = time();
+$callerId = $_GET["callerId"] ?? null;
 
 $activePeers = [];
 foreach ($peers as $id => $ts) {
@@ -88,7 +89,7 @@ $count = count($activePeers);
           <tr>
             <td><?= htmlspecialchars($id) ?></td>
             <td><?= $now - $ts ?></td>
-            <td><a class="call" href="javascript:window.parent.startCall && window.parent.startCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
+            <td><a class="call" href="/index-real.php?callerId=<?= urlencode($callerId) ?><a class="call" href="javascript:void(0)"partnerId=<?= urlencode($id) ?>" target="_blank" onclick="openCall('<?= htmlspecialchars($id) ?>')" target="_blank">Appeler</a></td>
           </tr>
         <?php endforeach; ?>
       </table>
@@ -114,5 +115,26 @@ $count = count($activePeers);
     // 🔁 Auto-refresh toutes les 30 secondes
     setInterval(refreshAnnuaire, 30000);
   </script>
+<script>
+
+function openCall(partnerId) {
+
+  const callerId = window.opener?.myPeerId || window.myPeerId || null;
+
+  if (!callerId) {
+
+    alert("Impossible de récupérer votre peerId");
+
+    return;
+
+  }
+
+  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+
+  window.open(url, "_blank");
+
+}
+
+</script>
 </body>
 </html>

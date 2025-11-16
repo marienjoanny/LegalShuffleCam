@@ -162,5 +162,41 @@
 
   <!-- Ton app.js optimisé -->
   <script src="/app.js" defer></script>
+<script>
+
+  window.addEventListener("load", () => {
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const callerId = urlParams.get("callerId");
+
+    const partnerId = urlParams.get("partnerId");
+
+    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
+
+      window.startCall(partnerId);
+
+    }
+
+  });
+
+</script>
+<script>
+
+  window.addEventListener("load", () => {
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const peerIdToCall = urlParams.get("peerId");
+
+    if (peerIdToCall && typeof window.startCall === "function") {
+
+      window.startCall(peerIdToCall);
+
+    }
+
+  });
+
+</script>
 </body>
 </html>
