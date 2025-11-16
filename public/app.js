@@ -1,4 +1,4 @@
-// LegalShuffleCam • app.js (Version FINALE avec logs visibles + patch JSON)
+// LegalShuffleCam • app.js (Version FINALE avec logs visibles + patch JSON + Annuaire)
 
 const topBar = document.getElementById('topBar');
 const cameraSelect = document.getElementById('cameraSelect');
@@ -249,6 +249,15 @@ function callPeer(partnerId) {
   currentCall = call;
 }
 
+function handleDirectCall(partnerId) {
+  if (!peer || !peer.id || !currentStream) {
+    showMessage("PeerJS ou caméra non prêt", true);
+    return;
+  }
+  showMessage(`Appel direct vers ${partnerId}...`);
+  callPeer(partnerId);
+}
+
 window.addEventListener('load', () => {
   showMessage("Initialisation...");
   detectCameras();
@@ -272,6 +281,38 @@ window.addEventListener('load', () => {
   }
 
   if (btnNext) btnNext.onclick = handleNextClick;
+
+  // 🔗 Gestion du formulaire annuaire (si présent dans la page)
+  const annuaireForm = document.querySelector('form[action="/api/direct-call.php"]');
+  if (annuaireForm) {
+    annuaireForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(annuaireForm);
+      const partnerId = formData.get('partnerId');
+
+      if (!partnerId) {
+        showMessage("Aucun partenaire sélectionné", true);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/direct-call.php', {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (data && data.partnerId) {
+          handleDirectCall(data.partnerId);
+        } else {
+          showMessage("Réponse annuaire invalide", true);
+        }
+      } catch (err) {
+        showMessage(`Erreur annuaire: ${err.message}`, true);
+      }
+    });
+  }
 
   window.addEventListener('beforeunload', () => {
     if (currentStream) currentStream.getTracks().forEach(track => track.stop());
