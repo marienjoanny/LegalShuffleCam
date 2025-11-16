@@ -120,7 +120,8 @@ async function startCamera(deviceId) {
 function initPeerJS(stream) {
   if (!stream) return;
 
-  peer = new Peer(undefined, {
+  const savedId = sessionStorage.getItem("peerId");
+  peer = new Peer(savedId || undefined, {
     host: 'legalshufflecam.ovh',
     port: 443,
     path: '/peerjs',
@@ -129,6 +130,7 @@ function initPeerJS(stream) {
   });
 
   peer.on('open', id => {
+    sessionStorage.setItem("peerId", id);
     window.myPeerId = id;
     showMessage(`PeerJS connecté (ID: ${id})`);
     registerPeer(id);
@@ -172,6 +174,16 @@ function handleIncomingCall(call) {
   });
 
   call.on('error', err => {
+    fetch("/api/unregister-peer.php", {
+
+      method: "POST",
+
+      headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({ partnerId: partnerId })
+
+    });
+    setTimeout(retryNextPeer, 1000); // relance après 1s
     showMessage(`Erreur appel: ${err.message}`, true);
   });
 
@@ -225,6 +237,14 @@ function handleNextClick() {
     });
 }
 
+function retryNextPeer() {
+
+  showMessage("Nouvelle tentative...");
+
+  handleNextClick();
+
+}
+
 function callPeer(partnerId) {
   if (!currentStream) {
     showMessage("Impossible d'appeler sans flux vidéo", true);
@@ -244,6 +264,16 @@ function callPeer(partnerId) {
   });
 
   call.on('error', err => {
+    fetch("/api/unregister-peer.php", {
+
+      method: "POST",
+
+      headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({ partnerId: partnerId })
+
+    });
+    setTimeout(retryNextPeer, 1000); // relance après 1s
     showMessage(`Erreur appel: ${err.message}`, true);
   });
 
