@@ -1,20 +1,20 @@
 <?php
 header('Content-Type: application/json');
-$exclude = $_GET['exclude'] ?? null;
+
+$callerId = $_GET['callerId'] ?? null;
 $file = '/tmp/peers.json';
 $peers = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
 
 $now = time();
-$validPeers = [];
-foreach ($peers as $id => $ts) {
-  if ($now - $ts < 600 && $id !== $exclude) {
-    $validPeers[] = $id;
-  }
+$peers = array_filter($peers, fn($ts) => $now - $ts < 60); // max 60s
+
+$available = array_keys($peers);
+$available = array_filter($available, fn($id) => $id !== $callerId);
+
+if (count($available) === 0) {
+  echo json_encode(['error' => 'No available peer']);
+  exit;
 }
 
-if (count($validPeers) > 0) {
-  $partnerId = $validPeers[array_rand($validPeers)];
-  echo json_encode(['status' => 'call', 'partnerId' => $partnerId]);
-} else {
-  echo json_encode(['status' => 'empty']);
-}
+$partnerId = $available[array_rand($available)];
+echo json_encode(['partnerId' => $partnerId]);
