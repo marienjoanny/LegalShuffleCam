@@ -1,38 +1,86 @@
 <?php
-$file = __DIR__ . '/../data/connected-partners.json';
-$partners = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-$count = is_array($partners) ? count($partners) : 0;
+$peersFile = '/tmp/peers.json';
+$peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
+$now = time();
+
+// Filtre les peers actifs
+$activePeers = [];
+foreach ($peers as $id => $ts) {
+  if ($now - $ts < 600) {
+    $activePeers[$id] = $ts;
+  }
+}
+
+ksort($activePeers);
+$count = count($activePeers);
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>Annuaire des connectés</title>
+  <meta charset="UTF-8">
+  <title>📖 Annuaire des connectés</title>
   <style>
-    body { font-family: system-ui, sans-serif; background:#0b1220; color:#e6e8ee; padding:20px; }
-    h1 { color:#fbbf24; }
-    .partner { background:#1f2937; padding:10px; margin:6px 0; border-radius:8px;
-               display:flex; justify-content:space-between; align-items:center; }
-    button { background:#2563eb; color:#fff; border:none; padding:8px 12px;
-             border-radius:6px; cursor:pointer; }
+    body {
+      font-family: sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      padding: 20px;
+    }
+    h1 {
+      color: #444;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #eee;
+    }
+    a.call {
+      text-decoration: none;
+      color: #0077cc;
+      font-weight: bold;
+    }
+    a.call::before {
+      content: "📞 ";
+    }
   </style>
 </head>
 <body>
   <h1>📖 Annuaire des connectés</h1>
-  <p>Total connectés : <strong><?= $count ?></strong></p>
+  <p>Total connectés : <?= $count ?></p>
 
-  <?php if ($count > 0): ?>
-    <?php foreach ($partners as $p): ?>
-      <div class="partner">
-        <span><?= htmlspecialchars($p) ?></span>
-        <form method="post" action="/api/direct-call.php" style="margin:0;">
-          <input type="hidden" name="partnerId" value="<?= htmlspecialchars($p) ?>" />
-          <button type="submit">📞 Appeler</button>
-        </form>
-      </div>
-    <?php endforeach; ?>
-  <?php else: ?>
+  <?php if ($count === 0): ?>
     <p>Aucun partenaire connecté pour le moment.</p>
+  <?php else: ?>
+    <table>
+      <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th></tr>
+      <?php foreach ($activePeers as $id => $ts): ?>
+        <tr>
+          <td><?= htmlspecialchars($id) ?></td>
+          <td><?= $now - $ts ?></td>
+          <td><a class="call" href="javascript:callPeer('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
+        </tr>
+      <?php endforeach; ?>
+    </table>
   <?php endif; ?>
+
+  <script>
+    function callPeer(id) {
+      if (window.parent && typeof window.parent.startCall === 'function') {
+        window.parent.startCall(id);
+      } else {
+        alert("Fonction d'appel non disponible.");
+      }
+    }
+  </script>
 </body>
 </html>
