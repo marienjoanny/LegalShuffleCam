@@ -144,7 +144,8 @@
       <a href="/fonctionnement.html">Fonctionnement</a> •
       <a href="/moderation.html">Modération</a> •
       <a href="/reglement.html">Règlement</a> •
-      <a href="/sitemap.html">Plan du site</a> •
+      <a href="/sitemap.html">Plan du site</a> • 
+<a href="/annuaire.php">Annuaire</a> •
       <a href="/reports.php">Signalements</a>
     </p>
     <p style="margin-top:8px;">
