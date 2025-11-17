@@ -198,5 +198,18 @@
   });
 
 </script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const peerIdToCall = urlParams.get("peerId");
+
+    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
+      window.startCall(partnerId);
+    } else if (peerIdToCall && typeof window.startCall === "function") {
+      window.startCall(peerIdToCall);
+    }
+  });
+</script>
 </body>
-</html>
