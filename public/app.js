@@ -190,51 +190,6 @@ function handleIncomingCall(call) {
   currentCall = call;
 }
 
-function handleNextClick() {
-  if (!peer || !peer.id || !currentStream) {
-    showMessage("PeerJS ou caméra non prêt", true);
-    return;
-  }
-
-  if (btnNext) {
-  }
-
-  if (currentCall) {
-  remoteVideo.srcObject = null;
-    currentCall.close();
-    currentCall = null;
-  }
-
-  fetch("/api/get-peer")
-    .then(async res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      try {
-        return JSON.parse(text);
-      } catch (err) {
-        throw new Error("Réponse non JSON");
-      }
-    })
-    .then(data => {
-      if (data.partnerId && data.partnerId !== peer.id) {
-        showMessage(`Connexion à ${data.partnerId}...`);
-        callPeer(data.partnerId);
-      } else {
-        showMessage("Aucun partenaire disponible", true);
-        if (btnNext) {
-          btnNext.disabled = false;
-          btnNext.textContent = "➡️ Interlocuteur suivant";
-        }
-      }
-    })
-    .catch(err => {
-      showMessage(`Erreur: ${err.message}`, true);
-      if (btnNext) {
-        btnNext.disabled = false;
-        btnNext.textContent = "➡️ Interlocuteur suivant";
-      }
-    });
-}
 
 function retryNextPeer() {
 
@@ -245,6 +200,28 @@ function retryNextPeer() {
 }
 
 function callPeer(partnerId) {
+  if (currentCall && currentCall.open) {
+
+    showMessage("🔁 Connexion déjà en cours, fermeture...");
+
+    currentCall.close();
+
+    remoteVideo.srcObject = null;
+
+    currentCall = null;
+
+  }
+  if (currentCall && currentCall.open) {
+
+    showMessage("🔁 Connexion déjà en cours, fermeture...");
+
+    currentCall.close();
+
+    remoteVideo.srcObject = null;
+
+    currentCall = null;
+
+  }
   if (!currentStream) {
     showMessage("Impossible d'appeler sans flux vidéo", true);
     return;
@@ -368,4 +345,53 @@ setInterval(() => {
 window.startCall = handleDirectCall;
 if (window !== window.parent) {
   window.parent.startCall = handleDirectCall;
+}
+
+function handleNextClick() {
+  if (!peer || !peer.id || !currentStream) {
+    showMessage("PeerJS ou caméra non prêt", true);
+    return;
+  }
+
+  if (currentCall && currentCall.open) {
+    showMessage("🔁 Interruption de l’appel en cours...");
+    currentCall.close();
+    remoteVideo.srcObject = null;
+    currentCall = null;
+  }
+
+  fetch("/api/get-peer")
+    .then(async res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        throw new Error("Réponse non JSON");
+      }
+    })
+    .then(data => {
+      if (data.partnerId === peer.id) {
+        showMessage(`⚠️ Le serveur a renvoyé ton propre ID (${data.partnerId})`, true);
+        return;
+      }
+
+      if (data.partnerId) {
+        showMessage(`🔗 Connexion à ${data.partnerId}`);
+        callPeer(data.partnerId);
+      } else {
+        showMessage("Aucun partenaire disponible", true);
+        if (btnNext) {
+          btnNext.disabled = false;
+          btnNext.textContent = "➡️ Interlocuteur suivant";
+        }
+      }
+    })
+    .catch(err => {
+      showMessage(`Erreur: ${err.message}`, true);
+      if (btnNext) {
+        btnNext.disabled = false;
+        btnNext.textContent = "➡️ Interlocuteur suivant";
+      }
+    });
 }
