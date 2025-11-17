@@ -100,61 +100,16 @@ $count = count($activePeers);
     <?php endif; ?>
   </div>
 
-  <script>
-    function refreshAnnuaire() {
-      const btn = document.getElementById('refreshBtn');
-      btn.classList.add('loading');
-      fetch(location.href)
-        .then(res => res.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const newContent = doc.getElementById('annuaireContent');
-          document.getElementById('annuaireContent').innerHTML = newContent.innerHTML;
-        })
-        .catch(err => alert("Erreur actualisation : " + err))
-        .finally(() => btn.classList.remove('loading'));
-    }
-
-    // 🔁 Auto-refresh toutes les 30 secondes
-    setInterval(refreshAnnuaire, 30000);
-  </script>
-<script>
-
-
-  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
-
-  window.open(url, "_blank");
-
-}
-
-</script>
-<script>
-  const myId = localStorage.getItem("myPeerId");
-  if (myId) {
-    const info = document.createElement("div");
-    info.textContent = `🧠 Votre peerId : ${myId}`;
-    info.style = "position:fixed;bottom:5px;right:10px;font-size:0.8em;color:#ccc;background:#222;padding:4px 8px;border-radius:4px;z-index:999";
-    document.body.appendChild(info);
-  }
-</script>
 </body>
 </html>
 <script>
-
-  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
-  window.open(url, "_blank");
-}
-</script>
-<script>
-
-  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
-  window.open(url, "_blank");
-}
-</script>
-<script>
 function openCall(partnerId) {
-  const url = `/index-real.php?partnerId=${encodeURIComponent(partnerId)}`;
+  const callerId = localStorage.getItem("myPeerId");
+  if (!callerId) {
+    alert("⛔ Votre peerId n’est pas encore initialisé. Veuillez ouvrir une session d’appel d’abord.");
+    return;
+  }
+  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
   window.open(url, "_blank");
 }
 </script>
