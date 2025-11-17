@@ -145,7 +145,7 @@
       <a href="/moderation.html">Modération</a> •
       <a href="/reglement.html">Règlement</a> •
       <a href="/sitemap.html">Plan du site</a> • 
-<a href="/annuaire.php">Annuaire</a> •
+      <a href="/annuaire.php">Annuaire</a> •
       <a href="/reports.php">Signalements</a>
     </p>
     <p style="margin-top:8px;">
@@ -160,93 +160,7 @@
   <!-- Librairie PeerJS -->
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
-  <!-- Ton app.js optimisé -->
-<script>
-
-  window.addEventListener("load", () => {
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    const callerId = urlParams.get("callerId");
-
-    const partnerId = urlParams.get("partnerId");
-
-    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
-
-      window.startCall(partnerId);
-
-    }
-
-  });
-
-</script>
-<script>
-
-  window.addEventListener("load", () => {
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    const peerIdToCall = urlParams.get("peerId");
-
-    if (peerIdToCall && typeof window.startCall === "function") {
-
-      window.startCall(peerIdToCall);
-
-    }
-
-  });
-
-</script>
-<script>
-  window.addEventListener("load", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const callerId = urlParams.get("callerId");
-    const partnerId = urlParams.get("partnerId");
-    const peerIdToCall = urlParams.get("peerId");
-
-    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
-      window.startCall(partnerId);
-    } else if (peerIdToCall && typeof window.startCall === "function") {
-      window.startCall(peerIdToCall);
-    }
-  });
-</script>
-<script>
-  window.addEventListener("load", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const callerId = urlParams.get("callerId");
-    const partnerId = urlParams.get("partnerId");
-    const topBar = document.getElementById("topBar");
-    if (topBar && (callerId || partnerId)) {
-    }
-  });
-</script>
-<script>
-  window.addEventListener("load", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const callerId = urlParams.get("callerId");
-    const partnerId = urlParams.get("partnerId");
-    const peerIdToCall = urlParams.get("peerId");
-    const topBar = document.getElementById("topBar");
-    if (topBar) {
-      topBar.textContent = `📡 callerId: ${callerId ?? "?"} → partnerId: ${partnerId ?? "?"} → peerIdToCall: ${peerIdToCall ?? "?"}`;
-    }
-  });
-</script>
-<script>
-  window.addEventListener("load", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const callerId = urlParams.get("callerId");
-    const topBar = document.getElementById("topBar");
-    if (topBar && !callerId) {
-      topBar.textContent = "⌛ Initialisation en cours...";
-    }
-  });
-</script>
-<script>
-  setInterval(() => {
-    const topBar = document.getElementById("topBar");
-    const callState = window.currentCall?.open ? "🟢 appel actif" : "⚪ aucun appel";
-    if (topBar) {
-      topBar.textContent += ` | ${callState}`;
-    }
+  <!-- App JS optimisé -->
+  <script type="module" src="/app-lite.js"></script>
+</body>
+</html>
