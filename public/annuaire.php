@@ -121,17 +121,6 @@ $count = count($activePeers);
   </script>
 <script>
 
-function openCall(partnerId) {
-
-  const callerId = window.opener?.myPeerId || window.myPeerId || null;
-
-  if (!callerId) {
-
-    alert("Impossible de récupérer votre peerId");
-
-    return;
-
-  }
 
   const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
 
@@ -140,5 +129,37 @@ function openCall(partnerId) {
 }
 
 </script>
+<script>
+  const myId = localStorage.getItem("myPeerId");
+  if (myId) {
+    const info = document.createElement("div");
+    info.textContent = `🧠 Votre peerId : ${myId}`;
+    info.style = "position:fixed;bottom:5px;right:10px;font-size:0.8em;color:#ccc;background:#222;padding:4px 8px;border-radius:4px;z-index:999";
+    document.body.appendChild(info);
+  }
+</script>
 </body>
 </html>
+<script>
+
+  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+  window.open(url, "_blank");
+}
+</script>
+<script>
+function openCall(partnerId) {
+  const callerId =
+    window.opener?.myPeerId ||
+    window.myPeerId ||
+    localStorage.getItem("myPeerId") ||
+    null;
+
+  if (!callerId) {
+    alert("Impossible de récupérer votre peerId");
+    return;
+  }
+
+  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+  window.open(url, "_blank");
+}
+</script>

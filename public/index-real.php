@@ -212,4 +212,26 @@
     }
   });
 </script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar && (callerId || partnerId)) {
+    }
+  });
+</script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const peerIdToCall = urlParams.get("peerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar) {
+      topBar.textContent = `📡 callerId: ${callerId ?? "?"} → partnerId: ${partnerId ?? "?"} → peerIdToCall: ${peerIdToCall ?? "?"}`;
+    }
+  });
+</script>
 </body>
