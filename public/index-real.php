@@ -234,4 +234,24 @@
     }
   });
 </script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar && !callerId) {
+      topBar.textContent = "⌛ Initialisation en cours...";
+    }
+  });
+</script>
+<script>
+  setInterval(() => {
+    const topBar = document.getElementById("topBar");
+    const callState = window.currentCall?.open ? "🟢 appel actif" : "⚪ aucun appel";
+    if (topBar) {
+      topBar.textContent += ` | ${callState}`;
+    }
+    console.log("📞 État du call :", callState);
+  }, 2000);
+</script>
 </body>

@@ -147,19 +147,14 @@ $count = count($activePeers);
 }
 </script>
 <script>
-function openCall(partnerId) {
-  const callerId =
-    window.opener?.myPeerId ||
-    window.myPeerId ||
-    localStorage.getItem("myPeerId") ||
-    null;
-
-  if (!callerId) {
-    alert("Impossible de récupérer votre peerId");
-    return;
-  }
 
   const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+  window.open(url, "_blank");
+}
+</script>
+<script>
+function openCall(partnerId) {
+  const url = `/index-real.php?partnerId=${encodeURIComponent(partnerId)}`;
   window.open(url, "_blank");
 }
 </script>
