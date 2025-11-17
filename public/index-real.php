@@ -251,7 +251,3 @@
     if (topBar) {
       topBar.textContent += ` | ${callState}`;
     }
-    console.log("📞 État du call :", callState);
-  }, 2000);
-</script>
-</body>
