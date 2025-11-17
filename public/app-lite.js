@@ -1,7 +1,13 @@
-// app-lite.js
-import { initPeer } from '/js/peer-init.js';
-import { maybeStartCall } from '/js/call-direct.js';
+import { listCameras, startCamera } from '/js/camera.js';
 
-initPeer().then(peerId => {
-  maybeStartCall(peerId);
+window.addEventListener('DOMContentLoaded', () => {
+  listCameras();
+
+  const select = document.getElementById('cameraSelect');
+  select.addEventListener('change', () => {
+    const deviceId = select.value;
+    if (deviceId) {
+      startCamera(deviceId);
+    }
+  });
 });
