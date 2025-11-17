@@ -89,7 +89,11 @@ $count = count($activePeers);
           <tr>
             <td><?= htmlspecialchars($id) ?></td>
             <td><?= $now - $ts ?></td>
-            <td><a class="call" href="/index-real.php?callerId=<?= urlencode($callerId) ?><a class="call" href="javascript:void(0)"partnerId=<?= urlencode($id) ?>" target="_blank" onclick="openCall('<?= htmlspecialchars($id) ?>')" target="_blank">Appeler</a></td>
+<td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
+<td><form method="POST" action="/api/unregister-peer.php" style="display:inline">
+<input type="hidden" name="partnerId" value="<?= htmlspecialchars($id) ?>">
+<button style="background:#cc6666;color:#fff;border:none;padding:0.3em 0.6em;border-radius:3px;cursor:pointer">Supprimer</button>
+</form></td>
           </tr>
         <?php endforeach; ?>
       </table>
