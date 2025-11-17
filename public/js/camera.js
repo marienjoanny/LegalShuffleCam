@@ -5,32 +5,28 @@ export async function listCameras() {
   const cameraSelect = document.getElementById('cameraSelect');
 
   try {
-    topBar.textContent = "📷 Détection des caméras...";
+    topBar.textContent = "📷 Détection...";
     const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    tempStream.getTracks().forEach(track => track.stop());
+    tempStream.getTracks().forEach(t => t.stop());
 
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter(d => d.kind === 'videoinput');
 
-    topBar.textContent = `📷 ${cameras.length} caméra(s) détectée(s)`;
+    topBar.textContent = `📷 ${cameras.length} caméra(s)`;
 
-    if (cameraSelect) {
-      cameraSelect.innerHTML = '';
-      cameras.forEach((camera, index) => {
-        const option = document.createElement('option');
-        option.value = camera.deviceId;
-        option.textContent = camera.label || (index === 0 ? 'Caméra arrière' : 'Caméra avant');
-        cameraSelect.appendChild(option);
-      });
-    }
+    cameraSelect.innerHTML = '';
+    cameras.forEach((cam, i) => {
+      const opt = document.createElement('option');
+      opt.value = cam.deviceId;
+      opt.textContent = cam.label || (i === 0 ? 'Caméra arrière' : 'Caméra avant');
+      cameraSelect.appendChild(opt);
+    });
 
-    if (cameras.length > 0) {
-      await startCamera(cameras[0].deviceId);
-    }
+    if (cameras.length > 0) await startCamera(cameras[0].deviceId);
 
   } catch (err) {
-    topBar.textContent = `❌ Erreur caméra: ${err.message}`;
-    console.error("[CAMERA] Erreur:", err);
+    topBar.textContent = `❌ ${err.message}`;
+    console.error("[CAMERA]", err);
   }
 }
 
@@ -40,30 +36,22 @@ export async function startCamera(deviceId) {
   const btnNext = document.getElementById('btnNext');
 
   try {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
 
-    topBar.textContent = "📷 Activation de la caméra...";
+    topBar.textContent = "📷 Activation...";
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: deviceId ? { exact: deviceId } : true,
-        facingMode: 'environment',
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      },
+      video: { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false
     });
 
     currentStream = stream;
     localVideo.srcObject = stream;
     topBar.textContent = "📷 Caméra active ✅";
-
     if (btnNext) btnNext.disabled = false;
 
   } catch (err) {
-    topBar.textContent = `❌ Erreur caméra: ${err.message}`;
-    console.error("[CAMERA] Erreur:", err);
+    topBar.textContent = `❌ ${err.message}`;
+    console.error("[CAMERA]", err);
   }
 }
