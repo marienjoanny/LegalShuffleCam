@@ -161,7 +161,6 @@
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <!-- Ton app.js optimisé -->
-  <script src="/app.js" defer></script>
 <script>
 
   window.addEventListener("load", () => {
