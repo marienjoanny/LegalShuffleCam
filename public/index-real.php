@@ -103,10 +103,13 @@
       margin: 0 6px;
     }
 }
+
 @media (max-width: 600px) {
   #remoteVideo {
     width: 100%;
     max-height: 80vh;
+    object-fit: contain;
+    display: block;
   }
 }
   </style>
