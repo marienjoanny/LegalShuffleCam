@@ -188,6 +188,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
+});
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <!-- App JS -->
@@ -209,6 +222,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
+});
   <script type="module" src="/app-lite.js"></script>
 document.getElementById("btnNext").addEventListener("click", () => {
   const myId = localStorage.getItem("myPeerId");
@@ -227,6 +253,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
       });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
 });
 <script type="module" src="/js/check-camera-params.js"></script>
 <script type="module">
@@ -249,6 +288,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
       });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
 });
 </script>
 <script>
@@ -277,6 +329,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
+});
 </script>
 <script>
 const peer = new Peer();
@@ -301,13 +366,6 @@ peer.on("open", id => {
     });
   }
 });
-peer.on("call", call => {
-  if (localStream) {
-    call.answer(localStream);
-    call.on("stream", remoteStream => {
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-      showTopbar("📺 Flux entrant reçu", "#0a0");
-    });
   } else {
     showTopbar("❌ Aucun flux local disponible", "#a00");
   }
@@ -329,6 +387,19 @@ document.getElementById("btnNext").addEventListener("click", () => {
       });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
+peer.on("call", call => {
+  showTopbar("📞 Appel entrant de " + call.peer);
+  if (localStream) {
+    call.answer(localStream);
+    showTopbar("✅ Réponse envoyée à " + call.peer);
+    call.on("stream", remoteStream => {
+      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+    });
+  } else {
+    showTopbar("❌ Aucun flux local pour répondre", "#a00");
+  }
 });
 </script>
 </body>
