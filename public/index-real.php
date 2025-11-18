@@ -98,6 +98,13 @@
       color: #fbbf24; text-decoration: none;
       margin: 0 6px;
     }
+@media (max-width: 600px) {
+  #remoteVideo {
+    width: 90%;
+    height: auto;
+    max-height: 60vh;
+  }
+}
   </style>
 </head>
 <body>
