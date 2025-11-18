@@ -17,6 +17,18 @@ export function initMatch() {
   });
 
   peer.on("connection", c => {
+navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+  const localVideo = document.getElementById("localVideo");
+  if (localVideo) { localVideo.srcObject = stream; localVideo.play(); }
+  window.localStream = stream;
+  peer.on("call", call => {
+    call.answer(stream);
+    call.on("stream", remoteStream => {
+      const remoteVideo = document.getElementById("remoteVideo");
+      if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
+    });
+  });
+});
     conn = c;
     conn.on("data", data => {
       console.log("📨 Reçu :", data);
@@ -53,6 +65,11 @@ export function nextMatch() {
         document.getElementById("topBar").textContent = `🔗 Connexion à ${data.partnerId}`;
         const c = peer.connect(data.partnerId);
         c.on("open", () => {
+const call = peer.call(data.partnerId, window.localStream);
+call.on("stream", remoteStream => {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
+});
           c.send({ hello: "👋 depuis " + window.myPeerId });
           document.getElementById("topBar").textContent = `✅ Connecté à ${data.partnerId}`;
         });
