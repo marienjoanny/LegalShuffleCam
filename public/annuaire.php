@@ -2,6 +2,8 @@
 $peersFile = '/tmp/peers.json';
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
 $now = time();
+$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
+file_put_contents($peersFile, json_encode($peers));
 $callerId = $_GET["callerId"] ?? null;
 
 $activePeers = [];
@@ -104,12 +106,37 @@ $count = count($activePeers);
 </html>
 <script>
 function openCall(partnerId) {
+
   const callerId = localStorage.getItem("myPeerId");
+
   if (!callerId) {
+
     alert("⛔ Votre peerId n’est pas encore initialisé. Veuillez ouvrir une session d’appel d’abord.");
+
     return;
+
   }
-  const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
-  window.open(url, "_blank");
+
+  fetch(`/api/ping-peer.php?peerId=${encodeURIComponent(partnerId)}`)
+
+    .then(res => res.json())
+
+    .then(json => {
+
+      if (json.status === "alive") {
+
+        const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+
+        window.open(url, "_blank");
+
+      } else {
+
+        alert("⛔ Ce peerId n’est plus actif.");
+
+      }
+
+    });
+
+}
 }
 </script>
