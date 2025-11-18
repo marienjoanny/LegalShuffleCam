@@ -78,6 +78,7 @@ $count = count($activePeers);
   </style>
 </head>
 <body>
+<div id="topbar-feedback" style="background:#222;color:#fff;padding:8px;font-family:sans-serif;text-align:center;display:none;"></div>
   <h1>📖 Annuaire des connectés</h1>
   <button id="refreshBtn" onclick="refreshAnnuaire()">🔄 Actualiser</button>
   <div id="annuaireContent">
@@ -111,6 +112,35 @@ function deletePeer(btn) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: "partnerId=" + encodeURIComponent(peerId)
   }).then(() => location.reload());
+}
+</script>
+<script>
+function showTopbar(msg, color="#222") {
+  const bar = document.getElementById("topbar-feedback");
+  bar.textContent = msg;
+  bar.style.background = color;
+  bar.style.display = "block";
+  setTimeout(() => bar.style.display = "none", 3000);
+}
+
+function deletePeer(btn) {
+  const li = btn.closest("li");
+  const peerId = li.textContent.trim().split(" ")[0];
+  showTopbar("🧪 Suppression de : " + peerId);
+
+  fetch("/api/unregister-peer.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "partnerId=" + encodeURIComponent(peerId)
+  }).then(response => response.json())
+    .then(data => {
+      if (data.status === "unregistered") {
+        showTopbar("✅ Supprimé : " + peerId, "#0a0");
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showTopbar("❌ Échec suppression : " + peerId, "#a00");
+      }
+    }).catch(err => showTopbar("❌ Erreur réseau", "#a00"));
 }
 </script>
 </body>
