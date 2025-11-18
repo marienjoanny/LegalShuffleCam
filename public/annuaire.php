@@ -93,10 +93,6 @@ $count = count($activePeers);
             <td><?= htmlspecialchars($id) ?></td>
             <td><?= $now - $ts ?></td>
 <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
-<td><form method="POST" action="/api/unregister-peer.php" style="display:inline">
-<input type="hidden" name="partnerId" value="<?= htmlspecialchars($id) ?>">
-<button style="background:#cc6666;color:#fff;border:none;padding:0.3em 0.6em;border-radius:3px;cursor:pointer">Supprimer</button>
-</form></td>
           </tr>
         <?php endforeach; ?>
       </table>
@@ -105,8 +101,8 @@ $count = count($activePeers);
 
 <script>
 function deletePeer(btn) {
-  const li = btn.closest("li");
-  const peerId = li.textContent.trim().split(" ")[0];
+  const li = btn.closest("tr");
+  const peerId = tr.querySelector("td").textContent.trim();
   fetch("/api/unregister-peer.php", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -124,8 +120,8 @@ function showTopbar(msg, color="#222") {
 }
 
 function deletePeer(btn) {
-  const li = btn.closest("li");
-  const peerId = li.textContent.trim().split(" ")[0];
+  const li = btn.closest("tr");
+  const peerId = tr.querySelector("td").textContent.trim();
   showTopbar("🧪 Suppression de : " + peerId);
 
   fetch("/api/unregister-peer.php", {
