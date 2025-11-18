@@ -102,6 +102,17 @@ $count = count($activePeers);
     <?php endif; ?>
   </div>
 
+<script>
+function deletePeer(btn) {
+  const li = btn.closest("li");
+  const peerId = li.textContent.trim().split(" ")[0];
+  fetch("/api/unregister-peer.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "partnerId=" + encodeURIComponent(peerId)
+  }).then(() => location.reload());
+}
+</script>
 </body>
 </html>
 <script>
