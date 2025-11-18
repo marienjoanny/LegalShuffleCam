@@ -51,6 +51,10 @@
       display: flex; justify-content: center; align-items: center;
     }
     #remoteVideo {
+  width: 100%;
+  height: auto;
+  max-height: 100vh;
+  object-fit: contain;
       width: 100%; height: auto;
       max-width: 100%; border-radius: 12px;
     }
@@ -98,11 +102,11 @@
       color: #fbbf24; text-decoration: none;
       margin: 0 6px;
     }
+}
 @media (max-width: 600px) {
   #remoteVideo {
-    width: 90%;
-    height: auto;
-    max-height: 60vh;
+    width: 100%;
+    max-height: 80vh;
   }
 }
   </style>
