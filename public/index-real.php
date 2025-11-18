@@ -184,5 +184,40 @@ function showTopbar(msg, color="#222") {
   setTimeout(() => bar.style.display = "none", 3000);
 }
 </script>
+<script>
+const peer = new Peer();
+let localStream = null;
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(stream => {
+    localStream = stream;
+    document.getElementById("localVideo").srcObject = stream;
+  })
+  .catch(() => showTopbar("❌ Impossible d’accéder à la caméra", "#a00"));
+peer.on("open", id => {
+  localStorage.setItem("myPeerId", id);
+  showTopbar("✅ Votre peerId est : " + id, "#0a0");
+  const urlParams = new URLSearchParams(window.location.search);
+  const partnerId = urlParams.get("partnerId");
+  if (partnerId && localStream) {
+    showTopbar("📞 Appel vers " + partnerId);
+    const call = peer.call(partnerId, localStream);
+    call.on("stream", remoteStream => {
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+      showTopbar("📺 Flux reçu de " + partnerId, "#0a0");
+    });
+  }
+});
+peer.on("call", call => {
+  if (localStream) {
+    call.answer(localStream);
+    call.on("stream", remoteStream => {
+      document.getElementById("remoteVideo").srcObject = remoteStream;
+      showTopbar("📺 Flux entrant reçu", "#0a0");
+    });
+  } else {
+    showTopbar("❌ Aucun flux local disponible", "#a00");
+  }
+});
+</script>
 </body>
 </html>
