@@ -407,3 +407,30 @@ document.getElementById("btnNext").addEventListener("click", () => {
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
+
+// 🔁 Bouton “Interlocuteur suivant”
+document.getElementById("btnNext").addEventListener("click", () => {
+  showTopbar("🔍 Recherche d’un interlocuteur actif…");
+  fetch("/api/get-peer.php")
+    .then(response => response.json())
+    .then(data => {
+      const nextId = data.nextId;
+      if (!nextId) {
+        showTopbar("❌ Aucun interlocuteur disponible", "#a00");
+        return;
+      }
+      showTopbar("📞 Appel vers " + nextId);
+
+      if (currentCall) {
+        currentCall.close();
+        showTopbar("🔁 Fermeture de l’appel précédent");
+      }
+
+      currentCall = peer.call(nextId, localStream);
+      currentCall.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
