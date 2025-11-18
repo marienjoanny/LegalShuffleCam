@@ -360,7 +360,6 @@ peer.on("open", id => {
   const partnerId = urlParams.get("partnerId");
   if (partnerId && localStream) {
     showTopbar("📞 Appel vers " + partnerId);
-    const call = peer.call(partnerId, localStream);
   }
 });
   } else {
