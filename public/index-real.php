@@ -162,5 +162,10 @@
 
   <!-- App JS -->
   <script type="module" src="/app-lite.js"></script>
+<script type="module" src="/js/check-camera-params.js"></script>
+<script type="module">
+import { listCameras } from "/js/camera.js";
+window.addEventListener("DOMContentLoaded", () => listCameras());
+</script>
 </body>
 </html>
