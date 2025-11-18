@@ -139,10 +139,27 @@ function deletePeer(btn) {
     }).catch(err => showTopbar("❌ Erreur réseau", "#a00"));
 }
 </script>
-</body>
-</html>
 <script>
 function openCall(partnerId) {
+  const callerId = localStorage.getItem("myPeerId");
+  if (!callerId) {
+    showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+    return;
+  }
+  fetch(`/api/ping-peer.php?peerId=${encodeURIComponent(partnerId)}`)
+    .then(res => res.json())
+    .then(json => {
+      if (json.status === "alive") {
+        const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+        showTopbar("📞 Appel vers " + partnerId);
+        window.open(url, "_blank");
+      } else {
+        showTopbar("⛔ Ce peerId n’est plus actif.", "#a00");
+      }
+    }).catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+}
+</script>
+</body>
 
   const callerId = localStorage.getItem("myPeerId");
 
