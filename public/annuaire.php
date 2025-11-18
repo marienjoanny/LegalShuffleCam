@@ -1,20 +1,20 @@
 <?php
-$peersFile = '/tmp/peers.json';
-$peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
-$now = time();
-$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
-file_put_contents($peersFile, json_encode($peers));
-$callerId = $_GET["callerId"] ?? null;
+\$peersFile = '/tmp/peers.json';
+\$peers = file_exists(\$peersFile) ? json_decode(file_get_contents(\$peersFile), true) : [];
+\$now = time();
+\$peers = array_filter(\$peers, fn(\$ts) => \$now - \$ts < 600);
+file_put_contents(\$peersFile, json_encode(\$peers));
+\$callerId = \$_GET["callerId"] ?? null;
 
-$activePeers = [];
-foreach ($peers as $id => $ts) {
-  if ($now - $ts < 600) {
-    $activePeers[$id] = $ts;
+\$activePeers = [];
+foreach (\$peers as \$id => \$ts) {
+  if (\$now - \$ts < 600) {
+    \$activePeers[\$id] = \$ts;
   }
 }
 
-ksort($activePeers);
-$count = count($activePeers);
+ksort(\$activePeers);
+\$count = count(\$activePeers);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -69,6 +69,14 @@ $count = count($activePeers);
     a.call::before {
       content: "📞 ";
     }
+    button.delete {
+      background: #cc6666;
+      color: #fff;
+      border: none;
+      padding: 0.3em 0.6em;
+      border-radius: 3px;
+      cursor: pointer;
+    }
     @media (max-width: 600px) {
       th, td {
         font-size: 0.85em;
@@ -79,37 +87,27 @@ $count = count($activePeers);
 </head>
 <body>
 <div id="topbar-feedback" style="background:#222;color:#fff;padding:8px;font-family:sans-serif;text-align:center;display:none;"></div>
-  <h1>📖 Annuaire des connectés</h1>
-  <button id="refreshBtn" onclick="refreshAnnuaire()">🔄 Actualiser</button>
-  <div id="annuaireContent">
-    <p>Total connectés : <?= $count ?></p>
-    <?php if ($count === 0): ?>
-      <p>Aucun partenaire connecté pour le moment.</p>
-    <?php else: ?>
-      <table>
-        <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th></tr>
-        <?php foreach ($activePeers as $id => $ts): ?>
-          <tr>
-            <td><?= htmlspecialchars($id) ?></td>
-            <td><?= $now - $ts ?></td>
-<td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
-          </tr>
-        <?php endforeach; ?>
-      </table>
-    <?php endif; ?>
-  </div>
+<h1>📖 Annuaire des connectés</h1>
+<button id="refreshBtn" onclick="location.reload()">🔄 Actualiser</button>
+<div id="annuaireContent">
+  <p>Total connectés : <?= \$count ?></p>
+  <?php if (\$count === 0): ?>
+    <p>Aucun partenaire connecté pour le moment.</p>
+  <?php else: ?>
+    <table>
+      <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th><th>Supprimer</th></tr>
+      <?php foreach (\$activePeers as \$id => \$ts): ?>
+        <tr>
+          <td><?= htmlspecialchars(\$id) ?></td>
+          <td><?= \$now - \$ts ?></td>
+          <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars(\$id) ?>')">Appeler</a></td>
+          <td><button class="delete" onclick="deletePeer(this)">Supprimer</button></td>
+        </tr>
+      <?php endforeach; ?>
+    </table>
+  <?php endif; ?>
+</div>
 
-<script>
-function deletePeer(btn) {
-  const li = btn.closest("tr");
-  const peerId = tr.querySelector("td").textContent.trim();
-  fetch("/api/unregister-peer.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "partnerId=" + encodeURIComponent(peerId)
-  }).then(() => location.reload());
-}
-</script>
 <script>
 function showTopbar(msg, color="#222") {
   const bar = document.getElementById("topbar-feedback");
@@ -120,7 +118,7 @@ function showTopbar(msg, color="#222") {
 }
 
 function deletePeer(btn) {
-  const li = btn.closest("tr");
+  const tr = btn.closest("tr");
   const peerId = tr.querySelector("td").textContent.trim();
   showTopbar("🧪 Suppression de : " + peerId);
 
@@ -136,21 +134,21 @@ function deletePeer(btn) {
       } else {
         showTopbar("❌ Échec suppression : " + peerId, "#a00");
       }
-    }).catch(err => showTopbar("❌ Erreur réseau", "#a00"));
+    }).catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 }
-</script>
-<script>
+
 function openCall(partnerId) {
   const callerId = localStorage.getItem("myPeerId");
   if (!callerId) {
     showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
     return;
   }
-  fetch(`/api/ping-peer.php?peerId=${encodeURIComponent(partnerId)}`)
+
+  fetch("/api/ping-peer.php?peerId=" + encodeURIComponent(partnerId))
     .then(res => res.json())
     .then(json => {
       if (json.status === "alive") {
-        const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
+        const url = "/index-real.php?callerId=" + encodeURIComponent(callerId) + "&partnerId=" + encodeURIComponent(partnerId);
         showTopbar("📞 Appel vers " + partnerId);
         window.open(url, "_blank");
       } else {
@@ -160,37 +158,4 @@ function openCall(partnerId) {
 }
 </script>
 </body>
-
-  const callerId = localStorage.getItem("myPeerId");
-
-  if (!callerId) {
-
-    alert("⛔ Votre peerId n’est pas encore initialisé. Veuillez ouvrir une session d’appel d’abord.");
-
-    return;
-
-  }
-
-  fetch(`/api/ping-peer.php?peerId=${encodeURIComponent(partnerId)}`)
-
-    .then(res => res.json())
-
-    .then(json => {
-
-      if (json.status === "alive") {
-
-        const url = `/index-real.php?callerId=${encodeURIComponent(callerId)}&partnerId=${encodeURIComponent(partnerId)}`;
-
-        window.open(url, "_blank");
-
-      } else {
-
-        alert("⛔ Ce peerId n’est plus actif.");
-
-      }
-
-    });
-
-}
-}
-</script>
+</html>
