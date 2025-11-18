@@ -108,6 +108,7 @@
   </style>
 </head>
 <body>
+<div id="topbar-feedback" style="background:#222;color:#fff;padding:8px;font-family:sans-serif;text-align:center;display:none;"></div>
   <div class="top-bar">
     <div class="tab-bar">
       <div class="tabs">
@@ -173,6 +174,15 @@
 <script type="module">
 import { listCameras } from "/js/camera.js";
 window.addEventListener("DOMContentLoaded", () => listCameras());
+</script>
+<script>
+function showTopbar(msg, color="#222") {
+  const bar = document.getElementById("topbar-feedback");
+  bar.textContent = msg;
+  bar.style.background = color;
+  bar.style.display = "block";
+  setTimeout(() => bar.style.display = "none", 3000);
+}
 </script>
 </body>
 </html>
