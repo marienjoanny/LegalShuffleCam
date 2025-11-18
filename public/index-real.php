@@ -189,10 +189,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -201,10 +197,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
@@ -231,10 +223,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -243,10 +231,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
@@ -271,10 +255,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -283,10 +263,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
@@ -314,10 +290,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -326,10 +298,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
@@ -362,10 +330,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -374,10 +338,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
@@ -401,10 +361,6 @@ peer.on("open", id => {
   if (partnerId && localStream) {
     showTopbar("📞 Appel vers " + partnerId);
     const call = peer.call(partnerId, localStream);
-    call.on("stream", remoteStream => {
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-      showTopbar("📺 Flux reçu de " + partnerId, "#0a0");
-    });
   }
 });
   } else {
@@ -430,10 +386,6 @@ currentCall.on("stream", remoteStream => {
   document.getElementById("remoteVideo").srcObject = remoteStream;
   showTopbar("📺 Flux reçu de " + nextId, "#0a0");
 });
-      call.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
     })
     .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
@@ -442,10 +394,6 @@ peer.on("call", call => {
   if (localStream) {
     call.answer(localStream);
     showTopbar("✅ Réponse envoyée à " + call.peer);
-    call.on("stream", remoteStream => {
-      showTopbar("📺 Flux reçu de " + call.peer, "#0a0");
-      document.getElementById("remoteVideo").srcObject = remoteStream;
-    });
   } else {
     showTopbar("❌ Aucun flux local pour répondre", "#a00");
   }
