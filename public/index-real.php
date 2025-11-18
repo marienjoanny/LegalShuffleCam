@@ -180,7 +180,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
@@ -214,7 +222,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
@@ -246,7 +262,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
@@ -281,7 +305,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
@@ -321,7 +353,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
@@ -345,6 +385,7 @@ peer.on("call", call => {
 </script>
 <script>
 const peer = new Peer();
+let currentCall = null;
 let localStream = null;
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   .then(stream => {
@@ -380,7 +421,15 @@ document.getElementById("btnNext").addEventListener("click", () => {
       if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
       const nextId = others[Math.floor(Math.random() * others.length)];
       showTopbar("➡️ Connexion à " + nextId);
-      const call = peer.call(nextId, localStream);
+if (currentCall) {
+  currentCall.close();
+  showTopbar("🔁 Fermeture de l’appel précédent");
+}
+currentCall = peer.call(nextId, localStream);
+currentCall.on("stream", remoteStream => {
+  document.getElementById("remoteVideo").srcObject = remoteStream;
+  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+});
       call.on("stream", remoteStream => {
         document.getElementById("remoteVideo").srcObject = remoteStream;
         showTopbar("📺 Flux reçu de " + nextId, "#0a0");
