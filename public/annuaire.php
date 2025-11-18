@@ -1,20 +1,20 @@
 <?php
-\$peersFile = '/tmp/peers.json';
-\$peers = file_exists(\$peersFile) ? json_decode(file_get_contents(\$peersFile), true) : [];
-\$now = time();
-\$peers = array_filter(\$peers, fn(\$ts) => \$now - \$ts < 600);
-file_put_contents(\$peersFile, json_encode(\$peers));
-\$callerId = \$_GET["callerId"] ?? null;
+$peersFile = '/tmp/peers.json';
+$peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
+$now = time();
+$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
+file_put_contents($peersFile, json_encode($peers));
+$callerId = $_GET["callerId"] ?? null;
 
-\$activePeers = [];
-foreach (\$peers as \$id => \$ts) {
-  if (\$now - \$ts < 600) {
-    \$activePeers[\$id] = \$ts;
+$activePeers = [];
+foreach ($peers as $id => $ts) {
+  if ($now - $ts < 600) {
+    $activePeers[$id] = $ts;
   }
 }
 
-ksort(\$activePeers);
-\$count = count(\$activePeers);
+ksort($activePeers);
+$count = count($activePeers);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -90,17 +90,17 @@ ksort(\$activePeers);
 <h1>📖 Annuaire des connectés</h1>
 <button id="refreshBtn" onclick="location.reload()">🔄 Actualiser</button>
 <div id="annuaireContent">
-  <p>Total connectés : <?= \$count ?></p>
-  <?php if (\$count === 0): ?>
+  <p>Total connectés : <?= $count ?></p>
+  <?php if ($count === 0): ?>
     <p>Aucun partenaire connecté pour le moment.</p>
   <?php else: ?>
     <table>
       <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th><th>Supprimer</th></tr>
-      <?php foreach (\$activePeers as \$id => \$ts): ?>
+      <?php foreach ($activePeers as $id => $ts): ?>
         <tr>
-          <td><?= htmlspecialchars(\$id) ?></td>
-          <td><?= \$now - \$ts ?></td>
-          <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars(\$id) ?>')">Appeler</a></td>
+          <td><?= htmlspecialchars($id) ?></td>
+          <td><?= $now - $ts ?></td>
+          <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
           <td><button class="delete" onclick="deletePeer(this)">Supprimer</button></td>
         </tr>
       <?php endforeach; ?>
