@@ -170,14 +170,86 @@
   </footer>
 
   <!-- PeerJS -->
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <!-- App JS -->
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
   <script type="module" src="/app-lite.js"></script>
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
 <script type="module" src="/js/check-camera-params.js"></script>
 <script type="module">
 import { listCameras } from "/js/camera.js";
 window.addEventListener("DOMContentLoaded", () => listCameras());
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
 </script>
 <script>
 function showTopbar(msg, color="#222") {
@@ -187,6 +259,24 @@ function showTopbar(msg, color="#222") {
   bar.style.display = "block";
   setTimeout(() => bar.style.display = "none", 3000);
 }
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
+});
 </script>
 <script>
 const peer = new Peer();
@@ -221,6 +311,24 @@ peer.on("call", call => {
   } else {
     showTopbar("❌ Aucun flux local disponible", "#a00");
   }
+});
+document.getElementById("btnNext").addEventListener("click", () => {
+  const myId = localStorage.getItem("myPeerId");
+  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
+  fetch("/api/annuaire-peers.php")
+    .then(res => res.json())
+    .then(peers => {
+      const others = Object.keys(peers).filter(id => id !== myId);
+      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
+      const nextId = others[Math.floor(Math.random() * others.length)];
+      showTopbar("➡️ Connexion à " + nextId);
+      const call = peer.call(nextId, localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("remoteVideo").srcObject = remoteStream;
+        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
+      });
+    })
+    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
 });
 </script>
 </body>
