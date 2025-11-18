@@ -1,5 +1,5 @@
 import { initMatch, nextMatch, bindMatchEvents } from "/js/match.js";
-import { listCameras, startCamera } from "/js/camera.js"""';
+import { listCameras, startCamera } from "/js/camera.js";
 
 window.addEventListener('DOMContentLoaded', () => {
   listCameras();
