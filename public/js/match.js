@@ -11,6 +11,7 @@ export function initMatch() {
 
   peer.on("open", id => {
     window.myPeerId = id;
+    fetch(`/api/register-peer.php?peerId=${id}`);
     sessionStorage.setItem("peerId", id);
     document.getElementById("topBar").textContent = `🟢 Connecté : ${id}`;
   });
