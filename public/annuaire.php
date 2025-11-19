@@ -2,17 +2,16 @@
 $peersFile = '/tmp/peers.json';
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
 $now = time();
-$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
-file_put_contents($peersFile, json_encode($peers));
 
-$activePeers = [];
-foreach ($peers as $id => $ts) {
-  if ($now - $ts < 600) {
-    $activePeers[$id] = $ts;
-  }
-}
+// 1. Nettoyer l'annuaire : Filtrer pour ne garder que les sessions de moins de 600 secondes (10 min)
+$activePeers = array_filter($peers, fn($ts) => $now - $ts < 600);
 
+// 2. Mettre à jour le fichier peers.json avec la liste nettoyée
+file_put_contents($peersFile, json_encode($activePeers));
+
+// 3. Trier les IDs pour l'affichage
 ksort($activePeers);
+
 $count = count($activePeers);
 ?>
 <!DOCTYPE html>
@@ -127,7 +126,8 @@ function openCall(partnerId) {
       if (json.status === "alive") {
         const url = "/index-real.php?partnerId=" + encodeURIComponent(partnerId);
         showTopbar("📞 Ouverture de la session avec " + partnerId);
-        window.open(url, "_blank");
+        // Ouvre la nouvelle page pour déclencher l'appel direct
+        window.open(url, "_blank"); 
       } else {
         showTopbar("⛔ Ce peerId n’est plus actif.", "#a00");
       }
@@ -136,7 +136,8 @@ function openCall(partnerId) {
 
 function deletePeer(btn) {
   const tr = btn.closest("tr");
-  const peerId = tr.querySelector("td").textContent.trim();
+  // Sélectionne le texte du premier <td> qui est le Peer ID
+  const peerId = tr.querySelector("td").textContent.trim(); 
   showTopbar("🧪 Suppression de : " + peerId);
 
   fetch("/api/unregister-peer.php", {
