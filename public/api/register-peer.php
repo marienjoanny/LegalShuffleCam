@@ -1,6 +1,9 @@
 <?php
 header('Content-Type: application/json');
 
+// Inclure la fonction de logging
+require_once __DIR__ . '/log_activity.php'; 
+
 $partnerId = $_GET['peerId'] ?? null;
 if (!$partnerId) {
   http_response_code(400);
@@ -18,4 +21,8 @@ $peers = array_filter($peers, fn($ts) => $now - $ts < 600);
 
 file_put_contents($file, json_encode($peers));
 
+// --- LOGGING ---
+logActivity('REGISTER', $partnerId);
+
 echo json_encode(['status' => 'registered', 'peerId' => $partnerId]);
+?>

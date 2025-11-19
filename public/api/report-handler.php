@@ -1,32 +1,50 @@
 <?php
-$data = json_decode(file_get_contents("php://input"), true);
+// /public/api/report-handler.php
+header('Content-Type: application/json');
 
-if (!$data || !isset($data['remoteId'], $data['reporterId'], $data['image'], $data['reason'])) {
-  http_response_code(400);
-  echo "Données incomplètes";
-  exit;
+// Inclure le logger général (si besoin)
+require_once __DIR__ . '/log_activity.php'; 
+
+// Le répertoire de stockage des rapports détaillés (Doit correspondre à $reportDir dans reports.php)
+// Remonter de deux niveaux : /public/api/ -> /public/ -> /api/logs/reports
+const REPORT_DIR = '/var/www/legalshufflecam/api/logs/reports'; 
+
+// Récupération des données POST
+$reporterId = $_POST['callerId'] ?? null;
+$reportedId = $_POST['partnerId'] ?? null;
+$reason = $_POST['reason'] ?? 'Raison non spécifiée';
+$imageBase64 = $_POST['imageBase64'] ?? ''; // Capture d'écran (data:image/jpeg;base64,...)
+$sessionId = $_POST['sessionId'] ?? uniqid('session_'); 
+
+if (!$reporterId || !$reportedId) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Missing ID (callerId or partnerId)']);
+    exit;
 }
 
-$logDir = __DIR__ . '/logs/reports';
-if (!is_dir($logDir)) {
-  mkdir($logDir, 0775, true);
-}
-
-$timestamp = date("Ymd-His");
-$filename = "$logDir/report-$timestamp-{$data['remoteId']}.json";
-
-$report = [
-  "timestamp"   => $timestamp,
-  "reporterId"  => $data['reporterId'],
-  "reportedId"  => $data['remoteId'],
-  "ip"          => $data['ip'] ?? "unknown",
-  "reason"      => $data['reason'],
-  "imageBase64" => $data['image'],
-  "sessionId"   => $data['sessionId'] ?? null
+// 1. Préparation des données du rapport
+$reportData = [
+    'timestamp' => date('Y-m-d H:i:s'),
+    'reporterId' => $reporterId,
+    'reportedId' => $reportedId,
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'N/A',
+    'reason' => $reason,
+    'sessionId' => $sessionId,
+    'imageBase64' => $imageBase64 
 ];
 
-file_put_contents($filename, json_encode($report, JSON_PRETTY_PRINT));
+// 2. Écriture du fichier JSON (nom unique pour l'archivage)
+$filename = REPORT_DIR . '/' . time() . '_' . $reporterId . '.json';
 
-http_response_code(200);
-echo "Signalement enregistré";
+if (!is_dir(REPORT_DIR)) {
+    // Tenter de créer le répertoire si nécessaire
+    @mkdir(REPORT_DIR, 0777, true);
+}
+
+@file_put_contents($filename, json_encode($reportData, JSON_PRETTY_PRINT));
+
+// 3. Log général (pour la traçabilité dans activity.log)
+logActivity('REPORT', $reporterId, $reportedId, $reason);
+
+echo json_encode(['status' => 'success', 'message' => 'Signalement enregistré.']);
 ?>

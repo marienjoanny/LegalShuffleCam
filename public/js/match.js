@@ -16,31 +16,43 @@ showTopbarLog("✅ Module match.js chargé.");
 let peer = null;
 let conn = null;
 let currentCall = null; 
+window.currentPartnerId = null; // 🚨 NOUVEAU : ID du partenaire actif
+window.myPeerId = null; // S'assurer que l'ID local est global
 
 // ----------------------------------------------------------------------
 // Fonctions d'Appel (Réutilisables par Shuffle et Direct)
 // ----------------------------------------------------------------------
 
-function setupOutgoingCall(partnerId, stream) {
+function closeCurrentCall() {
     if (currentCall) {
         currentCall.close();
         currentCall = null;
+    }
+    window.currentPartnerId = null; // Nettoyage de l'ID du partenaire
+    showTopbarLog("💔 Appel fermé.");
+}
+
+function setupOutgoingCall(partnerId, stream) {
+    if (currentCall) {
+        closeCurrentCall();
         showTopbarLog(`🔁 Fermeture de l'appel précédent avant appel vers ${partnerId}.`);
     }
 
     // 1. Lancer l'appel (Caller)
     const call = peer.call(partnerId, stream);
     currentCall = call; 
-    
+    window.currentPartnerId = partnerId; // 🚨 Mettre à jour l'ID du partenaire
+
     call.on("stream", remoteStream => {
         const remoteVideo = document.getElementById("remoteVideo");
         if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
         showTopbarLog(`✅ Appel sortant établi avec ${partnerId}`);
     });
     
-    call.on("close", () => { 
-        currentCall = null; 
-        showTopbarLog("💔 Appel sortant fermé.");
+    call.on("close", closeCurrentCall); // Utiliser la fonction de nettoyage
+    call.on("error", err => {
+        console.error("❌ Appel sortant erreur:", err);
+        closeCurrentCall();
     });
 
     // 2. Connexion de données (optionnelle)
@@ -85,7 +97,8 @@ async function initLocalStreamAndPeer() {
         
         peer.on("open", id => {
           window.myPeerId = id;
-          fetch(`/api/register-peer.php?peerId=${id}`); 
+          // Utiliser un fetch asynchrone pour ne pas bloquer
+          fetch(`/api/register-peer.php?peerId=${id}`).catch(err => console.error("Register Peer Failed:", err)); 
           sessionStorage.setItem("peerId", id);
           showTopbarLog(`🟢 Connecté : ${id}`);
           resolve(); // ID prêt !
@@ -96,10 +109,11 @@ async function initLocalStreamAndPeer() {
             showTopbarLog(`📞 Appel entrant de ${call.peer}.`);
             
             if (currentCall) {
-                currentCall.close();
-                showTopbarLog(`🔁 Fermeture de l'ancien appel (${currentCall.peer}).`);
+                closeCurrentCall();
+                showTopbarLog(`🔁 Fermeture de l'ancien appel avant de répondre.`);
             }
             currentCall = call;
+            window.currentPartnerId = call.peer; // 🚨 Mettre à jour l'ID du partenaire
 
             call.answer(window.localStream);
             
@@ -109,9 +123,10 @@ async function initLocalStreamAndPeer() {
                 showTopbarLog(`✅ Appel entrant établi avec ${call.peer}.`);
             });
             
-            call.on("close", () => { 
-                currentCall = null; 
-                showTopbarLog("💔 Appel entrant fermé.");
+            call.on("close", closeCurrentCall);
+             call.on("error", err => {
+                console.error("❌ Appel entrant erreur:", err);
+                closeCurrentCall();
             });
         });
 
@@ -131,6 +146,10 @@ async function initLocalStreamAndPeer() {
 
         peer.on("disconnected", () => {
           showTopbarLog("⚠ Déconnecté du serveur PeerJS");
+          // Tentative de reconnexion auto
+          if (peer && !peer.destroyed) {
+            peer.reconnect();
+          }
         });
         
         peer.on("close", () => {
@@ -167,10 +186,9 @@ export function nextMatch() {
 
   showTopbarLog("🔄 Recherche d’un interlocuteur...");
 
+  // Fermer proprement l'appel précédent avant le shuffle
   if (currentCall) {
-      currentCall.close();
-      currentCall = null;
-      showTopbarLog("🔁 Fermeture de l'appel précédent avant Shuffle.");
+      closeCurrentCall();
   }
   if (conn) {
       conn.close();
