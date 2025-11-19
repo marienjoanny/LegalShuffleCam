@@ -94,6 +94,12 @@ body {
     max-width: 450px;
 }
 
+/* Règle pour forcer les lignes à pleine largeur si elles n'ont qu'un seul bouton (Signaler, Suivant) */
+.full-width-row .control-button {
+    flex-grow: 1;
+    width: 100%;
+}
+
 .control-button, .control-select {
     padding: 12px 18px;
     border: none;
@@ -109,7 +115,6 @@ body {
 
 #btnNext {
     width: 100%;
-    max-width: 450px;
 }
 
 /* Couleurs des boutons */
@@ -195,7 +200,8 @@ body {
         bottom: 15px;
         right: 15px;
     }
-    .control-row {
+    /* Les rangées horizontales passent en colonnes */
+    .control-row:not(.full-width-row) {
         flex-direction: column;
         gap: 8px;
     }
