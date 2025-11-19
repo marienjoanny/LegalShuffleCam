@@ -1,6 +1,6 @@
 <?php
 // /public/index-real.php
-// Ce fichier est la vue principale de l'application de chat vidéo.
+// Vue principale de l'application de chat vidéo avec contrôles et modération.
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -42,12 +42,49 @@
     </div>
 
     <div id="controls">
-        <button id="btnNext" disabled>Interlocuteur Suivant (Shuffle)</button>
-
-        <button id="btnReport" style="background-color: #c0392b; margin-top: 10px;">Signaler</button>
         
-        <select id="reportTarget">
+        <p class="warning-ip">
+            <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
+        </p>
+
+        <div class="control-row">
+            <button class="control-button green" id="btnConsentement">👍 Consentement</button>
+            <button class="control-button purple" id="btnVibre">🔔 Vibre</button>
+            <button class="control-button red" id="btnReport">🚩 Signaler</button>
+        </div>
+
+        <div class="control-row">
+            <select class="control-select yellow" id="cameraSelect">
+                <option value="camera 1, facing front">camera 1, facing front</option>
             </select>
+            <button class="control-button small-icon" id="muteButton">🔇</button>
+        </div>
+
+        <button id="btnNext" disabled class="control-button blue">
+            ➔ Interlocuteur suivant
+        </button>
+
+        <select id="reportTarget"></select>
+    </div>
+
+    <div id="footer">
+        <p>
+            <a href="/accessibilite.php">Accessibilité</a> | 
+            <a href="/cgu.php">CGU</a> | 
+            <a href="/contact.php">Contact</a> | 
+            <a href="/confidentialite.php">Confidentialité</a> | 
+            <a href="/cookies.php">Cookies</a> | 
+            <a href="/mentions-legales.php">Mentions légales</a> | 
+            <a href="/fonctionnement.php">Fonctionnement</a> | 
+            <a href="/moderation.php">Modération</a> | 
+            <a href="/reglement.php">Règlement</a> | 
+            <a href="/plan-du-site.php">Plan du site</a> | 
+            <a href="/annuaire.php">Annuaire</a> | 
+            <a href="/signalements.php">Signalements</a>
+        </p>
+        <p>
+            <a href="https://github.com/marienjoanny/LegalShuffleCam" target="_blank">🔗 Voir le dépôt GitHub</a>
+        </p>
     </div>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -68,7 +105,7 @@
         });
     </script>
 
-  <script>
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
     const btnReport = document.getElementById('btnReport');
     const reportTargetSelect = document.getElementById('reportTarget');
@@ -162,6 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return canvas.toDataURL('image/jpeg', 0.8); 
     }
 });
-  </script>
+    </script>
 </body>
 </html>
