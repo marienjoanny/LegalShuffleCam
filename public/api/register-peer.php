@@ -1,4 +1,5 @@
 <?php
+// /public/api/register-peer.php
 header('Content-Type: application/json');
 
 // Inclure la fonction de logging
@@ -11,18 +12,27 @@ if (!$partnerId) {
   exit;
 }
 
+// 🔔 NOUVEAU: Récupérer l'adresse IP de l'utilisateur
+$ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'N/A';
+
 $file = '/tmp/peers.json';
 $peers = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-$peers[$partnerId] = time();
+
+// 🔔 MODIFICATION: Stocker l'IP et le Timestamp
+$peers[$partnerId] = [
+    'ts' => time(),
+    'ip' => $ipAddress
+];
 
 // Purge les sessions trop vieilles (>10 min)
 $now = time();
-$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
+// MODIFICATION: Purger en utilisant la clé 'ts'
+$peers = array_filter($peers, fn($peerData) => $now - $peerData['ts'] < 600);
 
 file_put_contents($file, json_encode($peers));
 
 // --- LOGGING ---
-logActivity('REGISTER', $partnerId);
+logActivity('REGISTER', $partnerId, $ipAddress); // Ajout de l'IP au log général
 
 echo json_encode(['status' => 'registered', 'peerId' => $partnerId]);
 ?>
