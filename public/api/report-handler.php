@@ -2,12 +2,11 @@
 // /public/api/report-handler.php
 header('Content-Type: application/json');
 
-// Inclure le logger général (si besoin)
+// Inclure le logger général
 require_once __DIR__ . '/log_activity.php'; 
 
 // Le répertoire de stockage des rapports détaillés (Doit correspondre à $reportDir dans reports.php)
-// Remonter de deux niveaux : /public/api/ -> /public/ -> /api/logs/reports
-const REPORT_DIR = '/var/www/legalshufflecam/api/logs/reports'; 
+const REPORT_DIR = '/var/www/legalshufflecam/public/api/logs/reports'; 
 
 // Récupération des données POST
 $reporterId = $_POST['callerId'] ?? null;
