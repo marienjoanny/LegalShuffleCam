@@ -1,0 +1,205 @@
+/* Fichier: /public/css/style.css */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- Barres de Feedback et d'Alerte --- */
+#topBar {
+    width: 100%;
+    text-align: center;
+    padding: 8px 0;
+    background-color: #2980b9;
+    color: white;
+    font-weight: bold;
+    z-index: 100;
+}
+
+.warning-ip {
+    color: #e0e0e0;
+    background-color: #34495e;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+    margin: 10px auto;
+    width: 90%;
+    max-width: 450px;
+    font-size: 0.9em;
+}
+
+.warning-ip span {
+     color: #e74c3c;
+     font-weight: bold;
+}
+
+
+/* --- Zone Vidéo --- */
+#videoGrid {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 10px;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+#remoteVideo {
+    width: 100%;
+    max-height: calc(100vh - 250px);
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #000;
+    display: block;
+}
+
+#localVideo {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border: 3px solid #3498db;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+}
+
+/* --- Contrôles et Boutons --- */
+#controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 20px 20px;
+    background-color: #2c3e50;
+    border-top: 1px solid #34495e;
+    z-index: 10;
+}
+
+.control-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 450px;
+}
+
+.control-button, .control-select {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1em;
+    flex-grow: 1;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+#btnNext {
+    width: 100%;
+    max-width: 450px;
+}
+
+/* Couleurs des boutons */
+.green { background-color: #2ecc71; color: #1a1a1a; }
+.green:hover { background-color: #27ae60; }
+
+.purple { background-color: #9b59b6; color: white; }
+.purple:hover { background-color: #8e44ad; }
+
+.red { background-color: #e74c3c; color: white; }
+.red:hover { background-color: #c0392b; }
+
+.yellow {
+    background-color: #f1c40f;
+    color: #1a1a1a;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+.yellow:hover { background-color: #f39c12; }
+
+.blue { background-color: #3498db; color: white; }
+.blue:hover { background-color: #2980b9; }
+
+.small-icon {
+    flex-grow: 0;
+    width: 48px;
+    font-size: 1.2em;
+    padding: 10px;
+    background-color: #7f8c8d;
+    color: white;
+}
+.small-icon:hover { background-color: #95a5a6; }
+
+/* Styles du sélecteur de signalement */
+#reportTarget {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 300px;
+    padding: 10px;
+    background-color: #2c3e50;
+    color: white;
+    border: 1px solid #c0392b;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    display: none;
+}
+#reportTarget.visible {
+    display: block;
+}
+
+/* Styles du footer */
+#footer {
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 0.8em;
+    background-color: #1a1a1a;
+    border-top: 1px solid #34495e;
+}
+
+#footer p {
+    margin: 5px 0;
+}
+
+#footer a {
+    color: #3498db;
+    text-decoration: none;
+    margin: 0 8px;
+}
+#footer a:hover {
+    text-decoration: underline;
+}
+
+/* Média Queries pour la réactivité */
+@media (max-width: 600px) {
+    #localVideo {
+        width: 100px;
+        height: 75px;
+        bottom: 15px;
+        right: 15px;
+    }
+    .control-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .control-button, .control-select {
+        padding: 10px;
+    }
+}
