@@ -1,4 +1,4 @@
-/* Fichier: /public/css/style.css - Version 1.2 (Correction Alignement Mobile) */
+/* Fichier: /public/css/style.css - Version 1.3 (Correction Finale Alignement & Footer) */
 
 body {
     margin: 0;
@@ -184,7 +184,8 @@ body {
 }
 
 #footer a {
-    color: #3498db;
+    color: #f1c40f; /* CORRECTION FINALE : Couleur dorée/jaune */
+    font-weight: bold;
     text-decoration: none;
     margin: 0 8px;
 }
@@ -200,11 +201,9 @@ body {
         bottom: 15px;
         right: 15px;
     }
-    /* Les rangées horizontales doivent rester horizontales par défaut (flex-direction: row),
-       donc nous retirons la règle "flex-direction: column" qui causait l'empilement. */
+    /* CORRECTION : On retire le flex-direction: column pour que les boutons (Consentement/Vibre) restent côte à côte */
     .control-row:not(.full-width-row) {
         gap: 8px;
-        /* La suppression de flex-direction: column permet aux boutons côte à côte de fonctionner */
     }
     .control-button, .control-select {
         padding: 10px;
