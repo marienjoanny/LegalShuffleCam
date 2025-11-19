@@ -42,6 +42,11 @@ function setupOutgoingCall(partnerId, stream) {
     const call = peer.call(partnerId, stream);
     currentCall = call; 
     window.currentPartnerId = partnerId; // 🚨 Mettre à jour l'ID du partenaire
+    
+    // 🔔 AJOUT 1: Mettre à jour l'historique des partenaires dès l'appel sortant
+    if (window.updateLastPeers) {
+        window.updateLastPeers(partnerId);
+    }
 
     call.on("stream", remoteStream => {
         const remoteVideo = document.getElementById("remoteVideo");
@@ -114,6 +119,11 @@ async function initLocalStreamAndPeer() {
             }
             currentCall = call;
             window.currentPartnerId = call.peer; // 🚨 Mettre à jour l'ID du partenaire
+
+            // 🔔 AJOUT 2: Mettre à jour l'historique des partenaires dès l'appel entrant
+            if (window.updateLastPeers) {
+                window.updateLastPeers(call.peer);
+            }
 
             call.answer(window.localStream);
             
