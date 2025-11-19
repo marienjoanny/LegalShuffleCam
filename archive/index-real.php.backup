@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LegalShuffleCam • Session</title>
   <style>
-    /* ... (Votre CSS complet et inchangé) ... */
     html, body {
       margin: 0; padding: 0; height: 100%;
       background: #0b1220; color: #e6e8ee;
@@ -52,10 +51,6 @@
       display: flex; justify-content: center; align-items: center;
     }
     #remoteVideo {
-  width: 100%;
-  height: auto;
-  max-height: 100vh;
-  object-fit: cover;
       width: 100%; height: auto;
       max-width: 100%; border-radius: 12px;
     }
@@ -103,19 +98,9 @@
       color: #fbbf24; text-decoration: none;
       margin: 0 6px;
     }
-
-    @media (max-width: 600px) {
-      #remoteVideo {
-        width: 100%;
-        max-height: 80vh;
-        object-fit: cover;
-        display: block;
-      }
-    }
   </style>
 </head>
 <body>
-<div id="topbar-feedback" style="background:#222;color:#fff;padding:8px;font-family:sans-serif;text-align:center;display:none;"></div>
   <div class="top-bar">
     <div class="tab-bar">
       <div class="tabs">
@@ -160,7 +145,7 @@
       <a href="/moderation.html">Modération</a> •
       <a href="/reglement.html">Règlement</a> •
       <a href="/sitemap.html">Plan du site</a> • 
-      <a href="/annuaire.php">Annuaire</a> •
+<a href="/annuaire.php">Annuaire</a> •
       <a href="/reports.php">Signalements</a>
     </p>
     <p style="margin-top:8px;">
@@ -172,21 +157,97 @@
     </p>
   </footer>
 
+  <!-- Librairie PeerJS -->
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
-  <script>
-    // NOTE: Cette fonction est utilisée par match.js pour les logs
-    function showTopbar(msg, color="#222") {
-      const bar = document.getElementById("topbar-feedback");
-      bar.textContent = msg;
-      bar.style.background = color;
-      bar.style.display = "block";
-      setTimeout(() => bar.style.display = "none", 3000);
+  <!-- Ton app.js optimisé -->
+  <script src="/app.js" defer></script>
+<script>
+
+  window.addEventListener("load", () => {
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const callerId = urlParams.get("callerId");
+
+    const partnerId = urlParams.get("partnerId");
+
+    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
+
+      window.startCall(partnerId);
+
     }
-  </script>
-  
-  <script type="module" src="/js/check-camera-params.js"></script>
-  <script type="module" src="/app-lite.js"></script>
-  
-</body>
-</html>
+
+  });
+
+</script>
+<script>
+
+  window.addEventListener("load", () => {
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const peerIdToCall = urlParams.get("peerId");
+
+    if (peerIdToCall && typeof window.startCall === "function") {
+
+      window.startCall(peerIdToCall);
+
+    }
+
+  });
+
+</script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const peerIdToCall = urlParams.get("peerId");
+
+    if (callerId && partnerId && callerId !== partnerId && typeof window.startCall === "function") {
+      window.startCall(partnerId);
+    } else if (peerIdToCall && typeof window.startCall === "function") {
+      window.startCall(peerIdToCall);
+    }
+  });
+</script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar && (callerId || partnerId)) {
+    }
+  });
+</script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const partnerId = urlParams.get("partnerId");
+    const peerIdToCall = urlParams.get("peerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar) {
+      topBar.textContent = `📡 callerId: ${callerId ?? "?"} → partnerId: ${partnerId ?? "?"} → peerIdToCall: ${peerIdToCall ?? "?"}`;
+    }
+  });
+</script>
+<script>
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const callerId = urlParams.get("callerId");
+    const topBar = document.getElementById("topBar");
+    if (topBar && !callerId) {
+      topBar.textContent = "⌛ Initialisation en cours...";
+    }
+  });
+</script>
+<script>
+  setInterval(() => {
+    const topBar = document.getElementById("topBar");
+    const callState = window.currentCall?.open ? "🟢 appel actif" : "⚪ aucun appel";
+    if (topBar) {
+      topBar.textContent += ` | ${callState}`;
+    }
