@@ -41,7 +41,36 @@
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
-    
+    <div id="controls">
+        
+        <p class="warning-ip">
+            <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
+        </p>
+
+        <div class="control-row">
+            <button class="control-button green" id="btnConsentement">👍 Consentement</button>
+            <button class="control-button purple" id="btnVibre">🔔 Vibre</button>
+        </div>
+
+        <div class="control-row full-width-row">
+            <button class="control-button red" id="btnReport">🚩 Signaler</button>
+        </div>
+
+        <div class="control-row">
+            <select class="control-select yellow" id="cameraSelect">
+                <option value="camera 1, facing front">camera 1, facing front</option>
+            </select>
+            <button class="control-button small-icon" id="muteButton">🔇</button>
+        </div>
+
+        <div class="control-row full-width-row">
+            <button id="btnNext" disabled class="control-button blue">
+                ➔ Interlocuteur suivant
+            </button>
+        </div>
+
+        <select id="reportTarget"></select>
+    </div>
 
     <div id="footer">
         <p>
