@@ -2,7 +2,6 @@
 // /public/api/log_activity.php
 
 // Chemin vers le fichier journal des activités PeerJS/Connexions
-// Remonter de trois niveaux : /public/api/ -> /public/ -> / -> /logs/activity.log
 const LOG_FILE = __DIR__ . '/../../../logs/activity.log'; 
 
 /**
