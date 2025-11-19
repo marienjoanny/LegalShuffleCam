@@ -1,222 +1,167 @@
-<!doctype html>
+<?php
+// /public/index-real.php
+// Ce fichier est la vue principale de l'application de chat vidéo.
+?>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LegalShuffleCam • Session</title>
-  <style>
-    /* Styles généraux */
-    html, body {
-      margin: 0; padding: 0; height: 100%;
-      background: #0b1220; color: #e6e8ee;
-      font-family: system-ui, sans-serif;
-      display: flex; flex-direction: column;
-    }
-    video { object-fit: cover; }
-    
-    /* Top Bar et Navigation */
-    .top-bar {
-      padding: 12px; background: #111827;
-      display: flex; flex-direction: column;
-      border-bottom: 1px solid #1f2937;
-    }
-    .tab-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 8px;
-    }
-    .tabs { display: flex; gap: 12px; }
-    .tab {
-      padding: 8px 16px;
-      background: #1f2937;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      color: #e6e8ee;
-    }
-    .tab.active { background: #2563eb; color: #fff; }
-    
-    /* Loader Ring */
-    .loader-ring {
-      width: 20px; height: 20px;
-      border: 3px solid #2563eb; border-top-color: transparent;
-      border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    
-    /* Main Content */
-    .main {
-      flex: 1; display: grid;
-      grid-template-rows: 1fr auto auto;
-      padding: 16px; gap: 16px;
-    }
-    
-    /* Zones Vidéo */
-    .video-zone {
-      width: 100%; max-width: 100%;
-      aspect-ratio: 16 / 9;
-      position: relative;
-      background: #000;
-      border-radius: 14px;
-      display: flex; justify-content: center; align-items: center;
-    }
-    
-    /* Vidéo Distante (Grande) - CORRECTION PLAIN ÉCRAN */
-    #remoteVideo {
-      width: 100%;
-      height: 100%;             /* FIXE : Prend 100% de la hauteur du conteneur */
-      max-height: 100vh;
-      object-fit: cover;        /* FIXE : Couvre sans laisser de bandes noires */
-      max-width: 100%; 
-      border-radius: 12px;
-    }
-    
-    /* Vidéo Locale (Petite) - CORRECTION CHEVAUCHEMENT */
-    #localVideo {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      width: 160px;             /* Réduit à 160px (était 240px) */
-      height: 120px;            /* Réduit à 120px (était 180px) */
-      border-radius: 8px;
-      background: #000;
-      box-shadow: 0 0 6px #000a;
-      z-index: 10;              /* S'assure qu'elle est au-dessus */
-    }
-    
-    /* Autres éléments */
-    .warning {
-      text-align: center; font-size: 13px;
-      color: #ef4444; font-weight: 500;
-    }
-    .actions {
-      display: flex; justify-content: center;
-      gap: 12px; flex-wrap: wrap;
-    }
-    
-    /* Boutons et Sélecteurs */
-    button, select {
-      padding: 12px 16px; border-radius: 12px; border: none;
-      font-weight: 700; font-size: 16px; cursor: pointer; color: #fff;
-    }
-    button.red { background: #dc2626; }
-    button.green { background: #10b981; }
-    button.blue { background: #2563eb; }
-    button.yellow { background: #fbbf24; color: #111827; }
-    button.purple { background: #7c3aed; }
-    select.yellow { background: #fbbf24; color: #111827; }
-    .red-select {
-      background: #dc2626; color: #fff;
-      font-weight: bold; border: none;
-      border-radius: 12px; padding: 12px 16px;
-      display: none; margin-top: 8px;
-    }
-    .red-select.visible { display: block; }
-    button:disabled, select:disabled {
-      opacity: .45; filter: saturate(.6); cursor: not-allowed;
-    }
-    
-    /* Footer */
-    footer {
-      background: #111827; border-top: 1px solid #1f2937;
-      padding: 16px; text-align: center;
-      font-size: 13px; color: #94a3b8;
-    }
-    footer a {
-      color: #fbbf24; text-decoration: none;
-      margin: 0 6px;
-    }
-
-    /* Media Queries */
-    @media (max-width: 600px) {
-      #remoteVideo {
-        width: 100%;
-        max-height: 80vh;
-        object-fit: cover;
-        display: block;
-      }
-      /* Rendre la vidéo locale encore plus petite sur mobile */
-      #localVideo {
-        width: 100px;
-        height: 75px;
-        bottom: 8px;
-        right: 8px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegalShuffleCam - Chat Vidéo Aléatoire Sécurisé</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Styles spécifiques pour le sélecteur de signalement */
+        #reportTarget {
+            position: absolute;
+            bottom: 60px; /* Au-dessus du bouton Report */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 300px;
+            padding: 10px;
+            background-color: #2c3e50;
+            color: white;
+            border: 1px solid #c0392b;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none; /* Caché par défaut */
+        }
+        #reportTarget.visible {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-<div id="topbar-feedback" style="background:#222;color:#fff;padding:8px;font-family:sans-serif;text-align:center;display:none;"></div>
-  <div class="top-bar">
-    <div class="tab-bar">
-      <div class="tabs">
-        <div class="tab active" id="tabCam">CAM</div>
-        <div class="tab" id="tabGames">JEUX</div>
-      </div>
-      <div class="loader-ring" id="loaderRing"></div>
-    </div>
-    <span id="topBar">Initialisation...</span>
-  </div>
 
-  <div class="main">
-    <div class="video-zone" id="faceFrame">
-      <video id="remoteVideo" autoplay muted playsinline></video>
-      <video id="localVideo" autoplay muted playsinline></video>
+    <div id="topBar">Chargement...</div>
+
+    <div id="videoGrid">
+        <video id="localVideo" muted autoplay playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
-    <div class="warning">⚠ Votre IP est visible et loguée. Visage visible et navigation privée requis !</div>
+    <div id="controls">
+        <button id="btnNext" disabled>Interlocuteur Suivant (Shuffle)</button>
 
-    <div class="actions">
-      <button id="btnConsent" class="green">👍 Consentement</button>
-      <button id="btnVibrate" class="purple">🔔 Vibre</button>
-      <button id="btnReport" class="red">🚩</button>
-      <select id="reportTarget" class="red-select">
-        <option disabled selected>Choisir un interlocuteur</option>
-      </select>
-      <select id="cameraSelect" class="yellow"></select>
-      <button id="btnMic" class="green">🔊</button>
-      <button id="btnNext" class="blue" disabled>➡️ Interlocuteur suivant</button>
+        <button id="btnReport" style="background-color: #c0392b; margin-top: 10px;">Signaler</button>
+        
+        <select id="reportTarget">
+            </select>
     </div>
-  </div>
 
-  <footer>
-    <p>
-      <a href="/accessibilite.html">Accessibilité</a> •
-      <a href="/cgu.html">CGU</a> •
-      <a href="/contact.html">Contact</a> •
-      <a href="/confidentialite.html">Confidentialité</a> •
-      <a href="/cookies.html">Cookies</a> •
-      <a href="/mentions-legales.html">Mentions légales</a> •
-      <a href="/fonctionnement.html">Fonctionnement</a> •
-      <a href="/moderation.html">Modération</a> •
-      <a href="/reglement.html">Règlement</a> •
-      <a href="/sitemap.html">Plan du site</a> • 
-      <a href="/annuaire.php">Annuaire</a> •
-      <a href="/reports.php">Signalements</a>
-    </p>
-    <p style="margin-top:8px;">
-      🔗 <a href="https://github.com/marienjoanny/LegalShuffleCam/tree/main/public" target="_blank">Voir le dépôt GitHub</a>
-    </p>
-    <p style="font-size:11px; margin-top:8px;">
-      IP : <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?> •
-      UA : <?php echo substr($_SERVER['HTTP_USER_AGENT'] ?? 'N/A', 0, 50); ?>
-    </p>
-  </footer>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script type="module">
+        import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
 
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+        // Rendre nextMatch global pour pouvoir l'appeler depuis le script de signalement
+        window.nextMatch = nextMatch;
+        window.showTopbar = (message, color = '#2980b9') => {
+            const topBar = document.getElementById("topBar");
+            topBar.textContent = message;
+            topBar.style.backgroundColor = color;
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initMatch();
+            bindMatchEvents();
+        });
+    </script>
 
   <script>
-    // NOTE: Cette fonction est utilisée par match.js (via showTopbarLog)
-    function showTopbar(msg, color="#222") {
-      const bar = document.getElementById("topbar-feedback");
-      bar.textContent = msg;
-      bar.style.background = color;
-      bar.style.display = "block";
-      setTimeout(() => bar.style.display = "none", 3000);
+document.addEventListener('DOMContentLoaded', () => {
+    const btnReport = document.getElementById('btnReport');
+    const reportTargetSelect = document.getElementById('reportTarget');
+    
+    // --- Étape 1: Afficher les options de signalement ---
+    btnReport.addEventListener('click', () => {
+        const partnerId = window.currentPartnerId; 
+        
+        if (!partnerId) {
+            showTopbar("⚠ Aucun interlocuteur actif à signaler.", "#fbbf24");
+            reportTargetSelect.classList.remove('visible');
+            return;
+        }
+
+        // Si un partenaire est là, basculer l'affichage du sélecteur
+        reportTargetSelect.classList.toggle('visible');
+
+        // Remplir le sélecteur d'options
+        if (reportTargetSelect.classList.contains('visible')) {
+            reportTargetSelect.innerHTML = `
+                <option value="" disabled selected>Signaler l'ID: ${partnerId}</option>
+                <option value="Nudite">Nudité (Violation de cadrage)</option>
+                <option value="Sexuel">Comportement sexuel / explicite</option>
+                <option value="Harcèlement">Harcèlement, Insultes, Discrimination</option>
+                <option value="Mineur">Suspicion de minorité</option>
+                <option value="Fraude">Fraude (Bot, Deepfake)</option>
+                <option value="Autre">Autre</option>
+            `;
+        }
+    });
+
+    // --- Étape 2: Envoyer le signalement lorsque l'utilisateur sélectionne une raison ---
+    reportTargetSelect.addEventListener('change', async (event) => {
+        const reason = event.target.value;
+        const callerId = window.myPeerId;
+        const partnerId = window.currentPartnerId;
+
+        const imageBase64 = getRemoteVideoSnapshot(); 
+
+        if (!callerId || !partnerId) {
+             showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
+             reportTargetSelect.classList.remove('visible');
+             return;
+        }
+        
+        showTopbar(`⏳ Envoi du signalement pour : ${reason}`, "#fbbf24");
+
+        const formData = new URLSearchParams();
+        formData.append('callerId', callerId);
+        formData.append('partnerId', partnerId);
+        formData.append('reason', reason);
+        formData.append('imageBase64', imageBase64);
+
+        try {
+            const response = await fetch('/api/report-handler.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                showTopbar("✅ Signalement envoyé. Interlocuteur suivant...", "#0a0");
+                if (typeof nextMatch === 'function') {
+                    nextMatch(); 
+                }
+            } else {
+                showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
+            }
+        } catch (err) {
+            showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
+            console.error("Report Error:", err);
+        }
+
+        reportTargetSelect.classList.remove('visible');
+    });
+
+    // --- Étape 3: Capture d'écran de la vidéo distante ---
+    function getRemoteVideoSnapshot() {
+        const remoteVideo = document.getElementById('remoteVideo');
+        if (!remoteVideo || remoteVideo.paused || remoteVideo.ended || remoteVideo.videoWidth === 0) {
+            return ''; 
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = remoteVideo.videoWidth;
+        canvas.height = remoteVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
+        
+        return canvas.toDataURL('image/jpeg', 0.8); 
     }
+});
   </script>
-  
-  <script type="module" src="/js/check-camera-params.js"></script>
-  <script type="module" src="/app-lite.js"></script>
-  
 </body>
 </html>
