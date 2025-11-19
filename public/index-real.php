@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LegalShuffleCam • Session</title>
   <style>
-    /* ... (Votre CSS complet et inchangé) ... */
+    /* Styles généraux */
     html, body {
       margin: 0; padding: 0; height: 100%;
       background: #0b1220; color: #e6e8ee;
@@ -13,6 +13,8 @@
       display: flex; flex-direction: column;
     }
     video { object-fit: cover; }
+    
+    /* Top Bar et Navigation */
     .top-bar {
       padding: 12px; background: #111827;
       display: flex; flex-direction: column;
@@ -32,17 +34,23 @@
       color: #e6e8ee;
     }
     .tab.active { background: #2563eb; color: #fff; }
+    
+    /* Loader Ring */
     .loader-ring {
       width: 20px; height: 20px;
       border: 3px solid #2563eb; border-top-color: transparent;
       border-radius: 50%; animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Main Content */
     .main {
       flex: 1; display: grid;
       grid-template-rows: 1fr auto auto;
       padding: 16px; gap: 16px;
     }
+    
+    /* Zones Vidéo */
     .video-zone {
       width: 100%; max-width: 100%;
       aspect-ratio: 16 / 9;
@@ -51,14 +59,18 @@
       border-radius: 14px;
       display: flex; justify-content: center; align-items: center;
     }
+    
+    /* Vidéo Distante (Grande) - CORRIGÉ pour COUVRIR */
     #remoteVideo {
-  width: 100%;
-  height: auto;
-  max-height: 100vh;
-  object-fit: cover;
-      width: 100%; height: auto;
-      max-width: 100%; border-radius: 12px;
+      width: 100%;
+      height: 100%; /* FIXE : Prend 100% de la hauteur du conteneur */
+      max-height: 100vh;
+      object-fit: cover; /* FIXE : Couvre sans laisser de bandes noires */
+      max-width: 100%; 
+      border-radius: 12px;
     }
+    
+    /* Vidéo Locale (Petite) */
     #localVideo {
       position: absolute;
       bottom: 12px; right: 12px;
@@ -66,6 +78,8 @@
       border-radius: 8px; background: #000;
       box-shadow: 0 0 6px #000a;
     }
+    
+    /* Autres éléments */
     .warning {
       text-align: center; font-size: 13px;
       color: #ef4444; font-weight: 500;
@@ -74,6 +88,8 @@
       display: flex; justify-content: center;
       gap: 12px; flex-wrap: wrap;
     }
+    
+    /* Boutons et Sélecteurs */
     button, select {
       padding: 12px 16px; border-radius: 12px; border: none;
       font-weight: 700; font-size: 16px; cursor: pointer; color: #fff;
@@ -94,6 +110,8 @@
     button:disabled, select:disabled {
       opacity: .45; filter: saturate(.6); cursor: not-allowed;
     }
+    
+    /* Footer */
     footer {
       background: #111827; border-top: 1px solid #1f2937;
       padding: 16px; text-align: center;
@@ -104,6 +122,7 @@
       margin: 0 6px;
     }
 
+    /* Media Queries */
     @media (max-width: 600px) {
       #remoteVideo {
         width: 100%;
@@ -175,7 +194,7 @@
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <script>
-    // NOTE: Cette fonction est utilisée par match.js pour les logs
+    // NOTE: Cette fonction est utilisée par match.js (via showTopbarLog)
     function showTopbar(msg, color="#222") {
       const bar = document.getElementById("topbar-feedback");
       bar.textContent = msg;
@@ -187,6 +206,5 @@
   
   <script type="module" src="/js/check-camera-params.js"></script>
   <script type="module" src="/app-lite.js"></script>
-  
-</body>
+  </body>
 </html>
