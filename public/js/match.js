@@ -1,11 +1,15 @@
 // LOG: Module /js/match.js chargé. (Validation obligatoire)
 function showTopbarLog(message) {
-    const topBar = document.getElementById("topBar");
-    if (topBar) {
-        topBar.textContent = message;
+    // Utiliser la fonction showTopbar globale définie dans index-real.php
+    if (typeof showTopbar === 'function') {
+        showTopbar(message);
     } else {
-        // Fallback si la topBar n'est pas chargée (pour le débogage console)
-        console.log(`[TOPBAR-LOG] ${message}`); 
+        const topBar = document.getElementById("topBar");
+        if (topBar) {
+            topBar.textContent = message;
+        } else {
+            console.log(`[TOPBAR-LOG] ${message}`); 
+        }
     }
 }
 showTopbarLog("✅ Module match.js chargé.");
@@ -13,6 +17,42 @@ showTopbarLog("✅ Module match.js chargé.");
 let peer = null;
 let conn = null;
 let currentCall = null; // 🚨 Variable CRITIQUE pour le shuffle
+
+// ----------------------------------------------------------------------
+// Fonctions d'Appel (Réutilisables par Shuffle et Direct)
+// ----------------------------------------------------------------------
+
+// Fonction interne pour gérer la création de l'appel
+function setupOutgoingCall(partnerId, stream) {
+    if (currentCall) {
+        currentCall.close();
+        currentCall = null;
+        showTopbarLog(`🔁 Fermeture de l'appel précédent avant appel vers ${partnerId}.`);
+    }
+
+    // 1. Lancer l'appel (Caller)
+    const call = peer.call(partnerId, stream);
+    currentCall = call; // 🚨 Stocker la référence de l'appel sortant
+    
+    call.on("stream", remoteStream => {
+        const remoteVideo = document.getElementById("remoteVideo");
+        if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
+        showTopbarLog(`✅ Appel sortant établi avec ${partnerId}`);
+    });
+    
+    call.on("close", () => { 
+        currentCall = null; 
+        showTopbarLog("💔 Appel sortant fermé.");
+    });
+
+    // 2. Connexion de données (optionnelle)
+    const c = peer.connect(partnerId);
+    c.on("open", () => {
+        c.send({ hello: "👋 depuis " + window.myPeerId });
+    });
+    conn = c; // Stocker la référence de la connexion de données
+}
+
 
 // Initialisation du stream local et de PeerJS. 
 async function initLocalStreamAndPeer() {
@@ -47,10 +87,21 @@ async function initLocalStreamAndPeer() {
     
     // Enregistrer l'ID dès qu'il est prêt
     peer.on("open", id => {
-      window.myPeerId = id;
-      fetch(`/api/register-peer.php?peerId=${id}`); 
-      sessionStorage.setItem("peerId", id);
-      showTopbarLog(`🟢 Connecté : ${id}`);
+        window.myPeerId = id;
+        fetch(`/api/register-peer.php?peerId=${id}`); 
+        sessionStorage.setItem("peerId", id);
+        showTopbarLog(`🟢 Connecté : ${id}`);
+
+        // --- NOUVELLE LOGIQUE D'APPEL DIRECT ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const partnerId = urlParams.get("partnerId");
+
+        if (partnerId && partnerId !== id) {
+             // Appeler l'interlocuteur directement si l'ID est dans l'URL
+            showTopbarLog("📞 Appel direct initialisé par Annuaire...");
+            setupOutgoingCall(partnerId, window.localStream);
+        }
+        // ------------------------------------
     });
 
     // 3. Gestion centralisée des Appels Entrants (Callee)
@@ -111,6 +162,9 @@ export function initMatch() {
     });
 }
 
+/**
+ * Lance la recherche d'un partenaire aléatoire et démarre l'appel.
+ */
 export function nextMatch() {
   if (!window.myPeerId || !window.localStream) {
     showTopbarLog("❌ Peer ou Média non prêt. Initialisation en cours...");
@@ -134,31 +188,10 @@ export function nextMatch() {
   fetch(`/api/get-peer.php?callerId=${window.myPeerId}`)
     .then(r => r.json())
     .then(data => {
-      if (data.partnerId) {
-        showTopbarLog(`🔗 Tentative d'appel vers ${data.partnerId}`);
-        
-        // 3. Lancer l'appel (Caller)
-        const call = peer.call(data.partnerId, window.localStream);
-        currentCall = call; // 🚨 Stocker la référence de l'appel sortant
-        
-        call.on("stream", remoteStream => {
-          const remoteVideo = document.getElementById("remoteVideo");
-          if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
-          showTopbarLog(`✅ Appel sortant établi avec ${data.partnerId}`);
-        });
-        
-        call.on("close", () => { 
-            currentCall = null; 
-            showTopbarLog("💔 Appel sortant fermé.");
-        });
-
-        // 4. Connexion de données (optionnelle)
-        const c = peer.connect(data.partnerId);
-        c.on("open", () => {
-          c.send({ hello: "👋 depuis " + window.myPeerId });
-        });
-        conn = c; // Stocker la référence de la connexion de données
-        
+      const partnerId = data.partnerId;
+      if (partnerId) {
+        showTopbarLog(`🔗 Tentative d'appel vers ${partnerId}`);
+        setupOutgoingCall(partnerId, window.localStream);
       } else {
         showTopbarLog("❌ Aucun interlocuteur disponible (Annuaire vide ou auto-appel)");
       }
@@ -168,6 +201,15 @@ export function nextMatch() {
       console.error("[MATCH]", err);
     });
 }
+
+/**
+ * Lance directement un appel vers un ID spécifique (utilisé par l'annuaire).
+ * NOTE: Cette fonction est appelée dans l'écouteur 'open' de PeerJS.
+ */
+// export function directMatch(partnerId) {
+//     // NOTE: Cette fonction n'est plus nécessaire comme exportation,
+//     // car la logique est gérée directement dans peer.on('open') de initLocalStreamAndPeer.
+// }
 
 export function bindMatchEvents() {
   const btnNext = document.getElementById("btnNext");
