@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 // Inclure la fonction de logging
-require_once __DIR__ . '/log_activity.php'; 
+require_once __DIR__ . '/log_activity.php';
 
 $partnerId = $_GET['peerId'] ?? null;
 if (!$partnerId) {
