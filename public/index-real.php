@@ -60,23 +60,27 @@
       display: flex; justify-content: center; align-items: center;
     }
     
-    /* Vidéo Distante (Grande) - CORRIGÉ pour COUVRIR */
+    /* Vidéo Distante (Grande) - CORRECTION PLAIN ÉCRAN */
     #remoteVideo {
       width: 100%;
-      height: 100%; /* FIXE : Prend 100% de la hauteur du conteneur */
+      height: 100%;             /* FIXE : Prend 100% de la hauteur du conteneur */
       max-height: 100vh;
-      object-fit: cover; /* FIXE : Couvre sans laisser de bandes noires */
+      object-fit: cover;        /* FIXE : Couvre sans laisser de bandes noires */
       max-width: 100%; 
       border-radius: 12px;
     }
     
-    /* Vidéo Locale (Petite) */
+    /* Vidéo Locale (Petite) - CORRECTION CHEVAUCHEMENT */
     #localVideo {
       position: absolute;
-      bottom: 12px; right: 12px;
-      width: 240px; height: 180px;
-      border-radius: 8px; background: #000;
+      bottom: 12px;
+      right: 12px;
+      width: 160px;             /* Réduit à 160px (était 240px) */
+      height: 120px;            /* Réduit à 120px (était 180px) */
+      border-radius: 8px;
+      background: #000;
       box-shadow: 0 0 6px #000a;
+      z-index: 10;              /* S'assure qu'elle est au-dessus */
     }
     
     /* Autres éléments */
@@ -129,6 +133,13 @@
         max-height: 80vh;
         object-fit: cover;
         display: block;
+      }
+      /* Rendre la vidéo locale encore plus petite sur mobile */
+      #localVideo {
+        width: 100px;
+        height: 75px;
+        bottom: 8px;
+        right: 8px;
       }
     }
   </style>
@@ -206,5 +217,6 @@
   
   <script type="module" src="/js/check-camera-params.js"></script>
   <script type="module" src="/app-lite.js"></script>
-  </body>
+  
+</body>
 </html>
