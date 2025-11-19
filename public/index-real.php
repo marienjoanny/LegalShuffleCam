@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LegalShuffleCam • Session</title>
   <style>
+    /* ... (Votre CSS complet et inchangé) ... */
     html, body {
       margin: 0; padding: 0; height: 100%;
       background: #0b1220; color: #e6e8ee;
@@ -102,16 +103,15 @@
       color: #fbbf24; text-decoration: none;
       margin: 0 6px;
     }
-}
 
-@media (max-width: 600px) {
-  #remoteVideo {
-    width: 100%;
-    max-height: 80vh;
-    object-fit: contain;
-    display: block;
-  }
-}
+    @media (max-width: 600px) {
+      #remoteVideo {
+        width: 100%;
+        max-height: 80vh;
+        object-fit: contain;
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
@@ -172,268 +172,21 @@
     </p>
   </footer>
 
-  <!-- PeerJS -->
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
-  <!-- App JS -->
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
+  <script>
+    // NOTE: Cette fonction est utilisée par match.js pour les logs
+    function showTopbar(msg, color="#222") {
+      const bar = document.getElementById("topbar-feedback");
+      bar.textContent = msg;
+      bar.style.background = color;
+      bar.style.display = "block";
+      setTimeout(() => bar.style.display = "none", 3000);
+    }
+  </script>
+  
+  <script type="module" src="/js/check-camera-params.js"></script>
   <script type="module" src="/app-lite.js"></script>
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
-<script type="module" src="/js/check-camera-params.js"></script>
-<script type="module">
-import { listCameras } from "/js/camera.js";
-window.addEventListener("DOMContentLoaded", () => listCameras());
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
-</script>
-<script>
-function showTopbar(msg, color="#222") {
-  const bar = document.getElementById("topbar-feedback");
-  bar.textContent = msg;
-  bar.style.background = color;
-  bar.style.display = "block";
-  setTimeout(() => bar.style.display = "none", 3000);
-}
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
-</script>
-<script>
-const peer = new Peer();
-let currentCall = null;
-let localStream = null;
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(stream => {
-    localStream = stream;
-    document.getElementById("localVideo").srcObject = stream;
-  })
-  .catch(() => showTopbar("❌ Impossible d’accéder à la caméra", "#a00"));
-peer.on("open", id => {
-  localStorage.setItem("myPeerId", id);
-  showTopbar("✅ Votre peerId est : " + id, "#0a0");
-  const urlParams = new URLSearchParams(window.location.search);
-  const partnerId = urlParams.get("partnerId");
-  if (partnerId && localStream) {
-    showTopbar("📞 Appel vers " + partnerId);
-  }
-  } else {
-    showTopbar("❌ Aucun flux local disponible", "#a00");
-  }
-document.getElementById("btnNext").addEventListener("click", () => {
-  const myId = localStorage.getItem("myPeerId");
-  if (!myId) return showTopbar("⛔ Votre peerId n’est pas encore initialisé.");
-  fetch("/api/annuaire-peers.php")
-    .then(res => res.json())
-    .then(peers => {
-      const others = Object.keys(peers).filter(id => id !== myId);
-      if (others.length === 0) return showTopbar("⛔ Aucun autre interlocuteur disponible.");
-      const nextId = others[Math.floor(Math.random() * others.length)];
-      showTopbar("➡️ Connexion à " + nextId);
-if (currentCall) {
-  currentCall.close();
-  showTopbar("🔁 Fermeture de l’appel précédent");
-}
-currentCall = peer.call(nextId, localStream);
-currentCall.on("stream", remoteStream => {
-  document.getElementById("remoteVideo").srcObject = remoteStream;
-  showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-peer.on("call", call => {
-  showTopbar("📞 Appel entrant de " + call.peer);
-  if (localStream) {
-    call.answer(localStream);
-    showTopbar("✅ Réponse envoyée à " + call.peer);
-  } else {
-    showTopbar("❌ Aucun flux local pour répondre", "#a00");
-  }
-</script>
+  
 </body>
 </html>
-
-// 🔁 Bouton “Interlocuteur suivant”
-document.getElementById("btnNext").addEventListener("click", () => {
-  showTopbar("🔍 Recherche d’un interlocuteur actif…");
-  fetch("/api/get-peer.php")
-    .then(response => response.json())
-    .then(data => {
-      const nextId = data.nextId;
-      if (!nextId) {
-        showTopbar("❌ Aucun interlocuteur disponible", "#a00");
-        return;
-      }
-      showTopbar("📞 Appel vers " + nextId);
-
-      if (currentCall) {
-        currentCall.close();
-        showTopbar("🔁 Fermeture de l’appel précédent");
-      }
-
-      currentCall = peer.call(nextId, localStream);
-      currentCall.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-});
-
-// 🔁 Bouton “Interlocuteur suivant”
-document.getElementById("btnNext").addEventListener("click", () => {
-  showTopbar("🔍 Recherche d’un interlocuteur actif…");
-  fetch("/api/get-peer.php")
-    .then(response => response.json())
-    .then(data => {
-      const nextId = data.nextId;
-      if (!nextId) {
-        showTopbar("❌ Aucun interlocuteur disponible", "#a00");
-        return;
-      }
-      showTopbar("📞 Appel vers " + nextId);
-
-      if (currentCall) {
-        currentCall.close();
-        showTopbar("🔁 Fermeture de l’appel précédent");
-      }
-
-      currentCall = peer.call(nextId, localStream);
-      currentCall.on("stream", remoteStream => {
-        document.getElementById("remoteVideo").srcObject = remoteStream;
-        showTopbar("📺 Flux reçu de " + nextId, "#0a0");
-      });
-    })
-    .catch(() => showTopbar("❌ Erreur réseau", "#a00"));
-});
