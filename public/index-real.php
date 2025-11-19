@@ -26,6 +26,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             display: none; /* Caché par défaut */
+            font-size: 1em; /* Assurer une bonne taille de texte */
         }
         #reportTarget.visible {
             display: block;
@@ -111,81 +112,137 @@
     </script>
 
     <script>
+// NOUVEAU: Variables globales pour stocker l'historique et la sélection du signalement
+window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
+const MAX_HISTORY = 5;
+
+// NOUVEAU: Fonction pour ajouter un ID à l'historique et maintenir la taille à MAX_HISTORY
+function updateLastPeers(newPeerId) {
+    if (!newPeerId) return;
+    
+    window.lastPeers[newPeerId] = Date.now(); 
+
+    let peerArray = Object.entries(window.lastPeers);
+    peerArray.sort((a, b) => b[1] - a[1]); // Trier par timestamp décroissant
+
+    if (peerArray.length > MAX_HISTORY) {
+        peerArray = peerArray.slice(0, MAX_HISTORY);
+    }
+    
+    window.lastPeers = Object.fromEntries(peerArray);
+    localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
+}
+window.updateLastPeers = updateLastPeers; // Rendre disponible pour match.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const btnReport = document.getElementById('btnReport');
     const reportTargetSelect = document.getElementById('reportTarget');
     
-    // --- Étape 1: Afficher les options de signalement ---
+    // NOUVELLES VARIABLES LOCALES POUR LA SÉLECTION EN DEUX ÉTAPES
+    let report_peerId = null;
+    let report_reason = null;
+
+    // --- Étape 1: Afficher les options de signalement (IDs et Raisons) ---
     btnReport.addEventListener('click', () => {
-        const partnerId = window.currentPartnerId; 
+        const peerHistory = window.lastPeers; 
         
-        if (!partnerId) {
-            showTopbar("⚠ Aucun interlocuteur actif à signaler.", "#fbbf24");
+        if (Object.keys(peerHistory).length === 0) {
+            showTopbar("⚠ Aucun interlocuteur récent ou actif à signaler.", "#fbbf24");
             reportTargetSelect.classList.remove('visible');
             return;
         }
 
-        // Si un partenaire est là, basculer l'affichage du sélecteur
+        // Basculer l'affichage du sélecteur
         reportTargetSelect.classList.toggle('visible');
 
-        // Remplir le sélecteur d'options
+        // Remplir le sélecteur
         if (reportTargetSelect.classList.contains('visible')) {
-            reportTargetSelect.innerHTML = `
-                <option value="" disabled selected>Signaler l'ID: ${partnerId}</option>
-                <option value="Nudite">Nudité (Violation de cadrage)</option>
-                <option value="Sexuel">Comportement sexuel / explicite</option>
-                <option value="Harcèlement">Harcèlement, Insultes, Discrimination</option>
-                <option value="Mineur">Suspicion de minorité</option>
-                <option value="Fraude">Fraude (Bot, Deepfake)</option>
-                <option value="Autre">Autre</option>
-            `;
+            let optionsHTML = '<option value="" disabled selected>👤 Choisir l\'interlocuteur à signaler</option>';
+
+            // Ajouter les IDs à l'historique (du plus récent au plus ancien)
+            Object.keys(peerHistory).forEach(id => {
+                const isCurrent = (id === window.currentPartnerId) ? ' (Actif)' : '';
+                const timestamp = peerHistory[id];
+                const timeAgo = (Date.now() - timestamp) / 1000 / 60; // Temps en minutes
+                const timeText = timeAgo < 1 ? 'moins d\'une minute' : `${Math.floor(timeAgo)} min`;
+
+                optionsHTML += `<option value="ID|${id}">${id}${isCurrent} (${timeText} ago)</option>`;
+            });
+
+            // Ajouter les raisons de signalement comme options
+            optionsHTML += '<option value="" disabled>--- Raison du signalement ---</option>';
+            optionsHTML += '<option value="REASON|Nudite">Nudité (Violation de cadrage)</option>';
+            optionsHTML += '<option value="REASON|Sexuel">Comportement sexuel / explicite</option>';
+            optionsHTML += '<option value="REASON|Harcèlement">Harcèlement, Insultes, Discrimination</option>';
+            optionsHTML += '<option value="REASON|Mineur">Suspicion de minorité</option>';
+            optionsHTML += '<option value="REASON|Fraude">Fraude (Bot, Deepfake)</option>';
+            optionsHTML += '<option value="REASON|Autre">Autre</option>';
+            
+            reportTargetSelect.innerHTML = optionsHTML;
         }
     });
 
-    // --- Étape 2: Envoyer le signalement lorsque l'utilisateur sélectionne une raison ---
+    // --- Étape 2: Gestion des sélections (ID et Raison) ---
     reportTargetSelect.addEventListener('change', async (event) => {
-        const reason = event.target.value;
-        const callerId = window.myPeerId;
-        const partnerId = window.currentPartnerId;
-
-        const imageBase64 = getRemoteVideoSnapshot(); 
-
-        if (!callerId || !partnerId) {
-             showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
-             reportTargetSelect.classList.remove('visible');
-             return;
-        }
+        const selectedValue = event.target.value;
         
-        showTopbar(`⏳ Envoi du signalement pour : ${reason}`, "#fbbf24");
-
-        const formData = new URLSearchParams();
-        formData.append('callerId', callerId);
-        formData.append('partnerId', partnerId);
-        formData.append('reason', reason);
-        formData.append('imageBase64', imageBase64);
-
-        try {
-            const response = await fetch('/api/report-handler.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData,
-            });
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                showTopbar("✅ Signalement envoyé. Interlocuteur suivant...", "#0a0");
-                if (typeof nextMatch === 'function') {
-                    nextMatch(); 
-                }
-            } else {
-                showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
-            }
-        } catch (err) {
-            showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
-            console.error("Report Error:", err);
+        if (selectedValue.startsWith('ID|')) {
+            report_peerId = selectedValue.substring(3);
+            showTopbar(`Interlocuteur sélectionné : ${report_peerId}. Choisissez maintenant la raison.`, "#2ecc71");
+            return; // Ne pas fermer le sélecteur
+        } else if (selectedValue.startsWith('REASON|')) {
+            report_reason = selectedValue.substring(7);
+            showTopbar(`Raison sélectionnée : ${report_reason}. Tentative d'envoi...`, "#f1c40f");
+        } else {
+            return;
         }
 
-        reportTargetSelect.classList.remove('visible');
+        // --- ENVOI FINAL SI ID ET RAISON SONT DÉFINIS ---
+        if (report_peerId && report_reason) {
+            const callerId = window.myPeerId;
+            const partnerId = report_peerId;
+            const reason = report_reason;
+            
+            // Prendre un snapshot uniquement si le partenaire signalé est le partenaire ACTUEL
+            const imageBase64 = (partnerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
+            
+            if (!callerId || !partnerId) {
+                 showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
+                 reportTargetSelect.classList.remove('visible');
+                 report_peerId = null; 
+                 report_reason = null; 
+                 return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('callerId', callerId);
+            formData.append('partnerId', partnerId);
+            formData.append('reason', reason);
+            formData.append('imageBase64', imageBase64);
+
+            try {
+                const response = await fetch('/api/report-handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData,
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showTopbar(`✅ Signalement de ${partnerId} pour ${reason} envoyé !`, "#0a0");
+                } else {
+                    showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
+                }
+            } catch (err) {
+                showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
+                console.error("Report Error:", err);
+            }
+
+            // Réinitialiser les états et masquer le sélecteur
+            reportTargetSelect.classList.remove('visible');
+            report_peerId = null;
+            report_reason = null;
+        }
     });
 
     // --- Étape 3: Capture d'écran de la vidéo distante ---
