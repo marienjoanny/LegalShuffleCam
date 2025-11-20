@@ -26,8 +26,12 @@ if ($peers === null) {
 
 $now = time();
 
-// 2. Filtrer pour garder uniquement les sessions actives (maintenant 600s)
-$peers = array_filter($peers, fn($ts) => $now - $ts < 600);
+// 2. CORRECTION: Filtrer en utilisant la clé 'ts' dans le tableau associatif
+// pour correspondre au format IP/TS utilisé par register-peer.php.
+$peers = array_filter($peers, function($peerData) use ($now) {
+    // Vérifie si la clé 'ts' existe et si le timestamp est actif (< 600s)
+    return isset($peerData['ts']) && ($now - $peerData['ts'] < 600);
+});
 
 // 3. Sauvegarder l'état nettoyé de l'annuaire.
 // Si l'écriture échoue, on continue mais on ne renvoie pas d'erreur HTML.
