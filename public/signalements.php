@@ -10,22 +10,31 @@
  * Le processus de ban est entièrement automatisé par des scripts shell exécutés
  * par le planificateur de tâches du système (Cron).
  *
- * 1. LOGIQUE DE BAN (Exécutée par CRON) :
+ * 1. MÉCANISME DE BAN :
+ * Le ban est effectué directement au niveau du noyau Linux via l'outil de pare-feu
+ * système, **iptables**.
+ * - La commande exécutée est : `/sbin/iptables -A INPUT -s <IP> -j DROP`.
+ * - Ceci est un ban permanent (sauf si une règle de déban est appliquée), qui DROP
+ * silencieusement tout le trafic entrant provenant de l'IP ciblée.
+ * - Ce système est une logique personnalisée, il n'utilise PAS le service 'fail2ban'.
+ *
+ * 2. LOGIQUE DE DÉCLENCHEMENT (Exécutée par CRON) :
  * - scripts/review_processor.sh : Prépare les données de signalement pour l'analyse.
  * - scripts/ban_processor.sh  : Lit les données préparées et exécute
  * les commandes `iptables` pour bannir les adresses IP problématiques sur le serveur.
  *
- * 2. FRÉQUENCE :
+ * 3. FRÉQUENCE :
  * - Le Cron est réglé pour s'exécuter à intervalle régulier (ex: toutes les 5 minutes).
  *
- * 3. LOCALISATION :
+ * 4. LOCALISATION :
  * - Les scripts se trouvent dans le répertoire 'scripts/'.
  * - Les logs du système de ban se trouvent dans le répertoire 'data/' (ex: data/banned_ips.txt).
  *
  * En cas de bug ou de problème de ban, la première étape est de vérifier :
  * 1. Les logs de l'utilisateur (logs/...).
  * 2. L'exécution du Cron (journal du système).
- * 3. Les logs des scripts de ban (`data/banned_ips.txt`).
+ * 3. Les règles iptables actives sur le serveur.
+ * 4. Les logs des scripts de ban (`data/banned_ips.txt`).
  *
  * NE PAS chercher la logique d'exécution du ban dans les fichiers PHP de l'interface.
  */
