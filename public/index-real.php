@@ -27,6 +27,8 @@
             z-index: 1000;
             display: none; /* Caché par défaut */
             font-size: 1em; /* Assurer une bonne taille de texte */
+            /* Pour un meilleur ciblage tactile */
+            min-height: 150px; 
         }
         #reportTarget.visible {
             display: block;
@@ -144,7 +146,11 @@
         
         // Variables globales pour l'historique de signalement
         const MAX_HISTORY = 5;
+        // On s'assure que lastPeers est initialisé si localStorage ne contient rien
         window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
+        
+        // On s'assure que currentPartnerId est disponible
+        window.currentPartnerId = null;
 
         /**
          * Met à jour l'historique des interlocuteurs récents.
@@ -153,17 +159,22 @@
         function updateLastPeers(newPeerId) {
             if (!newPeerId) return;
             
+            // Met à jour ou ajoute le peerId avec le timestamp actuel
             window.lastPeers[newPeerId] = Date.now(); 
 
             let peerArray = Object.entries(window.lastPeers);
-            peerArray.sort((a, b) => b[1] - a[1]); // Trier par timestamp décroissant
+            peerArray.sort((a, b) => b[1] - a[1]); // Trier par timestamp décroissant (plus récent en premier)
 
+            // Limiter à MAX_HISTORY entrées
             if (peerArray.length > MAX_HISTORY) {
                 peerArray = peerArray.slice(0, MAX_HISTORY);
             }
             
             window.lastPeers = Object.fromEntries(peerArray);
             localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
+            
+            // Pour le débogage/vérification
+            console.log("Historique des pairs mis à jour:", window.lastPeers);
         }
         window.updateLastPeers = updateLastPeers; 
 
@@ -172,8 +183,9 @@
          */
         function getRemoteVideoSnapshot() {
             const remoteVideo = document.getElementById('remoteVideo');
-            // Check
+            // Check si la vidéo est jouable
             if (!remoteVideo || remoteVideo.paused || remoteVideo.ended || remoteVideo.videoWidth === 0) {
+                console.warn("Impossible de prendre la capture: Vidéo distante non active.");
                 return ''; 
             }
 
@@ -184,6 +196,7 @@
             // Dessin
             canvas.getContext('2d').drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
             
+            // Retourne l'image en Base64
             return canvas.toDataURL('image/jpeg', 0.8); 
         }
 
@@ -205,17 +218,33 @@
                     return;
                 }
 
+                // Toggle l'affichage du sélecteur
                 reportTargetSelect.classList.toggle('visible');
 
                 if (reportTargetSelect.classList.contains('visible')) {
+                    // Réinitialiser les états locaux du signalement
+                    report_peerId = null;
+                    report_reason = null;
+
                     let optionsHTML = '<option value="" disabled selected>👤 Choisir l\'interlocuteur à signaler</option>';
 
                     // Remplir avec les IDs d'interlocuteurs récents
-                    Object.keys(peerHistory).sort((a, b) => peerHistory[b] - peerHistory[a]).forEach(id => {
+                    const sortedPeers = Object.keys(peerHistory).sort((a, b) => peerHistory[b] - peerHistory[a]);
+                    
+                    sortedPeers.forEach(id => {
                         const isCurrent = (id === window.currentPartnerId) ? ' (Actif)' : '';
-                        const timeAgo = (Date.now() - peerHistory[id]) / 60000; // Temps en minutes
-                        const timeText = timeAgo < 1 ? 'moins d\'une minute' : `${Math.floor(timeAgo)} min`;
-                        optionsHTML += `<option value="ID|${id}">${id}${isCurrent} (${timeText} ago)</option>`;
+                        const timeAgoMs = Date.now() - peerHistory[id];
+                        const timeAgoSec = Math.floor(timeAgoMs / 1000);
+                        let timeText;
+
+                        if (timeAgoSec < 60) {
+                            timeText = `${timeAgoSec} sec`;
+                        } else {
+                            const timeAgoMin = Math.floor(timeAgoSec / 60);
+                            timeText = `${timeAgoMin} min`;
+                        }
+                        
+                        optionsHTML += `<option value="ID|${id}">${id}${isCurrent} (vu il y a ${timeText})</option>`;
                     });
 
                     // Ajouter les raisons de signalement
@@ -241,6 +270,13 @@
                     return; 
                 } else if (selectedValue.startsWith('REASON|')) {
                     report_reason = selectedValue.substring(7);
+                    // Si l'ID n'est pas encore sélectionné, on avertit
+                    if (!report_peerId) {
+                         window.showTopbar("⚠ Choisissez d'abord l'interlocuteur à signaler (en haut de la liste).", "#fbbf24");
+                         // Remettre la sélection sur l'option par défaut
+                         event.target.value = event.target.options[0].value;
+                         return;
+                    }
                     window.showTopbar(`Raison sélectionnée : ${report_reason}. Tentative d'envoi...`, "#f1c40f");
                 } else {
                     return;
@@ -252,6 +288,7 @@
                     const reason = report_reason;
                     const sessionId = window.currentSessionId || 'N/A';
                     
+                    // La capture n'est prise que si on signale l'interlocuteur ACTUEL
                     const imageBase64 = (partnerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
                     
                     if (!callerId || !partnerId) {
@@ -280,7 +317,8 @@
                         if (data.status === 'success') {
                             window.showTopbar(`✅ Signalement de ${partnerId} pour ${reason} envoyé !`, "#0a0");
                         } else {
-                            window.showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
+                            // Afficher l'erreur du serveur si possible
+                            window.showTopbar(`❌ Échec de l'enregistrement du signalement: ${data.message || 'Erreur inconnue'}`, "#a00");
                         }
                     } catch (err) {
                         window.showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
@@ -297,3 +335,4 @@
     </script>
 </body>
 </html>
+
