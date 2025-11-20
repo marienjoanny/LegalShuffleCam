@@ -42,15 +42,17 @@
 // /public/signalements.php
 // Interface d'administration pour visualiser tous les rapports de modération.
 
-// CORRECTION IMPORTANTE DE SÉCURITÉ:
-// Définir le chemin vers le répertoire des rapports hors de la zone publique.
-// __DIR__ = /var/www/legalshufflecam/public
-// __DIR__ . '/../logs/reports' = /var/www/legalshufflecam/logs/reports
-const REPORT_DIR = __DIR__ . '/../logs/reports'; 
+// Définir le chemin vers le répertoire contenant les JSON de rapports.
+// CHANGEMENT CLÉ ICI : Ajout de '/pending_review'
+const REPORT_DIR = __DIR__ . '/../logs/reports/pending_review'; 
+
+// Le chemin d'accès au dossier racine des images pour l'information de l'administrateur
+const REPORT_IMAGES_PATH_INFO = '/var/www/legalshufflecam/logs/reports/images/'; 
 
 // --- Fonction pour lire et décoder un fichier JSON de rapport ---
 function getReportData($filename) {
-    $filePath = REPORT_DIR . '/' . $filename;
+    // Le chemin est maintenant dans 'pending_review' suite aux corrections de flux
+    $filePath = REPORT_DIR . '/' . $filename; 
     // Vérification de sécurité: S'assurer que c'est bien un fichier JSON et qu'il est lisible
     if (pathinfo($filename, PATHINFO_EXTENSION) !== 'json' || !is_readable($filePath)) {
         return null;
@@ -156,6 +158,24 @@ if ($files !== false) {
             display: block; 
             height: auto;
         }
+        .image-status-note {
+             font-size: 0.85em; 
+             color: #7f8c8d;
+             margin-top: 5px;
+             padding-top: 5px;
+             border-top: 1px dashed #4a637d;
+        }
+        .scp-command-suggestion {
+            background-color: #1a1a1a;
+            color: #2ecc71; /* Vert pour l'action */
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -188,22 +208,36 @@ if ($files !== false) {
             <p>Heure : <strong><?= htmlspecialchars($report['timestamp'] ?? 'N/A') ?></strong></p>
 
             <?php 
-                // Note: Le handler a mis la base64_data dans une clé différente pour ne pas surcharger le log,
-                // donc l'affichage brut de l'image ne fonctionnera que si la base64 a été passée dans le tableau
-                // $reportData['imageBase64'], ce qui est absent de la version actuelle du handler pour des raisons de log/performance.
-                
-                // Si la donnée brute 'imageBase64' est présente dans le JSON (optionnel)
-                if (!empty($report['imageBase64'])): 
+            // ----------------------------------------------------------------------------------
+            // Affichage de la capture d'écran (Uniquement pour l'information de l'administrateur)
+            // ----------------------------------------------------------------------------------
+            if (!empty($report['screenshotFile']) && $report['screenshotFile'] !== 'None' && $report['screenshotFile'] !== 'Failed to save screenshot'): 
             ?>
+                <?php
+                    // Chemin d'accès complet au fichier image réel sur le serveur
+                    $image_full_server_path = REPORT_IMAGES_PATH_INFO . $report['screenshotFile'];
+                ?>
                 <p>Capture d'écran :</p>
-                <img src="<?= htmlspecialchars($report['imageBase64']) ?>" alt="Capture du signalé" class="image-preview">
-            <?php 
-                // Si le handler a enregistré qu'une capture est présente
-                elseif (($report['imageBase64_data'] ?? '') === 'Present (base64)'): 
-            ?>
-                <p>Capture d'écran : **Présente** (dans le fichier JSON original), mais la donnée brute n'a pas été incluse dans cet affichage pour des raisons de performance.</p>
+                
+                <p class="image-status-note">
+                    *L'image est enregistrée hors du répertoire public. Pour la visualiser, utilisez SCP.
+                </p>
+                
+                <span class="scp-command-suggestion">
+                    SCP File: <?= htmlspecialchars($report['screenshotFile']) ?>
+                    <br>
+                    Chemin Serveur: <?= htmlspecialchars($image_full_server_path) ?>
+                </span>
+                
+                <!-- Exemple de commande SCP (à exécuter depuis la machine locale de l'admin) -->
+                <p class="image-status-note">
+                    *Exemple de commande SCP à exécuter depuis votre machine :
+                    <br>
+                    <code>scp root@&lt;IP_DU_SERVEUR&gt;:<?= htmlspecialchars($image_full_server_path) ?> ~/Téléchargements/</code>
+                </p>
+
             <?php else: ?>
-                <p>Capture d'écran : Non disponible.</p>
+                <p>Capture d'écran : Non disponible ou échec de l'enregistrement.</p>
             <?php endif; ?>
 
         </div>
