@@ -1,4 +1,35 @@
 <?php
+/**
+ * =========================================================================
+ * NOTE IMPORTANTE : Système de Ban Préventif Automatisé (via Cron)
+ * =========================================================================
+ *
+ * Ce fichier (signalements.php) est la PAGE DE VISUALISATION des rapports de modération.
+ * IL NE CONTIENT PAS et NE DÉCLENCHE PAS la logique d'analyse et de ban IP.
+ *
+ * Le processus de ban est entièrement automatisé par des scripts shell exécutés
+ * par le planificateur de tâches du système (Cron).
+ *
+ * 1. LOGIQUE DE BAN (Exécutée par CRON) :
+ * - scripts/review_processor.sh : Prépare les données de signalement pour l'analyse.
+ * - scripts/ban_processor.sh  : Lit les données préparées et exécute
+ * les commandes `iptables` pour bannir les adresses IP problématiques sur le serveur.
+ *
+ * 2. FRÉQUENCE :
+ * - Le Cron est réglé pour s'exécuter à intervalle régulier (ex: toutes les 5 minutes).
+ *
+ * 3. LOCALISATION :
+ * - Les scripts se trouvent dans le répertoire 'scripts/'.
+ * - Les logs du système de ban se trouvent dans le répertoire 'data/' (ex: data/banned_ips.txt).
+ *
+ * En cas de bug ou de problème de ban, la première étape est de vérifier :
+ * 1. Les logs de l'utilisateur (logs/...).
+ * 2. L'exécution du Cron (journal du système).
+ * 3. Les logs des scripts de ban (`data/banned_ips.txt`).
+ *
+ * NE PAS chercher la logique d'exécution du ban dans les fichiers PHP de l'interface.
+ */
+
 // /public/signalements.php
 // Interface d'administration pour visualiser tous les rapports de modération.
 
