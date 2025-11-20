@@ -1,18 +1,37 @@
 <?php
 $peersFile = '/tmp/peers.json';
+// Assurez-vous que le décodage échoue proprement
 $peers = file_exists($peersFile) ? json_decode(file_get_contents($peersFile), true) : [];
+
+if ($peers === null) {
+    $peers = [];
+}
+
 $now = time();
 
-// 1. Nettoyer l'annuaire : Filtrer pour ne garder que les sessions de moins de 600 secondes (10 min)
-$activePeers = array_filter($peers, fn($ts) => $now - $ts < 600);
+// 1. CORRECTION: Nettoyer l'annuaire : Filtrer pour ne garder que les sessions actives en utilisant la clé 'ts'
+$activePeers = array_filter($peers, function($peerData) use ($now) {
+    // Vérifie si la clé 'ts' existe et si le timestamp est actif (< 600s)
+    return isset($peerData['ts']) && ($now - $peerData['ts'] < 600);
+});
 
 // 2. Mettre à jour le fichier peers.json avec la liste nettoyée
 file_put_contents($peersFile, json_encode($activePeers));
 
-// 3. Trier les IDs pour l'affichage
+// 3. Trier les IDs pour l'affichage (trie sur la clé Peer ID)
 ksort($activePeers);
 
 $count = count($activePeers);
+
+// 4. Préparer les données pour l'affichage du tableau
+// On extrait le Peer ID, le timestamp et l'IP pour le tableau.
+$peersForDisplay = [];
+foreach ($activePeers as $id => $data) {
+    $peersForDisplay[$id] = [
+        'ts' => $data['ts'],
+        'ip' => $data['ip'] ?? 'N/D' // Sécurité si l'IP manque
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -98,11 +117,12 @@ $count = count($activePeers);
   <p>Aucun partenaire connecté pour le moment.</p>
 <?php else: ?>
   <table>
-    <tr><th>Peer ID</th><th>Âge (sec)</th><th>Appeler</th><th>Supprimer</th></tr>
-    <?php foreach ($activePeers as $id => $ts): ?>
+    <tr><th>Peer ID</th><th>Âge (sec)</th><th>IP</th><th>Appeler</th><th>Supprimer</th></tr>
+    <?php foreach ($peersForDisplay as $id => $data): // Utiliser $peersForDisplay ?>
       <tr>
         <td><?= htmlspecialchars($id) ?></td>
-        <td><?= $now - $ts ?></td>
+        <td><?= $now - $data['ts'] ?></td>
+        <td><?= htmlspecialchars($data['ip']) ?></td>
         <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
         <td><button class="delete" onclick="deletePeer(this)">🚮</button></td>
       </tr>
