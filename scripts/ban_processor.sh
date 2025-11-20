@@ -1,121 +1,83 @@
 #!/bin/bash
+# Utilisation: sudo ./ban_processor.sh
+# Ce script DOIT être exécuté par CRON toutes les minutes avec SUDO.
 
-# ==============================================================================
-# SCRIPT DE BAN IMMÉDIAT PAR CRON (ban_processor.sh)
-# Rôle: Bannir immédiatement l'IP du signalement et transférer le rapport (JSON + PNG) 
-#       en attente de révision manuelle.
-# Ce script doit tourner chaque minute via CRON.
-# ==============================================================================
+# --- Configuration et chemins (Relatif à l'exécution dans /scripts) ---
+LOG_FILE="../logs/ban_processor.log"
+BANNED_IP_LIST="../data/banned_ips.txt"
+AUDIT_LOG="../logs/ban_audit.log"
+REPORT_DIR_INCOMING="../logs/reports/pending_review"
+REPORT_DIR_STAGING="../logs/reports/banned_but_pending_review"
+IP_REGEX="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
+IPTABLES_CHAIN="LEGALSHUFFLECAM_BAN"
 
-# --- Configuration ---
-# Répertoire des nouveaux rapports (où le PHP les dépose)
-INCOMING_DIR="/var/www/legalshufflecam/logs/reports" 
-# Répertoire des rapports dont l'IP est déjà bannie (en attente de votre revue)
-PENDING_DIR="/var/www/legalshufflecam/logs/reports/pending_review" 
-# Fichier de la liste de simulation des IPs bannies
-IP_FILE="/var/www/legalshufflecam/data/banned_ips.txt" 
-
-# --- Fonction de Logging ---
+# --- Fonctions de Log ---
 log_action() {
     local TYPE="$1"
     local MESSAGE="$2"
-    local TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
-    
-    case "$TYPE" in
-        INFO)    COLOR='\033[0;34m';;
-        SUCCES)  COLOR='\033[0;32m';;
-        ECHEC)   COLOR='\033[0;31m';;
-        AVERTISSEMENT) COLOR='\033[0;33m';;
-        *)       COLOR='\033[0m';;
-    esac
-
-    echo -e "${COLOR}[$TIMESTAMP] [$TYPE] $MESSAGE\033[0m"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - [$TYPE] - $MESSAGE" | tee -a "$LOG_FILE"
 }
 
-# --- Fonction de Bannissement (Simulation) ---
-ban_ip_internal() {
-    local IP_ADDRESS="\$1"
-    local SIGNALEMENT_ID="\$2"
-    local REASON="\$3"
-
-    if grep -q "\$IP_ADDRESS" "\$IP_FILE" 2>/dev/null; then
-        log_action "AVERTISSEMENT" "IP \$IP_ADDRESS déjà bannie. Maintien du ban."
-        return 0
-    fi
-
-    echo "\$IP_ADDRESS # Raison: \$REASON | Signalement ID: \$SIGNALEMENT_ID" >> "\$IP_FILE"
-    
-    if [ \$? -eq 0 ]; then
-        log_action "SUCCES" "IP \$IP_ADDRESS bannie préventivement (SIMULÉ)."
-        return 0
-    else
-        log_action "ECHEC" "Échec de l'ajout de l'IP à la liste de ban."
-        return 1
-    fi
-}
-
-
-# --- Début du Traitement ---
-
-if ! command -v jq &> /dev/null; then
-    log_action "ECHEC" "L'outil 'jq' est requis. Installation nécessaire."
+# --- Initialisation des Prérequis ---
+if [ "$(id -u)" -ne 0 ]; then
+    log_action "ERREUR" "Doit être exécuté avec 'sudo' ou par 'root' (via CRON)."
     exit 1
 fi
 
-log_action "INFO" "Démarrage du BAN immédiat sur \$INCOMING_DIR"
-REPORTS_FOUND=0
-REPORTS_PROCESSED=0
+if ! command -v jq &> /dev/null; then
+    log_action "ERREUR" "L'outil 'jq' est manquant. Veuillez l'installer (sudo apt install jq)."
+    exit 1
+fi
 
-# On boucle sur tous les fichiers JSON dans le répertoire entrant
-for REPORT_PATH in "\$INCOMING_DIR"/*.json; do
+mkdir -p "$REPORT_DIR_INCOMING" "$REPORT_DIR_STAGING" 2>/dev/null
+touch "$BANNED_IP_LIST" "$AUDIT_LOG"
 
-    if [ ! -f "\$REPORT_PATH" ]; then
-        continue
-    fi
-
-    REPORTS_FOUND=\$((REPORTS_FOUND + 1))
-    REPORT_FILE_NAME=\$(basename "\$REPORT_PATH")
-    REPORT_BASE_NAME=\${REPORT_FILE_NAME%.json} # Nom sans l'extension
-
-    # Chemin du fichier PNG correspondant (il se peut qu'il n'existe pas)
-    SCREENSHOT_PATH="\$INCOMING_DIR/\$REPORT_BASE_NAME.png"
-
-    # Extraction de l'IP, ID et Raison
-    READ_DATA=\$(jq -r '[.reportedIP, .reportedId, .reason] | @tsv' "\$REPORT_PATH" 2>/dev/null)
-    
-    if [ -z "\$READ_DATA" ]; then
-        log_action "ECHEC" "Erreur d'extraction JSON. Fichier ignoré: \$REPORT_FILE_NAME."
-        continue
-    fi
-    
-    IP_ADDRESS=\$(echo "\$READ_DATA" | awk '{print \$1}')
-    SIGNALEMENT_ID=\$(echo "\$READ_DATA" | awk '{print \$2}')
-    REASON=\$(echo "\$READ_DATA" | awk '{print \$3}')
-
-    if [ "\$IP_ADDRESS" == "null" ] || [ -z "\$IP_ADDRESS" ]; then
-        log_action "AVERTISSEMENT" "IP manquante dans le rapport JSON. Fichier ignoré."
-        continue
-    fi
-
-    # 1. Bannissement de l'IP
-    ban_ip_internal "\$IP_ADDRESS" "\$SIGNALEMENT_ID" "\$REASON"
-
-    # 2. Déplacement du rapport JSON vers la file d'attente
-    if mv "\$REPORT_PATH" "\$PENDING_DIR/\$REPORT_FILE_NAME"; then
-        log_action "SUCCES" "Rapport JSON déplacé vers file d'attente."
-        
-        # 3. Déplacement de la capture PNG si elle existe
-        if [ -f "\$SCREENSHOT_PATH" ]; then
-            mv "\$SCREENSHOT_PATH" "\$PENDING_DIR/\$REPORT_BASE_NAME.png"
-            log_action "SUCCES" "Capture PNG déplacée."
+# Initialisation de la chaîne IPTables
+init_iptables_chain() {
+    if ! iptables -nL | grep -q "$IPTABLES_CHAIN"; then
+        log_action "INFO" "Création de la chaîne IPTables $IPTABLES_CHAIN."
+        iptables -N "$IPTABLES_CHAIN"
+        if ! iptables -C INPUT -j "$IPTABLES_CHAIN" 2>/dev/null; then
+            iptables -I INPUT 1 -j "$IPTABLES_CHAIN"
+            log_action "INFO" "Chaîne $IPTABLES_CHAIN insérée dans la chaîne INPUT."
         fi
+    fi
+}
+init_iptables_chain
 
-        REPORTS_PROCESSED=\$((REPORTS_PROCESSED + 1))
-    else
-        log_action "ECHEC" "Échec du déplacement vers file d'attente. Vérifiez les permissions."
+# --- Main Logic ---
+log_action "INFO" "Démarrage du traitement de BAN immédiat dans $REPORT_DIR_INCOMING"
+
+find "$REPORT_DIR_INCOMING" -maxdepth 1 -type f -name "*.json" | while IFS= read -r REPORT_PATH; do
+    REPORT_FILE_NAME=$(basename "$REPORT_PATH")
+    IP_TO_BAN=$(jq -r '.reportedIP' "$REPORT_PATH" 2>/dev/null)
+
+    if [ -z "$IP_TO_BAN" ] || [ "$IP_TO_BAN" == "null" ] || ! [[ "$IP_TO_BAN" =~ $IP_REGEX ]]; then
+        log_action "ERREUR" "IP invalide ou manquante ('$IP_TO_BAN') dans $REPORT_FILE_NAME. Fichier supprimé."
+        rm -f "$REPORT_PATH"
+        continue
     fi
 
+    log_action "TENTATIVE" "Traitement du rapport $REPORT_FILE_NAME (IP: $IP_TO_BAN) pour BAN."
+
+    if ! iptables -C "$IPTABLES_CHAIN" -s "$IP_TO_BAN" -j DROP 2>/dev/null; then
+        iptables -A "$IPTABLES_CHAIN" -s "$IP_TO_BAN" -j DROP
+        
+        if ! grep -q "^$IP_TO_BAN$" "$BANNED_IP_LIST" 2>/dev/null; then
+            echo "$IP_TO_BAN" >> "$BANNED_IP_LIST"
+        fi
+        
+        if command -v netfilter-persistent &> /dev/null; then
+            netfilter-persistent save
+        fi
+        log_action "SUCCES" "Bannissement APPLIQUÉ à l'IP $IP_TO_BAN."
+    else
+        log_action "AVERTISSEMENT" "IP $IP_TO_BAN déjà bannie. Poursuite du déplacement."
+    fi
+
+    mv "$REPORT_PATH" "$REPORT_DIR_STAGING/$REPORT_FILE_NAME"
+    log_action "INFO" "Rapport déplacé vers l'examen secondaire: $REPORT_DIR_STAGING."
 done
 
-log_action "INFO" "Fin du BAN immédiat. \$REPORTS_PROCESSED sur \$REPORTS_FOUND nouveaux rapports traités."
+log_action "INFO" "Fin du traitement."
 exit 0

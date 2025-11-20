@@ -4,7 +4,7 @@
 # Utilisation: sudo ./unban_ip_manually.sh <adresse_ip>
 
 # --- Configuration ---
-PERSISTENT_BAN_FILE="../logs/banned_ips_list.txt"
+PERSISTENT_BAN_FILE="../data/banned_ips.txt"
 LOG_FILE="../logs/report_actions.log" # Log dans le même fichier que process_report
 
 # --- Fonctions de Log ---
