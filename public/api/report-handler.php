@@ -5,8 +5,10 @@ header('Content-Type: application/json');
 // Inclure le logger général
 require_once __DIR__ . '/log_activity.php'; 
 
-// Le répertoire de stockage des rapports détaillés
-const REPORT_DIR = '/var/www/legalshufflecam/public/api/logs/reports'; 
+// --- CHEMIN CORRIGÉ ---
+// Le répertoire de stockage des rapports détaillés. 
+// __DIR__ est /var/www/legalshufflecam/public/api. On remonte de deux niveaux pour atteindre la racine du projet.
+const REPORT_DIR = __DIR__ . '/../../logs/reports'; 
 
 // 🔔 NOUVEAU: L'emplacement où register-peer.php stocke l'annuaire IP/TS
 const PEER_IP_ANNUAIRE = '/tmp/peers.json';
@@ -54,10 +56,21 @@ $reportData = [
 $filename = REPORT_DIR . '/' . time() . '_' . $reportedId . '.json'; // Utiliser l'ID signalé dans le nom du fichier
 
 if (!is_dir(REPORT_DIR)) {
-    @mkdir(REPORT_DIR, 0777, true);
+    // 🚨 Sécurité : Utilisation de 0775 (ou 0755) pour de meilleures pratiques de sécurité
+    // L'arobase (@) masque les erreurs si le répertoire existe déjà ou si les permissions sont insuffisantes.
+    if (!@mkdir(REPORT_DIR, 0775, true)) {
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Failed to create report directory.', 'path' => REPORT_DIR]);
+        exit;
+    }
 }
 
-@file_put_contents($filename, json_encode($reportData, JSON_PRETTY_PRINT));
+if (@file_put_contents($filename, json_encode($reportData, JSON_PRETTY_PRINT)) === false) {
+    // Si l'écriture échoue
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to write report file (Permissions?).', 'path' => $filename]);
+    exit;
+}
 
 // 3. Log général (pour la traçabilité dans activity.log)
 logActivity('REPORT', $reporterId, $reportedId, $reason, $reportedIP); // Ajout de l'IP du signalé au log général
