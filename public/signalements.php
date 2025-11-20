@@ -2,8 +2,11 @@
 // /public/signalements.php
 // Interface d'administration pour visualiser tous les rapports de modération.
 
-// Définir le chemin vers le répertoire des rapports (Doit correspondre à report-handler.php)
-const REPORT_DIR = __DIR__ . '/api/logs/reports'; 
+// CORRECTION IMPORTANTE DE SÉCURITÉ:
+// Définir le chemin vers le répertoire des rapports hors de la zone publique.
+// __DIR__ = /var/www/legalshufflecam/public
+// __DIR__ . '/../logs/reports' = /var/www/legalshufflecam/logs/reports
+const REPORT_DIR = __DIR__ . '/../logs/reports'; 
 
 // --- Fonction pour lire et décoder un fichier JSON de rapport ---
 function getReportData($filename) {
