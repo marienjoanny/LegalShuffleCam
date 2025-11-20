@@ -147,11 +147,21 @@ if ($files !== false) {
 
             <p>Heure : <strong><?= htmlspecialchars($report['timestamp'] ?? 'N/A') ?></strong></p>
 
-            <?php if (!empty($report['imageBase64'])): ?>
+            <?php 
+                // Note: Le handler a mis la base64_data dans une clé différente pour ne pas surcharger le log,
+                // donc l'affichage brut de l'image ne fonctionnera que si la base64 a été passée dans le tableau
+                // $reportData['imageBase64'], ce qui est absent de la version actuelle du handler pour des raisons de log/performance.
+                
+                // Si la donnée brute 'imageBase64' est présente dans le JSON (optionnel)
+                if (!empty($report['imageBase64'])): 
+            ?>
                 <p>Capture d'écran :</p>
                 <img src="<?= htmlspecialchars($report['imageBase64']) ?>" alt="Capture du signalé" class="image-preview">
-            <?php elseif (($report['imageBase64_data'] ?? '') === 'Present (base64)'): ?>
-                <p>Capture d'écran : **Présente**, mais la donnée brute n'a pas été incluse dans cet affichage pour des raisons de performance.</p>
+            <?php 
+                // Si le handler a enregistré qu'une capture est présente
+                elseif (($report['imageBase64_data'] ?? '') === 'Present (base64)'): 
+            ?>
+                <p>Capture d'écran : **Présente** (dans le fichier JSON original), mais la donnée brute n'a pas été incluse dans cet affichage pour des raisons de performance.</p>
             <?php else: ?>
                 <p>Capture d'écran : Non disponible.</p>
             <?php endif; ?>
