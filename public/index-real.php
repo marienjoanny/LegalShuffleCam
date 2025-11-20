@@ -31,6 +31,19 @@
         #reportTarget.visible {
             display: block;
         }
+        /* Style pour la barre supérieure (topBar) */
+        #topBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            background-color: #2980b9; /* Couleur de base */
+            z-index: 10000;
+        }
     </style>
 </head>
 <body>
@@ -94,10 +107,13 @@
     </div>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <!-- SCRIPT DE BASE (gestion des imports de match.js et autres) -->
     <script type="module">
         import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
+        import { listCameras, startCamera } from "/js/camera.js"; // J'ai remis l'importation de camera.js ici
 
-        // Rendre nextMatch global pour pouvoir l'appeler depuis le script de signalement
+        // Rendre nextMatch et showTopbar globaux pour l'usage dans le script non-module (ou pour d'autres modules)
         window.nextMatch = nextMatch;
         window.showTopbar = (message, color = '#2980b9') => {
             const topBar = document.getElementById("topBar");
@@ -106,161 +122,178 @@
         };
         
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialisation de la caméra/liste
+            listCameras(); 
+            const select = document.getElementById('cameraSelect');
+            select.addEventListener('change', () => {
+                const deviceId = select.value;
+                if (deviceId) {
+                    startCamera(deviceId);
+                }
+            });
+
+            // Initialisation du matching PeerJS
             initMatch();
             bindMatchEvents();
         });
     </script>
 
+    <!-- SCRIPT DE SIGNALEMENT (Contenu de report.js intégré ici) -->
     <script>
-// NOUVEAU: Variables globales pour stocker l'historique et la sélection du signalement
-window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
-const MAX_HISTORY = 5;
-
-// NOUVEAU: Fonction pour ajouter un ID à l'historique et maintenir la taille à MAX_HISTORY
-function updateLastPeers(newPeerId) {
-    if (!newPeerId) return;
-    
-    window.lastPeers[newPeerId] = Date.now(); 
-
-    let peerArray = Object.entries(window.lastPeers);
-    peerArray.sort((a, b) => b[1] - a[1]); // Trier par timestamp décroissant
-
-    if (peerArray.length > MAX_HISTORY) {
-        peerArray = peerArray.slice(0, MAX_HISTORY);
-    }
-    
-    window.lastPeers = Object.fromEntries(peerArray);
-    localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
-}
-window.updateLastPeers = updateLastPeers; // Rendre disponible pour match.js
-
-document.addEventListener('DOMContentLoaded', () => {
-    const btnReport = document.getElementById('btnReport');
-    const reportTargetSelect = document.getElementById('reportTarget');
-    
-    // NOUVELLES VARIABLES LOCALES POUR LA SÉLECTION EN DEUX ÉTAPES
-    let report_peerId = null;
-    let report_reason = null;
-
-    // --- Étape 1: Afficher les options de signalement (IDs et Raisons) ---
-    btnReport.addEventListener('click', () => {
-        const peerHistory = window.lastPeers; 
+        // La logique de signalement n'a pas besoin de "type=module"
         
-        if (Object.keys(peerHistory).length === 0) {
-            showTopbar("⚠ Aucun interlocuteur récent ou actif à signaler.", "#fbbf24");
-            reportTargetSelect.classList.remove('visible');
-            return;
+        // Variables globales pour l'historique de signalement
+        const MAX_HISTORY = 5;
+        window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
+
+        /**
+         * Met à jour l'historique des interlocuteurs récents.
+         * Rendu global via window.updateLastPeers
+         */
+        function updateLastPeers(newPeerId) {
+            if (!newPeerId) return;
+            
+            window.lastPeers[newPeerId] = Date.now(); 
+
+            let peerArray = Object.entries(window.lastPeers);
+            peerArray.sort((a, b) => b[1] - a[1]); // Trier par timestamp décroissant
+
+            if (peerArray.length > MAX_HISTORY) {
+                peerArray = peerArray.slice(0, MAX_HISTORY);
+            }
+            
+            window.lastPeers = Object.fromEntries(peerArray);
+            localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
+        }
+        window.updateLastPeers = updateLastPeers; 
+
+        /**
+         * Capture une image (snapshot) à partir de l'élément vidéo distant.
+         */
+        function getRemoteVideoSnapshot() {
+            const remoteVideo = document.getElementById('remoteVideo');
+            // Check
+            if (!remoteVideo || remoteVideo.paused || remoteVideo.ended || remoteVideo.videoWidth === 0) {
+                return ''; 
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = remoteVideo.videoWidth;
+            canvas.height = remoteVideo.videoHeight;
+            
+            // Dessin
+            canvas.getContext('2d').drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
+            
+            return canvas.toDataURL('image/jpeg', 0.8); 
         }
 
-        // Basculer l'affichage du sélecteur
-        reportTargetSelect.classList.toggle('visible');
+        // Initialisation de la logique de signalement
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnReport = document.getElementById('btnReport');
+            const reportTargetSelect = document.getElementById('reportTarget');
+            
+            let report_peerId = null;
+            let report_reason = null;
 
-        // Remplir le sélecteur
-        if (reportTargetSelect.classList.contains('visible')) {
-            let optionsHTML = '<option value="" disabled selected>👤 Choisir l\'interlocuteur à signaler</option>';
+            // --- Étape 1: Afficher les options de signalement (IDs et Raisons) ---
+            btnReport.addEventListener('click', () => {
+                const peerHistory = window.lastPeers; 
+                
+                if (Object.keys(peerHistory).length === 0) {
+                    window.showTopbar("⚠ Aucun interlocuteur récent ou actif à signaler.", "#fbbf24");
+                    reportTargetSelect.classList.remove('visible');
+                    return;
+                }
 
-            // Ajouter les IDs à l'historique (du plus récent au plus ancien)
-            Object.keys(peerHistory).forEach(id => {
-                const isCurrent = (id === window.currentPartnerId) ? ' (Actif)' : '';
-                const timestamp = peerHistory[id];
-                const timeAgo = (Date.now() - timestamp) / 1000 / 60; // Temps en minutes
-                const timeText = timeAgo < 1 ? 'moins d\'une minute' : `${Math.floor(timeAgo)} min`;
+                reportTargetSelect.classList.toggle('visible');
 
-                optionsHTML += `<option value="ID|${id}">${id}${isCurrent} (${timeText} ago)</option>`;
+                if (reportTargetSelect.classList.contains('visible')) {
+                    let optionsHTML = '<option value="" disabled selected>👤 Choisir l\'interlocuteur à signaler</option>';
+
+                    // Remplir avec les IDs d'interlocuteurs récents
+                    Object.keys(peerHistory).sort((a, b) => peerHistory[b] - peerHistory[a]).forEach(id => {
+                        const isCurrent = (id === window.currentPartnerId) ? ' (Actif)' : '';
+                        const timeAgo = (Date.now() - peerHistory[id]) / 60000; // Temps en minutes
+                        const timeText = timeAgo < 1 ? 'moins d\'une minute' : `${Math.floor(timeAgo)} min`;
+                        optionsHTML += `<option value="ID|${id}">${id}${isCurrent} (${timeText} ago)</option>`;
+                    });
+
+                    // Ajouter les raisons de signalement
+                    optionsHTML += '<option value="" disabled>--- Raison du signalement ---</option>';
+                    optionsHTML += '<option value="REASON|Nudite">Nudité (Violation de cadrage)</option>';
+                    optionsHTML += '<option value="REASON|Sexuel">Comportement sexuel / explicite</option>';
+                    optionsHTML += '<option value="REASON|Harcèlement">Harcèlement, Insultes, Discrimination</option>';
+                    optionsHTML += '<option value="REASON|Mineur">Suspicion de minorité</option>';
+                    optionsHTML += '<option value="REASON|Fraude">Fraude (Bot, Deepfake)</option>';
+                    optionsHTML += '<option value="REASON|Autre">Autre</option>';
+                    
+                    reportTargetSelect.innerHTML = optionsHTML;
+                }
             });
 
-            // Ajouter les raisons de signalement comme options
-            optionsHTML += '<option value="" disabled>--- Raison du signalement ---</option>';
-            optionsHTML += '<option value="REASON|Nudite">Nudité (Violation de cadrage)</option>';
-            optionsHTML += '<option value="REASON|Sexuel">Comportement sexuel / explicite</option>';
-            optionsHTML += '<option value="REASON|Harcèlement">Harcèlement, Insultes, Discrimination</option>';
-            optionsHTML += '<option value="REASON|Mineur">Suspicion de minorité</option>';
-            optionsHTML += '<option value="REASON|Fraude">Fraude (Bot, Deepfake)</option>';
-            optionsHTML += '<option value="REASON|Autre">Autre</option>';
-            
-            reportTargetSelect.innerHTML = optionsHTML;
-        }
-    });
-
-    // --- Étape 2: Gestion des sélections (ID et Raison) ---
-    reportTargetSelect.addEventListener('change', async (event) => {
-        const selectedValue = event.target.value;
-        
-        if (selectedValue.startsWith('ID|')) {
-            report_peerId = selectedValue.substring(3);
-            showTopbar(`Interlocuteur sélectionné : ${report_peerId}. Choisissez maintenant la raison.`, "#2ecc71");
-            return; // Ne pas fermer le sélecteur
-        } else if (selectedValue.startsWith('REASON|')) {
-            report_reason = selectedValue.substring(7);
-            showTopbar(`Raison sélectionnée : ${report_reason}. Tentative d'envoi...`, "#f1c40f");
-        } else {
-            return;
-        }
-
-        // --- ENVOI FINAL SI ID ET RAISON SONT DÉFINIS ---
-        if (report_peerId && report_reason) {
-            const callerId = window.myPeerId;
-            const partnerId = report_peerId;
-            const reason = report_reason;
-            
-            // Prendre un snapshot uniquement si le partenaire signalé est le partenaire ACTUEL
-            const imageBase64 = (partnerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
-            
-            if (!callerId || !partnerId) {
-                 showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
-                 reportTargetSelect.classList.remove('visible');
-                 report_peerId = null; 
-                 report_reason = null; 
-                 return;
-            }
-            
-            const formData = new URLSearchParams();
-            formData.append('callerId', callerId);
-            formData.append('partnerId', partnerId);
-            formData.append('reason', reason);
-            formData.append('imageBase64', imageBase64);
-
-            try {
-                const response = await fetch('/api/report-handler.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData,
-                });
-                const data = await response.json();
+            // --- Étape 2: Gestion des sélections (ID et Raison) et Envoi ---
+            reportTargetSelect.addEventListener('change', async (event) => {
+                const selectedValue = event.target.value;
                 
-                if (data.status === 'success') {
-                    showTopbar(`✅ Signalement de ${partnerId} pour ${reason} envoyé !`, "#0a0");
+                if (selectedValue.startsWith('ID|')) {
+                    report_peerId = selectedValue.substring(3);
+                    window.showTopbar(`Interlocuteur sélectionné : ${report_peerId}. Choisissez maintenant la raison.`, "#2ecc71");
+                    return; 
+                } else if (selectedValue.startsWith('REASON|')) {
+                    report_reason = selectedValue.substring(7);
+                    window.showTopbar(`Raison sélectionnée : ${report_reason}. Tentative d'envoi...`, "#f1c40f");
                 } else {
-                    showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
+                    return;
                 }
-            } catch (err) {
-                showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
-                console.error("Report Error:", err);
-            }
 
-            // Réinitialiser les états et masquer le sélecteur
-            reportTargetSelect.classList.remove('visible');
-            report_peerId = null;
-            report_reason = null;
-        }
-    });
+                if (report_peerId && report_reason) {
+                    const callerId = window.myPeerId;
+                    const partnerId = report_peerId;
+                    const reason = report_reason;
+                    const sessionId = window.currentSessionId || 'N/A';
+                    
+                    const imageBase64 = (partnerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
+                    
+                    if (!callerId || !partnerId) {
+                        window.showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
+                        reportTargetSelect.classList.remove('visible');
+                        report_peerId = null; 
+                        report_reason = null; 
+                        return;
+                    }
+                    
+                    const formData = new URLSearchParams();
+                    formData.append('callerId', callerId);
+                    formData.append('partnerId', partnerId);
+                    formData.append('reason', reason);
+                    formData.append('imageBase64', imageBase64);
+                    formData.append('sessionId', sessionId);
 
-    // --- Étape 3: Capture d'écran de la vidéo distante ---
-    function getRemoteVideoSnapshot() {
-        const remoteVideo = document.getElementById('remoteVideo');
-        if (!remoteVideo || remoteVideo.paused || remoteVideo.ended || remoteVideo.videoWidth === 0) {
-            return ''; 
-        }
+                    try {
+                        const response = await fetch('/api/report-handler.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: formData,
+                        });
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            window.showTopbar(`✅ Signalement de ${partnerId} pour ${reason} envoyé !`, "#0a0");
+                        } else {
+                            window.showTopbar("❌ Échec de l'enregistrement du signalement.", "#a00");
+                        }
+                    } catch (err) {
+                        window.showTopbar("❌ Erreur réseau lors du signalement.", "#a00");
+                        console.error("Report Error:", err);
+                    }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = remoteVideo.videoWidth;
-        canvas.height = remoteVideo.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
-        
-        return canvas.toDataURL('image/jpeg', 0.8); 
-    }
-});
+                    // Réinitialiser les états et masquer le sélecteur
+                    reportTargetSelect.classList.remove('visible');
+                    report_peerId = null;
+                    report_reason = null;
+                }
+            });
+        });
     </script>
 </body>
 </html>
