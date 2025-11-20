@@ -6,7 +6,10 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/log_activity.php'; 
 
 // --- CHEMINS ---
-const REPORT_DIR = __DIR__ . '/../../logs/reports'; 
+
+// CHEMIN CRUCIAL CORRIGÉ : Les rapports sont désormais écrits dans la file d'attente.
+const REPORT_PENDING_DIR = __DIR__ . '/../../logs/reports/pending_review'; 
+const REPORT_IMAGES_DIR = __DIR__ . '/../../logs/reports/images'; // Nouveau dossier pour les images
 const PEER_IP_ANNUAIRE = '/tmp/peers.json';
 
 // Récupération des données POST
@@ -22,7 +25,7 @@ if (!$reporterId || !$reportedId) {
     exit;
 }
 
-// 1. Gestion de l'IP du signalé
+// 1. Gestion de l'IP du signalé (via annuaire)
 $reportedIP = 'NOT_FOUND_IN_ANNUAIRE';
 
 if (file_exists(PEER_IP_ANNUAIRE)) {
@@ -33,13 +36,16 @@ if (file_exists(PEER_IP_ANNUAIRE)) {
     }
 }
 
-// 2. Préparation du dossier de rapports
-if (!is_dir(REPORT_DIR)) {
-    if (!@mkdir(REPORT_DIR, 0775, true)) {
+// 2. Préparation des dossiers de rapports et d'images
+if (!is_dir(REPORT_PENDING_DIR)) {
+    if (!@mkdir(REPORT_PENDING_DIR, 0775, true)) {
         http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'Failed to create report directory.', 'path' => REPORT_DIR]);
+        echo json_encode(['status' => 'error', 'message' => 'Failed to create report directory.', 'path' => REPORT_PENDING_DIR]);
         exit;
     }
+}
+if (!is_dir(REPORT_IMAGES_DIR)) {
+     @mkdir(REPORT_IMAGES_DIR, 0775, true);
 }
 
 
@@ -53,7 +59,8 @@ if (!empty($imageBase64)) {
     
     // Nom du fichier image: timestamp_reportedId.png
     $imageFilename = $reportTimestamp . '_' . $reportedId . '.png';
-    $imagePath = REPORT_DIR . '/' . $imageFilename;
+    // L'image va dans un dossier séparé 'images'
+    $imagePath = REPORT_IMAGES_DIR . '/' . $imageFilename;
 
     if (@file_put_contents($imagePath, $imageData) === false) {
         logActivity('REPORT_ERROR', $reporterId, $reportedId, "Failed to save screenshot at: " . $imagePath, $reportedIP);
@@ -78,7 +85,8 @@ $reportData = [
 
 // Nom du fichier JSON: timestamp_reportedId.json
 $jsonFilename = $reportTimestamp . '_' . $reportedId . '.json';
-$jsonPath = REPORT_DIR . '/' . $jsonFilename;
+// Écrit dans le dossier PENDING_REVIEW
+$jsonPath = REPORT_PENDING_DIR . '/' . $jsonFilename;
 
 if (@file_put_contents($jsonPath, json_encode($reportData, JSON_PRETTY_PRINT)) === false) {
     http_response_code(500);
