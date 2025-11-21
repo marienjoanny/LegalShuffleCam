@@ -106,7 +106,7 @@
     <!-- TEXTE D'AVERTISSEMENT ROUGE (SOUS la cam du haut) -->
     <p class="warning-ip">
         <span style="color: red; font-size: 14px;">
-            ⚠️ **CONFIDENTIALITÉ EXTRÊME :** Votre IP est loguée. **ATTENTION :** La **Navigation Privée** (Incognito) est **OBLIGATOIRE** pour bloquer la capture d'écran sur **votre** téléphone, mais ne protège pas contre l'enregistrement par l'interlocuteur. **Toute tentative d'enregistrement, même réussie, est illégale et traçable.** Visage visible requis.
+            ⚠️ **CONFIDENTIALITÉ :** Votre IP est loguée. Navigation Privée **OBLIGATOIRE** ! L'enregistrement est **illégal et traçable** !! Visage requis !
         </span>
     </p>
 
