@@ -13,7 +13,7 @@
         /* Styles spécifiques pour le sélecteur de signalement */
         #reportTarget {
             position: absolute;
-            bottom: 60px; /* Au-dessus du bouton Report */
+            bottom: 60px; /* Position ajustée par style.css */
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -41,6 +41,7 @@
 
         /* Champ de texte pour la raison "Autre" */
         #otherReasonContainer {
+            /* Position ajustée par style.css */
             position: absolute;
             bottom: 60px; 
             left: 50%;
@@ -107,7 +108,7 @@
             color: white;
             text-align: center;
             font-weight: bold;
-            background-color: #2980b9; /* Couleur de base */
+            background-color: #2980b9; 
             z-index: 10000;
             transition: background-color 0.3s;
         }
@@ -121,26 +122,31 @@
     <canvas id="screenshotCanvas" style="display: none;"></canvas>
 
     <div id="videoGrid">
-        <video id="localVideo" muted autoplay playsinline></video>
+        <!-- L'ordre des vidéos importe peu ici, car elles sont positionnées par CSS -->
         <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" muted autoplay playsinline></video> 
     </div>
 
     <div id="controls">
         
+        <!-- Message d'Avertissement (Maintenu en haut des contrôles) -->
         <p class="warning-ip">
             <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
         </p>
 
+        <!-- Ligne 1: Consentement et Wizz (Compact et côte à côte) -->
         <div class="control-row">
             <button class="control-button green" id="btnConsentement">👍 Consentement</button>
-            <button class="control-button purple" id="btnVibre">🔔 Vibre</button>
+            <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
         </div>
 
+        <!-- Ligne 2: Signaler (Compact) -->
         <div class="control-row full-width-row">
             <!-- Ajout d'une balise 'data-partner-id' temporaire pour suivre l'ID -->
             <button class="control-button red" id="btnReport" data-partner-id="" data-session-id="">🚩 Signaler</button>
         </div>
 
+        <!-- Ligne 3: Caméra et Son (Compact) -->
         <div class="control-row">
             <select class="control-select yellow" id="cameraSelect">
                 <option value="camera 1, facing front">camera 1, facing front</option>
@@ -148,12 +154,13 @@
             <button class="control-button small-icon" id="muteButton">🔇</button>
         </div>
 
+        <!-- Ligne 4: Interlocuteur Suivant (Compact) -->
         <div class="control-row full-width-row">
             <button id="btnNext" disabled class="control-button blue">
                 ➔ Interlocuteur suivant
             </button>
         </div>
-
+        
         <!-- Le SELECT sera peuplé dynamiquement par JS -->
         <select id="reportTarget" size="5"></select>
     </div>
@@ -510,4 +517,3 @@
     </script>
 </body>
 </html>
-
