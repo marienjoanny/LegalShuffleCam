@@ -96,12 +96,18 @@
 
     <!-- ZONE VIDÉO PRINCIPALE (HAUT) -->
     <div id="remoteVideoContainer">
+        <!-- Message affiché si la vidéo est masquée (ex: changement d'onglet) -->
+        <div id="videoObscuredMessage" style="position: absolute; color: white; background-color: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1em; display: none;">
+            Vidéo masquée ! Revenez sur l'onglet pour continuer.
+        </div>
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
     <!-- TEXTE D'AVERTISSEMENT ROUGE (SOUS la cam du haut) -->
     <p class="warning-ip">
-        <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
+        <span style="color: red; font-size: 14px;">
+            ⚠️ **CONFIDENTIALITÉ EXTRÊME :** Votre IP est loguée. **ATTENTION :** La **Navigation Privée** (Incognito) est **OBLIGATOIRE** pour bloquer la capture d'écran sur **votre** téléphone, mais ne protège pas contre l'enregistrement par l'interlocuteur. **Toute tentative d'enregistrement, même réussie, est illégale et traçable.** Visage visible requis.
+        </span>
     </p>
 
     <!-- ZONE INFÉRIEURE : CONTRÔLES (GAUCHE) / CAM LOCALE (DROITE) -->
@@ -212,6 +218,52 @@
         window.myPeerId = null; 
         window.currentSessionId = null; 
     </script>
+
+    <!-- SCRIPT DE SÉCURITÉ ET DISSUASION (Inchangé) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const remoteVideo = document.getElementById('remoteVideo');
+            const videoObscuredMessage = document.getElementById('videoObscuredMessage');
+
+            /**
+             * Mesures de dissuasion : Bloque le clic droit (téléchargement facile) et l'inspection de code.
+             * Note : C'est seulement de la dissuasion, cela ne bloque pas un utilisateur déterminé.
+             */
+            document.addEventListener('contextmenu', (e) => {
+                // Bloque le clic droit (pour empêcher l'enregistrement/téléchargement facile de la vidéo)
+                e.preventDefault();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                // Bloque les raccourcis clavier F12 (outils dev) et Ctrl/Cmd + Shift + I
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
+                    console.log("Accès aux outils de développement bloqué.");
+                    e.preventDefault();
+                }
+            });
+
+            /**
+             * API de Visibilité du Document : Masque la vidéo si l'utilisateur change d'onglet/fenêtre.
+             * Empêche l'enregistrement vidéo pendant que l'utilisateur travaille dans un autre onglet.
+             */
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === 'hidden') {
+                    // L'utilisateur est sur un autre onglet/fenêtre. Masquer la vidéo distante.
+                    remoteVideo.style.opacity = '0';
+                    remoteVideo.style.pointerEvents = 'none'; // Rendre ininteractable
+                    videoObscuredMessage.style.display = 'block';
+                    console.log("Vidéo distante masquée (changement d'onglet).");
+                } else {
+                    // L'utilisateur revient sur l'onglet. Rétablir la vidéo.
+                    remoteVideo.style.opacity = '1';
+                    remoteVideo.style.pointerEvents = 'auto';
+                    videoObscuredMessage.style.display = 'none';
+                    console.log("Vidéo distante rétablie.");
+                }
+            });
+        });
+    </script>
+    <!-- FIN DU SCRIPT DE SÉCURITÉ ET DISSUASION -->
 
     <!-- SCRIPT DE SIGNALEMENT (Contenu de report.js intégré ici) -->
     <script>
