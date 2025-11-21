@@ -13,7 +13,7 @@
         /* Styles spécifiques pour le sélecteur de signalement */
         #reportTarget {
             position: absolute;
-            bottom: 60px; /* Position ajustée par style.css */
+            /* Position ajustée par style.css (bottom: 230px) */
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -28,12 +28,11 @@
             display: none; /* Caché par défaut */
             font-size: 1em; 
             min-height: 150px;
-            /* Rendre le select plus esthétique et masquer l'icône de dropdown par défaut */
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             cursor: pointer;
-            text-align: left; /* Aligner le texte des options */
+            text-align: left; 
         }
         #reportTarget.visible {
             display: block;
@@ -41,17 +40,16 @@
 
         /* Champ de texte pour la raison "Autre" */
         #otherReasonContainer {
-            /* Position ajustée par style.css */
+            /* Position ajustée par style.css (bottom: 250px) */
             position: absolute;
-            bottom: 60px; 
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
             max-width: 300px;
-            padding: 15px; /* Augmenter le padding */
+            padding: 15px; 
             background-color: #2c3e50;
-            border: 2px solid #3498db; /* Bordure plus visible */
-            border-radius: 8px; /* Coins plus arrondis */
+            border: 2px solid #3498db; 
+            border-radius: 8px; 
             box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
             z-index: 1005; 
             display: none; 
@@ -66,10 +64,10 @@
             border: 1px solid #3498db;
             background-color: #1c1c1c;
             color: white;
-            box-sizing: border-box; /* Inclure padding et bordure dans la largeur */
+            box-sizing: border-box; 
         }
         #submitOtherReason {
-            background-color: #27ae60; /* Vert pour l'action finale */
+            background-color: #27ae60; 
             color: white;
             padding: 10px 15px;
             border: none;
@@ -83,14 +81,14 @@
             background-color: #2ecc71;
         }
 
-        /* Style pour les options, pour éviter les cercles/carrés de sélection (si le navigateur les affiche) */
+        /* Style pour les options */
         #reportTarget option {
             padding: 8px;
             border-bottom: 1px solid #34495e;
             background-color: #2c3e50;
             color: white;
             cursor: pointer;
-            white-space: nowrap; /* Empêcher le wrap pour les longs libellés */
+            white-space: nowrap; 
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -122,18 +120,17 @@
     <canvas id="screenshotCanvas" style="display: none;"></canvas>
 
     <div id="videoGrid">
-        <!-- L'ordre des vidéos importe peu ici, car elles sont positionnées par CSS -->
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" muted autoplay playsinline></video> 
     </div>
 
+    <!-- NOUVELLE POSITION DU MESSAGE D'AVERTISSEMENT (sous la cam du haut) -->
+    <p class="warning-ip">
+        <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
+    </p>
+
     <div id="controls">
         
-        <!-- Message d'Avertissement (Maintenu en haut des contrôles) -->
-        <p class="warning-ip">
-            <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
-        </p>
-
         <!-- Ligne 1: Consentement et Wizz (Compact et côte à côte) -->
         <div class="control-row">
             <button class="control-button green" id="btnConsentement">👍 Consentement</button>
