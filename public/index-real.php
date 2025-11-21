@@ -105,8 +105,8 @@
 
     <!-- TEXTE D'AVERTISSEMENT ROUGE (SOUS la cam du haut) -->
     <p class="warning-ip">
-        <span style="color: red; font-size: 14px;">
-            ⚠️ **CONFIDENTIALITÉ :** Votre IP est loguée. Navigation Privée **OBLIGATOIRE** ! L'enregistrement est **illégal et traçable** !! Visage requis !
+        <span style="color: red; font-size: 14px; font-weight: bold;">
+            ⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L'enregistrement est illégal !!
         </span>
     </p>
 
