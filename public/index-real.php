@@ -8,16 +8,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LegalShuffleCam - Chat Vidéo Aléatoire Sécurisé</title>
-    <link rel="stylesheet" href="/css/style.css?v=20251119">
+    <link rel="stylesheet" href="/css/style.css?v=20251121">
     <style>
         /* Styles spécifiques pour le sélecteur de signalement */
         #reportTarget {
-            position: absolute;
-            /* Position ajustée par style.css (bottom: 230px) */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 300px;
+            /* Positionnement fixé dans le CSS principal */
             padding: 10px;
             background-color: #2c3e50;
             color: white;
@@ -40,12 +35,7 @@
 
         /* Champ de texte pour la raison "Autre" */
         #otherReasonContainer {
-            /* Position ajustée par style.css (bottom: 250px) */
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 300px;
+            /* Positionnement fixé dans le CSS principal */
             padding: 15px; 
             background-color: #2c3e50;
             border: 2px solid #3498db; 
@@ -95,21 +85,6 @@
         #reportTarget option:hover {
             background-color: #34495e;
         }
-
-        /* Style pour la barre supérieure (topBar) */
-        #topBar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 10px;
-            color: white;
-            text-align: center;
-            font-weight: bold;
-            background-color: #2980b9; 
-            z-index: 10000;
-            transition: background-color 0.3s;
-        }
     </style>
 </head>
 <body>
@@ -119,50 +94,58 @@
     <!-- Canvas temporaire pour la capture d'écran (caché) -->
     <canvas id="screenshotCanvas" style="display: none;"></canvas>
 
-    <div id="videoGrid">
+    <!-- ZONE VIDÉO PRINCIPALE (HAUT) -->
+    <div id="remoteVideoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
-        <video id="localVideo" muted autoplay playsinline></video> 
     </div>
 
-    <!-- NOUVELLE POSITION DU MESSAGE D'AVERTISSEMENT (sous la cam du haut) -->
+    <!-- TEXTE D'AVERTISSEMENT ROUGE (SOUS la cam du haut) -->
     <p class="warning-ip">
         <span style="color: red; font-size: 14px;">⚠️ Votre IP est visible et loguée. Visage visible et navigation privée requis !</span>
     </p>
 
-    <div id="controls">
+    <!-- ZONE INFÉRIEURE : CONTRÔLES (GAUCHE) / CAM LOCALE (DROITE) -->
+    <div id="bottomLayout">
         
-        <!-- Ligne 1: Consentement et Wizz (Compact et côte à côte) -->
-        <div class="control-row">
-            <button class="control-button green" id="btnConsentement">👍 Consentement</button>
-            <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
+        <!-- CONTRÔLES (GAUCHE) -->
+        <div id="controls">
+            <!-- Ligne 1: Consentement et Wizz -->
+            <div class="control-row">
+                <button class="control-button green" id="btnConsentement">👍 Consentement</button>
+                <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
+            </div>
+
+            <!-- Ligne 2: Signaler -->
+            <div class="control-row full-width-row">
+                <button class="control-button red" id="btnReport" data-partner-id="" data-session-id="">🚩 Signaler</button>
+            </div>
+
+            <!-- Ligne 3: Caméra et Son -->
+            <div class="control-row">
+                <select class="control-select yellow" id="cameraSelect">
+                    <option value="camera 1, facing front">camera 1, facing front</option>
+                </select>
+                <button class="control-button small-icon" id="muteButton">🔇</button>
+            </div>
+
+            <!-- Ligne 4: Interlocuteur Suivant -->
+            <div class="control-row full-width-row">
+                <button id="btnNext" disabled class="control-button blue">
+                    ➔ Interlocuteur suivant
+                </button>
+            </div>
         </div>
 
-        <!-- Ligne 2: Signaler (Compact) -->
-        <div class="control-row full-width-row">
-            <!-- Ajout d'une balise 'data-partner-id' temporaire pour suivre l'ID -->
-            <button class="control-button red" id="btnReport" data-partner-id="" data-session-id="">🚩 Signaler</button>
+        <!-- CAMÉRA LOCALE (DROITE) -->
+        <div id="localVideoContainer">
+            <video id="localVideo" muted autoplay playsinline></video> 
         </div>
-
-        <!-- Ligne 3: Caméra et Son (Compact) -->
-        <div class="control-row">
-            <select class="control-select yellow" id="cameraSelect">
-                <option value="camera 1, facing front">camera 1, facing front</option>
-            </select>
-            <button class="control-button small-icon" id="muteButton">🔇</button>
-        </div>
-
-        <!-- Ligne 4: Interlocuteur Suivant (Compact) -->
-        <div class="control-row full-width-row">
-            <button id="btnNext" disabled class="control-button blue">
-                ➔ Interlocuteur suivant
-            </button>
-        </div>
-        
-        <!-- Le SELECT sera peuplé dynamiquement par JS -->
-        <select id="reportTarget" size="5"></select>
     </div>
+    
+    <!-- SÉLECTEUR DE SIGNALEMENT (Flottant au-dessus de tout) -->
+    <select id="reportTarget" size="5"></select>
 
-    <!-- CONTENEUR POUR LA RAISON "AUTRE" -->
+    <!-- CONTENEUR POUR LA RAISON "AUTRE" (Flottant au-dessus de tout) -->
     <div id="otherReasonContainer">
         <label for="otherReasonInput">Décrivez brièvement le problème :</label>
         <input type="text" id="otherReasonInput" maxlength="100" placeholder="Ex: Musique trop forte, écran noir..." aria-label="Description du motif Autre">
@@ -194,6 +177,9 @@
     
     <!-- SCRIPT DE BASE (gestion des imports de match.js et autres) -->
     <script type="module">
+        // Le code JS ici est le même que précédemment et gère la logique PeerJS, la caméra, 
+        // le signalement et les interactions. Il n'est pas modifié car le changement est purement HTML/CSS.
+
         import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
         import { listCameras, startCamera } from "/js/camera.js"; 
 
