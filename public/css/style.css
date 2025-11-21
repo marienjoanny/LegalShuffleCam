@@ -1,4 +1,4 @@
-/* Fichier: /public/css/style.css - Version 1.6 (Layout V4 - Caméra Fixe au Viewport) */
+/* Fichier: /public/css/style.css - Version 1.7 (Layout V5 - Split Zone Controles/Local Cam) */
 
 body {
     margin: 0;
@@ -26,15 +26,39 @@ body {
     transition: background-color 0.3s;
 }
 
-/* STYLING DU MESSAGE D'AVERTISSEMENT (maintenant en dehors de #controls) */
+/* --- Zone Vidéo Principale (Haut) --- */
+#remoteVideoContainer {
+    padding-top: 50px; 
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    max-width: 100%;
+    margin: 0 auto;
+    /* Hauteur minimale pour que la vidéo s'étende visiblement */
+    min-height: calc(100vh - 350px); 
+    width: 100%;
+}
+
+#remoteVideo {
+    width: 100%;
+    height: 100%; 
+    max-height: calc(100vh - 350px);
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #000;
+    display: block;
+}
+
+/* STYLING DU MESSAGE D'AVERTISSEMENT (sous la cam du haut) */
 .warning-ip {
     color: #e0e0e0;
     background-color: #34495e;
     padding: 8px;
     border-radius: 4px;
     text-align: center;
-    /* Centrer le bloc d'alerte sous la vidéo */
-    margin: 10px auto 10px auto; 
+    margin: 10px auto; 
     width: 90%;
     max-width: 450px;
     font-size: 0.9em;
@@ -46,68 +70,36 @@ body {
      font-weight: bold;
 }
 
-
-/* --- Zone Vidéo Principale --- */
-#videoGrid {
-    padding-top: 50px; 
-    flex-grow: 1;
+/* --- Zone Inférieure (Contrôles Gauche / Cam Locale Droite) --- */
+#bottomLayout {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    padding-bottom: 0px; 
-    max-width: 100%;
-    margin: 0 auto;
-    /* Hauteur minimale pour que #remoteVideo puisse s'étendre visiblement */
-    min-height: calc(100vh - 250px); 
-}
-
-#remoteVideo {
-    width: 100%;
-    height: 100%; /* S'étend pour remplir videoGrid */
-    max-height: calc(100vh - 250px);
-    object-fit: contain;
-    border-radius: 8px;
-    background-color: #000;
-    display: block;
-}
-
-/* Caméra locale (Position FIXE par rapport au Viewport - C'est la nouvelle "zone") */
-#localVideo {
-    position: fixed; /* CHANGEMENT: Fixe par rapport au viewport */
-    bottom: 220px; /* Positionnée au-dessus des contrôles et du message d'avertissement */
-    right: 10px; 
-    width: 150px; 
-    height: 120px; 
-    object-fit: cover;
-    border: 3px solid #3498db;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    z-index: 50;
-}
-
-/* --- Contrôles et Boutons --- */
-#controls {
-    display: flex;
-    flex-direction: column; /* Force l'empilement vertical */
-    /* ALIGNEMENT STRICT À GAUCHE */
-    align-items: flex-start; 
-    padding: 10px 20px 20px 10px; 
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px;
     background-color: #2c3e50;
     border-top: 1px solid #34495e;
     z-index: 10;
-    width: 100%; 
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* --- Contrôles (Gauche) --- */
+#controls {
+    display: flex;
+    flex-direction: column; 
+    align-items: flex-start; /* ALIGNEMENT STRICT À GAUCHE */
+    padding-left: 10px;
+    padding-right: 10px;
+    flex-basis: 60%; /* Prend plus de place pour les boutons */
+    max-width: 320px;
 }
 
 .control-row {
     display: flex;
-    justify-content: flex-start; /* Alignement strict à gauche */
+    justify-content: flex-start; 
     gap: 8px; 
     margin-bottom: 8px; 
-    /* Fixer une largeur pour que les rangées ne soient pas trop grandes */
-    width: 95%; 
-    max-width: 320px; 
-    margin-left: 10px; /* Décaler légèrement de la bordure gauche */
+    width: 100%; 
 }
 
 /* Les boutons Consentement/Wizz prennent 50% de la ligne */
@@ -135,6 +127,27 @@ body {
     padding: 8px;
 }
 
+/* --- Caméra Locale (Droite) --- */
+#localVideoContainer {
+    flex-basis: 40%;
+    display: flex;
+    justify-content: flex-end; /* Pousser la vidéo à droite */
+    align-items: flex-start;
+    padding-right: 10px;
+}
+
+#localVideo {
+    width: 150px; 
+    height: 120px; 
+    object-fit: cover;
+    border: 3px solid #3498db;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+}
+
+
+/* Couleurs des boutons */
 .green { background-color: #2ecc71; color: #1a1a1a; }
 .green:hover { background-color: #27ae60; }
 
@@ -156,10 +169,11 @@ body {
 .blue { background-color: #3498db; color: white; }
 .blue:hover { background-color: #2980b9; }
 
-/* Styles du sélecteur de signalement et Autre raison (Positionnement réajusté) */
+/* Styles du sélecteur de signalement et Autre raison (Maintenant positionnés par rapport au #bottomLayout) */
 #reportTarget, #otherReasonContainer {
-    position: absolute;
-    bottom: 230px; /* Doit être au-dessus de la zone de contrôle */
+    /* Positionnement fixe par rapport au viewport pour flotter */
+    position: fixed; 
+    bottom: 120px; /* Au-dessus de la zone de contrôle */
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
@@ -167,7 +181,7 @@ body {
     z-index: 1000;
 }
 #otherReasonContainer {
-     bottom: 250px; 
+     bottom: 140px; 
      border: 2px solid #3498db;
      border-radius: 8px;
      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
@@ -201,17 +215,23 @@ body {
 
 /* Média Queries pour la réactivité */
 @media (max-width: 600px) {
-    #localVideo {
-        width: 120px;
-        height: 90px;
-        bottom: 220px; /* Maintenir la distance des contrôles sur mobile */
-        right: 8px;
+    /* Sur mobile, on empile les contrôles et la cam locale */
+    #bottomLayout {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 0;
+    }
+
+    #controls {
+        flex-basis: 100%;
+        max-width: 100%;
+        align-items: center;
+        padding-left: 0;
+        padding-right: 0;
     }
     
     .control-row {
-        max-width: 100%;
-        margin-left: 5px; 
-        margin-right: 5px;
+        width: 90%; 
         justify-content: space-between; 
     }
     
@@ -220,7 +240,15 @@ body {
         font-size: 0.8em;
     }
     
+    #localVideoContainer {
+        flex-basis: 100%;
+        width: 100%;
+        justify-content: center; /* Centrer la petite cam sur mobile */
+        padding: 10px 0 0 0;
+    }
+    
     #reportTarget, #otherReasonContainer {
-        bottom: 220px; 
+        /* Positionnement réajusté pour mobile si empilement */
+        bottom: 150px; 
     }
 }
