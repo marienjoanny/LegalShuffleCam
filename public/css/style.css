@@ -1,4 +1,4 @@
-/* Fichier: /public/css/style.css - Version 1.9 (Layout V7 - Contrôles Écrasés Cotes-à-Cotes) */
+/* Fichier: /public/css/style.css - Version 1.10 (Layout V8 - Zone Vidéo Rétrecie) */
 
 body {
     margin: 0;
@@ -36,15 +36,16 @@ body {
     position: relative;
     max-width: 100%;
     margin: 0 auto;
-    /* Hauteur minimale ajustée */
-    min-height: calc(100vh - 250px); 
+    /* Hauteur minimale RÉDUITE pour laisser plus d'espace */
+    min-height: calc(100vh - 300px); 
     width: 100%;
 }
 
 #remoteVideo {
     width: 100%;
     height: 100%; 
-    max-height: calc(100vh - 250px);
+    /* Hauteur maximale RÉDUITE */
+    max-height: calc(100vh - 300px);
     object-fit: contain;
     border-radius: 8px;
     background-color: #000;
@@ -228,15 +229,23 @@ body {
 
 /* Média Queries pour la réactivité (Ajustement forcé) */
 @media (max-width: 600px) {
-    /* On garde le flex-wrap: nowrap; pour forcer l'alignement */
+    
+    /* TRÈS IMPORTANT : Nouvelle hauteur réduite sur mobile */
+    #remoteVideoContainer {
+        min-height: calc(100vh - 350px); 
+    }
+    #remoteVideo {
+        max-height: calc(100vh - 350px);
+    }
+    
     #bottomLayout {
         padding: 5px; 
     }
 
     #controls {
-        flex-basis: 70%; /* Les contrôles écrasent pour laisser 30% à la cam */
+        flex-basis: 70%; 
         padding: 0 5px 0 5px;
-        min-width: 0; /* Permet l'écrasement */
+        min-width: 0; 
     }
     
     #localVideoContainer {
@@ -245,13 +254,13 @@ body {
     }
     
     .control-row {
-        gap: 3px; /* Encore moins d'espace entre les boutons */
+        gap: 3px; 
         margin-bottom: 3px; 
     }
     
     .control-button, .control-select {
         padding: 5px 3px; 
-        font-size: 0.7em; /* Taille de police minimale */
+        font-size: 0.7em; 
     }
     
     #localVideo {
@@ -261,6 +270,6 @@ body {
     }
     
     #reportTarget, #otherReasonContainer {
-        bottom: 100px; /* Remonter un peu si l'espace est réduit */
+        bottom: 100px; 
     }
 }
