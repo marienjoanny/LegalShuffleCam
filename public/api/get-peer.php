@@ -1,56 +1,51 @@
 <?php
-// Désactiver l'affichage des erreurs pour éviter de corrompre la réponse JSON
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
-
-// S'assurer que le Content-Type est JSON
+// /public/api/get-peer.php
+/**
+ * Récupère les informations détaillées (IP, SessionId, Timestamp) pour un PeerID donné.
+ * Principalement utilisé par les outils d'administration ou les scripts côté serveur.
+ */
 header('Content-Type: application/json');
 
-$callerId = $_GET['callerId'] ?? null;
-$file = '/tmp/peers.json';
+// Inclure la constante PEER_IP_ANNUAIRE
+require_once __DIR__ . '/log_activity.php';
 
-// --- Fonction utilitaire pour renvoyer le JSON et quitter ---
-function jsonResponse($data) {
-    echo json_encode($data);
+// --- Récupération des données ---
+$peerId = $_GET['peerId'] ?? null;
+
+if (!$peerId) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Missing peerId']);
     exit;
 }
 
-// 1. Lire les peers, ou initialiser un tableau vide.
-$peers = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+$annuairePath = PEER_IP_ANNUAIRE;
+$peersData = [];
 
-if ($peers === null) {
-    // Si la lecture ou le décodage du JSON a échoué (fichier corrompu)
-    $peers = [];
+// ----------------------------------------------------
+// 1. Lecture de l'annuaire IP
+// ----------------------------------------------------
+if (file_exists($annuairePath)) {
+    $content = @file_get_contents($annuairePath);
+    if ($content !== false) {
+        $decoded = json_decode($content, true);
+        if (is_array($decoded)) {
+            $peersData = $decoded;
+        }
+    }
 }
 
-$now = time();
-
-// 2. CORRECTION: Filtrer en utilisant la clé 'ts' dans le tableau associatif
-// pour correspondre au format IP/TS utilisé par register-peer.php.
-$peers = array_filter($peers, function($peerData) use ($now) {
-    // Vérifie si la clé 'ts' existe et si le timestamp est actif (< 600s)
-    return isset($peerData['ts']) && ($now - $peerData['ts'] < 600);
-});
-
-// 3. Sauvegarder l'état nettoyé de l'annuaire.
-// Si l'écriture échoue, on continue mais on ne renvoie pas d'erreur HTML.
-@file_put_contents($file, json_encode($peers));
-
-// 4. Déterminer les pairs disponibles
-$available = array_keys($peers);
-
-// Filtrer pour exclure l'appelant lui-même
-$available = array_filter($available, fn($id) => $id !== $callerId);
-
-// 5. Gérer le cas sans interlocuteur
-if (empty($available)) {
-  jsonResponse(['partnerId' => null, 'message' => 'No available peer']);
+// ----------------------------------------------------
+// 2. Vérification et Réponse
+// ----------------------------------------------------
+if (isset($peersData[$peerId])) {
+    // Le pair est trouvé, inclut l'ID dans la réponse
+    $response = array_merge(['status' => 'found', 'peerId' => $peerId], $peersData[$peerId]);
+    echo json_encode($response);
+} else {
+    // Pair non trouvé
+    http_response_code(404);
+    echo json_encode(['status' => 'not_found', 'peerId' => $peerId, 'message' => 'Peer ID not found in temporary annuaire.']);
 }
 
-// 6. Sélectionner un ID aléatoire et répondre
-$partnerId = $available[array_rand($available)];
-jsonResponse(['partnerId' => $partnerId]);
-
-// En cas de sortie inattendue, ne rien envoyer après le JSON
+// Note: Pas de logActivity ici, c'est une opération de lecture
 ?>
