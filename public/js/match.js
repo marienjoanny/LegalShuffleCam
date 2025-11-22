@@ -16,8 +16,82 @@ showTopbarLog("✅ Module match.js chargé.");
 let peer = null;
 let conn = null;
 let currentCall = null; 
-window.currentPartnerId = null; // 🚨 NOUVEAU : ID du partenaire actif
+window.currentPartnerId = null; // ID du partenaire actif
 window.myPeerId = null; // S'assurer que l'ID local est global
+window.mySessionId = crypto.randomUUID(); // Nouvelle variable pour le Session ID
+
+// --- Fonctions d'Utilitaires Backend ---
+
+/**
+ * Envoie une requête POST/GET générique au backend.
+ * @param {string} endpoint - L'endpoint de l'API (ex: 'log-handler.php').
+ * @param {Object} data - Les données à envoyer.
+ */
+async function sendToBackend(endpoint, data = {}, method = 'GET') {
+    const url = `${window.location.origin}/api/${endpoint}`;
+    const fullData = { 
+        callerId: window.myPeerId || 'NO_PEER_ID',
+        sessionId: window.mySessionId,
+        ...data 
+    };
+
+    try {
+        let response;
+        if (method === 'POST') {
+            const formData = new URLSearchParams();
+            for (const key in fullData) { formData.append(key, fullData[key]); }
+
+            response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+        } else { // GET
+             const queryString = new URLSearchParams(fullData).toString();
+             response = await fetch(`${url}?${queryString}`);
+        }
+
+        if (!response.ok) {
+            console.error(`Backend Error on ${endpoint}:`, response.status, await response.text());
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Fetch Error on ${endpoint}:`, error);
+        return { status: 'error', message: 'Network or server issue.' };
+    }
+}
+
+/**
+ * Enregistre un événement dans le log général (utilisant log-handler.php).
+ */
+function logActivity(type, message, partnerId = null) {
+    sendToBackend('log-handler.php', {
+        type: type,
+        logMessage: message, // Utilise logMessage pour correspondre au backend
+        partnerId: partnerId || window.currentPartnerId || 'N/A',
+    }, 'POST');
+}
+
+/**
+ * Signale la déconnexion au serveur (utilisant unregister-peer.php).
+ */
+function unregisterPeer(reason = 'Déconnexion navigateur') {
+    logActivity('PEER_UNREGISTER', `Déconnexion: ${reason}`);
+    sendToBackend('unregister-peer.php', { 
+        peerId: window.myPeerId, 
+        reason: reason 
+    }, 'POST');
+}
+
+/**
+ * Envoie un ping régulier pour maintenir l'entrée IP fraîche (utilisant ping-peer.php).
+ */
+function sendPing() {
+    if (window.myPeerId) {
+        sendToBackend('ping-peer.php', { peerId: window.myPeerId }, 'POST');
+    }
+}
+
 
 // ----------------------------------------------------------------------
 // Fonctions d'Appel (Réutilisables par Shuffle et Direct)
@@ -25,6 +99,7 @@ window.myPeerId = null; // S'assurer que l'ID local est global
 
 function closeCurrentCall() {
     if (currentCall) {
+        logActivity('CALL_CLOSE', `Appel fermé avec ${window.currentPartnerId}.`);
         currentCall.close();
         currentCall = null;
     }
@@ -43,7 +118,9 @@ function setupOutgoingCall(partnerId, stream) {
     currentCall = call; 
     window.currentPartnerId = partnerId; // 🚨 Mettre à jour l'ID du partenaire
     
-    // 🔔 AJOUT 1: Mettre à jour l'historique des partenaires dès l'appel sortant
+    // 🔔 LOGGING: Début de l'appel sortant
+    logActivity('CALL_OUTGOING', `Tentative d'appel vers ${partnerId}`);
+
     if (window.updateLastPeers) {
         window.updateLastPeers(partnerId);
     }
@@ -52,11 +129,14 @@ function setupOutgoingCall(partnerId, stream) {
         const remoteVideo = document.getElementById("remoteVideo");
         if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
         showTopbarLog(`✅ Appel sortant établi avec ${partnerId}`);
+        // 🔔 LOGGING: Flux reçu
+        logActivity('STREAM_RECEIVE', 'Flux distant reçu.', partnerId);
     });
     
-    call.on("close", closeCurrentCall); // Utiliser la fonction de nettoyage
+    call.on("close", closeCurrentCall); 
     call.on("error", err => {
         console.error("❌ Appel sortant erreur:", err);
+        logActivity('CALL_ERROR', `Erreur appel sortant: ${err.message}`, partnerId);
         closeCurrentCall();
     });
 
@@ -64,10 +144,20 @@ function setupOutgoingCall(partnerId, stream) {
     const c = peer.connect(partnerId);
     c.on("open", () => {
         c.send({ hello: "👋 depuis " + window.myPeerId });
+        logActivity('DATA_OPEN', 'Canal de données établi.', partnerId);
     });
     conn = c; 
 }
 
+// Intervalle de Ping Global
+let pingInterval = null;
+
+function startPingInterval() {
+    if (pingInterval) clearInterval(pingInterval);
+    sendPing(); // Envoi immédiat
+    pingInterval = setInterval(sendPing, 30000); // Toutes les 30 secondes
+    console.log("Ping interval started (30s).");
+}
 
 // Initialisation du stream local et de PeerJS. 
 async function initLocalStreamAndPeer() {
@@ -84,9 +174,11 @@ async function initLocalStreamAndPeer() {
             const btnNext = document.getElementById("btnNext");
             if (btnNext) { btnNext.disabled = false; }
         }
+        logActivity('MEDIA_ACCESS', 'Accès caméra/micro OK.');
         showTopbarLog("✅ Média capturé. En attente de l'ID Peer.");
     } catch (err) {
         console.error("❌ Impossible d'obtenir le flux média:", err);
+        logActivity('MEDIA_ERROR', `Échec d'accès média: ${err.name}`);
         showTopbarLog("❌ ÉCHEC CRITIQUE: Accès Média Refusé.");
         throw new Error("Local Stream Failed"); 
     }
@@ -102,25 +194,28 @@ async function initLocalStreamAndPeer() {
         
         peer.on("open", id => {
           window.myPeerId = id;
-          // Utiliser un fetch asynchrone pour ne pas bloquer
-          fetch(`/api/register-peer.php?peerId=${id}`).catch(err => console.error("Register Peer Failed:", err)); 
+          // 🔔 ENREGISTREMENT INITIAL + START PING
+          sendToBackend('register-peer.php', { peerId: id }, 'POST').catch(err => console.error("Register Peer Failed:", err)); 
           sessionStorage.setItem("peerId", id);
+          startPingInterval(); // Démarrer le ping
+          logActivity('PEER_ONLINE', `PeerID: ${id}`);
           showTopbarLog(`🟢 Connecté : ${id}`);
-          resolve(); // ID prêt !
+          resolve(); 
         });
         
         // 3. Gestion centralisée des Appels Entrants (Callee)
         peer.on("call", call => {
             showTopbarLog(`📞 Appel entrant de ${call.peer}.`);
+            // 🔔 LOGGING: Appel entrant
+            logActivity('CALL_INCOMING', `Appel reçu de ${call.peer}.`, call.peer);
             
             if (currentCall) {
                 closeCurrentCall();
                 showTopbarLog(`🔁 Fermeture de l'ancien appel avant de répondre.`);
             }
             currentCall = call;
-            window.currentPartnerId = call.peer; // 🚨 Mettre à jour l'ID du partenaire
+            window.currentPartnerId = call.peer; 
 
-            // 🔔 AJOUT 2: Mettre à jour l'historique des partenaires dès l'appel entrant
             if (window.updateLastPeers) {
                 window.updateLastPeers(call.peer);
             }
@@ -131,11 +226,14 @@ async function initLocalStreamAndPeer() {
                 const remoteVideo = document.getElementById("remoteVideo");
                 if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
                 showTopbarLog(`✅ Appel entrant établi avec ${call.peer}.`);
+                // 🔔 LOGGING: Flux reçu
+                logActivity('STREAM_RECEIVE', 'Flux distant reçu.', call.peer);
             });
             
             call.on("close", closeCurrentCall);
              call.on("error", err => {
                 console.error("❌ Appel entrant erreur:", err);
+                logActivity('CALL_ERROR', `Erreur appel entrant: ${err.message}`, call.peer);
                 closeCurrentCall();
             });
         });
@@ -148,26 +246,29 @@ async function initLocalStreamAndPeer() {
             });
         });
 
-        // Gestion des erreurs
+        // Gestion des erreurs et déconnexions PeerJS
         peer.on("error", err => {
           console.error("❌ PeerJS", err);
+          logActivity('PEER_ERROR', `Erreur PeerJS: ${err.type}`);
           showTopbarLog(`❌ Erreur PeerJS : ${err.type}`);
         });
 
         peer.on("disconnected", () => {
+          logActivity('PEER_DISCONNECTED', 'Déconnecté du serveur PeerJS. Tentative de reconnexion.');
           showTopbarLog("⚠ Déconnecté du serveur PeerJS");
-          // Tentative de reconnexion auto
           if (peer && !peer.destroyed) {
             peer.reconnect();
           }
         });
         
         peer.on("close", () => {
+          // Ceci est l'événement final. On s'unregister.
+          unregisterPeer('Fermeture connexion PeerJS');
           showTopbarLog("🔒 Connexion PeerJS fermée");
         });
     }); // Fin de new Promise
 
-    // --- LOGIQUE D'APPEL DIRECT : EXÉCUTÉE SEULEMENT SI LE STREAM ET L'ID SONT PRÊTS ---
+    // --- LOGIQUE D'APPEL DIRECT ---
     const urlParams = new URLSearchParams(window.location.search);
     const partnerId = urlParams.get("partnerId");
 
@@ -176,6 +277,12 @@ async function initLocalStreamAndPeer() {
         setupOutgoingCall(partnerId, window.localStream);
     }
     // ------------------------------------------------------------------------------------
+
+    // 🔔 Gérer la fermeture du navigateur/onglet (pour l'unregister)
+    window.addEventListener('beforeunload', () => {
+        // Envoi synchrone de la déconnexion si possible, mais le serveur de ping gère le timeout.
+        unregisterPeer('Fermeture navigateur');
+    });
 }
 
 // ----------------------------------------------------------------------
@@ -205,18 +312,33 @@ export function nextMatch() {
       conn = null;
   }
   
-  fetch(`/api/get-peer.php?callerId=${window.myPeerId}`)
+  // 🔔 Utilisation de la nouvelle API de liste/shuffle pour le match
+  // Nous allons utiliser 'list-peers.php' et faire le shuffle côté client 
+  // pour cette démo, ou dépendre d'une API spécifique de shuffle si elle existe.
+  // Dans le code original, il semble y avoir un appel à 'get-peer.php'
+  // qui est étrange pour un shuffle. Je le remplace par 'list-peers.php'.
+  
+  // L'ancienne ligne: fetch(`/api/get-peer.php?callerId=${window.myPeerId}`)
+  
+  fetch(`${window.location.origin}/api/list-peers.php`)
     .then(r => r.json())
-    .then(data => {
-      const partnerId = data.partnerId;
-      if (partnerId) {
-        showTopbarLog(`🔗 Tentative d'appel vers ${partnerId}`);
+    .then(peerList => {
+      // 1. Filtrer les pairs pour exclure soi-même et les pairs trop vieux/invalides (déjà géré par la purge côté serveur, mais on filtre le local)
+      const availablePeers = peerList.filter(p => p.peerId !== window.myPeerId);
+      
+      if (availablePeers.length > 0) {
+        // 2. Sélection aléatoire d'un pair (implémentation client du shuffle)
+        const randomIndex = Math.floor(Math.random() * availablePeers.length);
+        const partnerId = availablePeers[randomIndex].peerId;
+        
+        showTopbarLog(`🔗 Tentative d'appel vers ${partnerId} (Trouvé via Annuaire: ${availablePeers.length} actifs)`);
         setupOutgoingCall(partnerId, window.localStream);
       } else {
-        showTopbarLog("❌ Aucun interlocuteur disponible (Annuaire vide ou auto-appel)");
+        showTopbarLog("❌ Aucun interlocuteur disponible (Annuaire vide ou vous êtes le seul)");
       }
     })
     .catch(err => {
+      logActivity('SHUFFLE_ERROR', `Erreur recherche partenaire: ${err.message}`);
       showTopbarLog(`❌ Erreur Réseau/Annuaire : ${err.message}`);
       console.error("[MATCH]", err);
     });
