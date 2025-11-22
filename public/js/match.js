@@ -1,5 +1,5 @@
 // LOG: Module /js/match.js chargé. (Validation obligatoire)
-// Import de la logique de détection de visage (Assurez-vous que face-visible.js est chargé avant ou via import map)
+// Import de la logique de détection de visage (Assurez-vous que face-visible.js est chargé)
 import { initFaceDetection, stopFaceDetection } from '/js/face-visible.js';
 
 function showTopbarLog(message) {
@@ -32,9 +32,13 @@ window.mySessionId = crypto.randomUUID(); // Nouvelle variable pour le Session I
  */
 async function sendToBackend(endpoint, data = {}, method = 'GET') {
     const url = `${window.location.origin}/api/${endpoint}`;
+    // window.currentSessionId est initialisé globalement dans index-real.php, mais si match.js l'initialise avant l'UI,
+    // on s'assure qu'il est synchronisé ou défini ici.
+    window.currentSessionId = window.currentSessionId || window.mySessionId; 
+    
     const fullData = { 
         callerId: window.myPeerId || 'NO_PEER_ID',
-        sessionId: window.mySessionId,
+        sessionId: window.currentSessionId,
         ...data 
     };
 
@@ -124,7 +128,7 @@ function setupOutgoingCall(partnerId, stream) {
     // 🔔 LOGGING: Début de l'appel sortant
     logActivity('CALL_OUTGOING', `Tentative d'appel vers ${partnerId}`);
 
-    if (window.updateLastPeers) {
+    if (typeof window.updateLastPeers === 'function') {
         window.updateLastPeers(partnerId);
     }
 
@@ -206,7 +210,9 @@ async function initLocalStreamAndPeer() {
         
         peer.on("open", id => {
           window.myPeerId = id;
-          window.updatePeerIdDisplay(id); // Afficher l'ID dans l'UI
+          if (typeof window.updatePeerIdDisplay === 'function') {
+            window.updatePeerIdDisplay(id); // Afficher l'ID dans l'UI
+          }
           // 🔔 ENREGISTREMENT INITIAL + START PING
           sendToBackend('register-peer.php', { peerId: id }, 'POST').catch(err => console.error("Register Peer Failed:", err)); 
           sessionStorage.setItem("peerId", id);
@@ -228,7 +234,7 @@ async function initLocalStreamAndPeer() {
             window.currentCall = call;
             window.currentPartnerId = call.peer; 
 
-            if (window.updateLastPeers) {
+            if (typeof window.updateLastPeers === 'function') {
                 window.updateLastPeers(call.peer);
             }
 
