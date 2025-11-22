@@ -8,11 +8,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LegalShuffleCam - Chat Vidéo Aléatoire Sécurisé</title>
-    <link rel="stylesheet" href="/css/style.css?v=20251121">
+    <link rel="stylesheet" href="/css/style.css?v=20251122">
     <style>
-        /* Styles spécifiques pour le sélecteur de signalement */
+        /* --- Styles Spécifiques aux Modales de Consentement --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Caché par défaut */
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* Doit être au-dessus de tout le reste */
+        }
+        .modal-content {
+            background-color: #2c3e50;
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+            width: 450px;
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            color: #ecf0f1;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+        }
+        .modal-buttons button {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .modal-buttons .btn-yes {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .modal-buttons .btn-yes:hover {
+            background-color: #27ae60;
+        }
+        .modal-buttons .btn-no {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .modal-buttons .btn-no:hover {
+            background-color: #c0392b;
+        }
+
+        /* Styles spécifiques pour le sélecteur de signalement (inchangé) */
         #reportTarget {
-            /* Positionnement fixé dans le CSS principal */
             padding: 10px;
             background-color: #2c3e50;
             color: white;
@@ -20,18 +72,16 @@
             border-radius: 5px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 1000;
-            display: none; /* Caché par défaut */
+            display: none;
             font-size: 1em; 
             min-height: 150px;
-            /* Rendre le select plus facile à interagir sur mobile/desktop */
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             cursor: pointer;
             text-align: left; 
-            /* Positionnement spécifique pour le sélecteur */
             position: fixed; 
-            bottom: 200px; /* À ajuster selon le CSS réel */
+            bottom: 200px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -40,10 +90,7 @@
         #reportTarget.visible {
             display: block;
         }
-
-        /* Champ de texte pour la raison "Autre" */
         #otherReasonContainer {
-            /* Positionnement fixé dans le CSS principal */
             padding: 15px; 
             background-color: #2c3e50;
             border: 2px solid #3498db; 
@@ -52,9 +99,8 @@
             z-index: 1005; 
             display: none; 
             color: #ecf0f1;
-            /* Positionnement spécifique pour le conteneur "Autre" */
             position: fixed; 
-            bottom: 200px; /* Doit être au-dessus de tout */
+            bottom: 200px; 
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -84,21 +130,6 @@
         }
         #submitOtherReason:hover {
             background-color: #2ecc71;
-        }
-
-        /* Style pour les options */
-        #reportTarget option {
-            padding: 8px;
-            border-bottom: 1px solid #34495e;
-            background-color: #2c3e50;
-            color: white;
-            cursor: pointer;
-            white-space: nowrap; 
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        #reportTarget option:hover {
-            background-color: #34495e;
         }
     </style>
 </head>
@@ -164,6 +195,29 @@
         </div>
     </div>
     
+    <!-- MODAL DE CONFIRMATION LOCALE (Étape 1 : Confirmation par l'utilisateur) -->
+    <div id="localConsentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Je consens à désactiver le blocage visage pour un moment spécial avec un inconnu.</h3>
+            <div class="modal-buttons">
+                <button class="btn-yes" id="localConsentYes">Oui</button>
+                <button class="btn-no" id="localConsentNo">Non</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE REQUÊTE/RÉPONSE DISTANTE (Étape 2 : Reçu par le partenaire) -->
+    <div id="remoteConsentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Consentez-vous à désactiver le blocage visage pour un moment spécial avec un inconnu ?</h3>
+            <p id="consentPartnerMessage" style="color:#3498db;"></p>
+            <div class="modal-buttons">
+                <button class="btn-yes" id="remoteConsentYes">Oui</button>
+                <button class="btn-no" id="remoteConsentNo">Non</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SÉLECTEUR DE SIGNALEMENT (Flottant au-dessus de tout) -->
     <select id="reportTarget" size="5"></select>
 
@@ -270,6 +324,9 @@
         // Définir les variables globales pour la gestion du pair (mis à jour par match.js)
         window.currentPartnerId = null; 
         window.currentSessionId = crypto.randomUUID(); // Initialiser l'ID de session ici
+        
+        // État de consentement mutuel global
+        window.mutualConsentGiven = false; 
 
         
         document.addEventListener('DOMContentLoaded', () => {
