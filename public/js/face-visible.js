@@ -14,6 +14,7 @@ window.faceVisible = false;
  * Fonction utilitaire pour envoyer un log à la barre d'état.
  */
 function showTopbarLog(message, color = '#2980b9') {
+    // S'assurer que la fonction globale showTopbar existe (définie dans index-real.php)
     if (typeof showTopbar === 'function') {
         showTopbar(`[FACE] ${message}`, color);
     } else {
@@ -43,12 +44,12 @@ export function stopFaceDetection() {
             lastDetectionTimer = null;
         }
 
-        // Mettre à jour l'UI pour indiquer l'arrêt
+        // Mettre à jour l'UI pour indiquer l'arrêt (le visage n'est plus "activement" visible)
         window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
             detail: { isVisible: false }
         }));
 
-        showTopbarLog("Détection faciale arrêtée.", "#f39c12");
+        showTopbarLog("Détection faciale arrêtée par consentement.", "#10b981");
     }
 }
 
@@ -95,7 +96,6 @@ export function initFaceDetection(video, options = {}) {
             window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
                 detail: { isVisible: window.faceVisible }
             }));
-            // showTopbarLog sera appelé par l'écouteur d'événement pour éviter la redondance
         }
         
         // Relancer la vérification si le tracker est toujours actif
@@ -160,13 +160,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mise à jour de la bannière d'avertissement rouge
         const warningIpSpan = document.querySelector('.warning-ip span');
         if (warningIpSpan) {
-             warningIpSpan.innerHTML = isVisible
-                ? '⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L\'enregistrement est illégal !!'
-                : '✅ Visage masqué/perdu. Votre IP est loguée. (L\'enregistrement est illégal !)';
-            warningIpSpan.style.color = isVisible ? 'red' : '#2ecc71';
+            // Si la détection est arrêtée (par consentement), on ne met plus en rouge/vert, on montre un état neutre
+            // L'état 'faceVisible: false' est envoyé par stopFaceDetection, il faut donc vérifier si le consentement est donné
+            const isConsented = window.mutualConsentGiven;
+            
+            if (isConsented) {
+                // Si consentement mutuel donné, afficher l'état "OK" permanent
+                warningIpSpan.innerHTML = '🟢 CONDUITE SANS SURVEILLANCE. Consentement mutuel actif.';
+                warningIpSpan.style.color = '#10b981';
+            } else {
+                // Logique de détection active
+                warningIpSpan.innerHTML = isVisible
+                    ? '⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L\'enregistrement est illégal !!'
+                    : '✅ Visage masqué/perdu. Votre IP est loguée. (L\'enregistrement est illégal !)';
+                warningIpSpan.style.color = isVisible ? 'red' : '#2ecc71';
+            }
         }
         
         // Mise à jour de la TopBar
-        showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? '#2ecc71' : '#e74c3c');
+        // Si le consentement est donné, on n'affiche plus les logs de détection
+        if (!window.mutualConsentGiven) {
+            showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? '#2ecc71' : '#e74c3c');
+        }
     });
 });
