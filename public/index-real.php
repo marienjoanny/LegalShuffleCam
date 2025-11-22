@@ -23,11 +23,19 @@
             display: none; /* Caché par défaut */
             font-size: 1em; 
             min-height: 150px;
+            /* Rendre le select plus facile à interagir sur mobile/desktop */
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             cursor: pointer;
             text-align: left; 
+            /* Positionnement spécifique pour le sélecteur */
+            position: fixed; 
+            bottom: 200px; /* À ajuster selon le CSS réel */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
         }
         #reportTarget.visible {
             display: block;
@@ -44,6 +52,13 @@
             z-index: 1005; 
             display: none; 
             color: #ecf0f1;
+            /* Positionnement spécifique pour le conteneur "Autre" */
+            position: fixed; 
+            bottom: 200px; /* Doit être au-dessus de tout */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
         }
         #otherReasonInput {
             width: 100%;
@@ -108,6 +123,7 @@
         <span style="color: red; font-size: 14px; font-weight: bold;">
             ⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L'enregistrement est illégal !!
         </span>
+        <span id="my-peer-id" style="color: #ccc; font-size: 10px; margin-left: 10px;">ID Peer: En attente...</span>
     </p>
 
     <!-- ZONE INFÉRIEURE : CONTRÔLES (GAUCHE) / CAM LOCALE (DROITE) -->
@@ -129,7 +145,7 @@
             <!-- Ligne 3: Caméra et Son -->
             <div class="control-row">
                 <select class="control-select yellow" id="cameraSelect">
-                    <option value="camera 1, facing front">camera 1, facing front</option>
+                    <option value="">Chargement...</option>
                 </select>
                 <button class="control-button small-icon" id="muteButton">🔇</button>
             </div>
@@ -179,109 +195,32 @@
         </p>
     </div>
 
+    <!-- Librairie PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <!-- SCRIPT DE BASE (gestion des imports de match.js et autres) -->
-    <script type="module">
-        // Le code JS ici est le même que précédemment et gère la logique PeerJS, la caméra, 
-        // le signalement et les interactions. Il n'est pas modifié car le changement est purement HTML/CSS.
-
-        import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
-        import { listCameras, startCamera } from "/js/camera.js"; 
-
-        // Rendre nextMatch et showTopbar globaux pour l'usage dans le script non-module (ou pour d'autres modules)
-        window.nextMatch = nextMatch;
-        window.showTopbar = (message, color = '#2980b9') => {
-            const topBar = document.getElementById("topBar");
-            topBar.textContent = message;
-            topBar.style.backgroundColor = color;
+    <!-- FONCTIONS GLOBALES POUR LE MATCHING/SIGNALEMENT -->
+    <script>
+        // Fonction globale pour mettre à jour l'ID Peer dans l'interface
+        window.updatePeerIdDisplay = (id) => {
+            const el = document.getElementById('my-peer-id');
+            if (el) {
+                el.textContent = `ID Peer: ${id.substring(0, 10)}...`;
+                // On peut aussi mettre à jour l'ID complet pour le debug si on voulait
+            }
+            window.myPeerId = id;
+            // On s'assure que le bouton de report a aussi l'ID pour le cas où il faut l'inclure dans les logs
+            document.getElementById('btnReport').setAttribute('data-session-id', window.currentSessionId || `Manual_${Date.now()}`);
         };
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialisation de la caméra/liste
-            listCameras(); 
-            const select = document.getElementById('cameraSelect');
-            select.addEventListener('change', () => {
-                const deviceId = select.value;
-                if (deviceId) {
-                    startCamera(deviceId);
-                }
-            });
 
-            // Initialisation du matching PeerJS
-            initMatch();
-            bindMatchEvents();
-        });
-
-        // Définir les variables globales pour la gestion du pair (mis à jour par match.js)
-        window.currentPartnerId = null; 
-        window.myPeerId = null; 
-        window.currentSessionId = null; 
-    </script>
-
-    <!-- SCRIPT DE SÉCURITÉ ET DISSUASION (Inchangé) -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const remoteVideo = document.getElementById('remoteVideo');
-            const videoObscuredMessage = document.getElementById('videoObscuredMessage');
-
-            /**
-             * Mesures de dissuasion : Bloque le clic droit (téléchargement facile) et l'inspection de code.
-             * Note : C'est seulement de la dissuasion, cela ne bloque pas un utilisateur déterminé.
-             */
-            document.addEventListener('contextmenu', (e) => {
-                // Bloque le clic droit (pour empêcher l'enregistrement/téléchargement facile de la vidéo)
-                e.preventDefault();
-            });
-
-            document.addEventListener('keydown', (e) => {
-                // Bloque les raccourcis clavier F12 (outils dev) et Ctrl/Cmd + Shift + I
-                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
-                    console.log("Accès aux outils de développement bloqué.");
-                    e.preventDefault();
-                }
-            });
-
-            /**
-             * API de Visibilité du Document : Masque la vidéo si l'utilisateur change d'onglet/fenêtre.
-             * Empêche l'enregistrement vidéo pendant que l'utilisateur travaille dans un autre onglet.
-             */
-            document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === 'hidden') {
-                    // L'utilisateur est sur un autre onglet/fenêtre. Masquer la vidéo distante.
-                    remoteVideo.style.opacity = '0';
-                    remoteVideo.style.pointerEvents = 'none'; // Rendre ininteractable
-                    videoObscuredMessage.style.display = 'block';
-                    console.log("Vidéo distante masquée (changement d'onglet).");
-                } else {
-                    // L'utilisateur revient sur l'onglet. Rétablir la vidéo.
-                    remoteVideo.style.opacity = '1';
-                    remoteVideo.style.pointerEvents = 'auto';
-                    videoObscuredMessage.style.display = 'none';
-                    console.log("Vidéo distante rétablie.");
-                }
-            });
-        });
-    </script>
-    <!-- FIN DU SCRIPT DE SÉCURITÉ ET DISSUASION -->
-
-    <!-- SCRIPT DE SIGNALEMENT (Contenu de report.js intégré ici) -->
-    <script>
-        
         const MAX_HISTORY = 5;
-        // La gestion de l'historique doit se faire dans le script qui gère les connexions (match.js)
-        // Mais nous laissons ici l'accès et la fonction utilitaire si elle est appelée d'ailleurs.
         window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
-
+        
         /**
-         * Met à jour l'historique des interlocuteurs récents.
-         * Fonction utilitaire, normalement appelée après une connexion ou déconnexion.
+         * Met à jour l'historique des interlocuteurs récents (stocké dans localStorage).
+         * Appelée par match.js pour synchroniser l'historique.
          */
-        function updateLastPeers(newPeerId) {
-            if (!newPeerId) return;
-            
-            // Évite de lister l'ID deux fois
-            if (newPeerId === window.myPeerId) return; 
+        window.updateLastPeers = (newPeerId) => {
+            if (!newPeerId || newPeerId === window.myPeerId) return; 
 
             window.lastPeers[newPeerId] = Date.now(); 
 
@@ -295,9 +234,95 @@
             
             window.lastPeers = Object.fromEntries(peerArray);
             localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
-        }
-        window.updateLastPeers = updateLastPeers; // Rendre disponible globalement si match.js en a besoin
+            
+            // Si le menu de signalement est ouvert sur l'étape 1, le reconstruire
+            if (document.getElementById('reportTarget').classList.contains('visible') && typeof window.buildPeerOptions === 'function') {
+                window.buildPeerOptions();
+            }
+        };
+        
+        // La fonction window.buildPeerOptions est définie plus bas dans le script de signalement
+    </script>
 
+
+    <!-- SCRIPT DE BASE (gestion des imports de match.js et autres) -->
+    <script type="module">
+        import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
+        import { listCameras, startCamera } from "/js/camera.js"; 
+
+        // Rendre nextMatch global
+        window.nextMatch = nextMatch;
+        
+        // Définition de showTopbar (utilisée par tous les modules)
+        window.showTopbar = (message, color = '#2980b9') => {
+            const topBar = document.getElementById("topBar");
+            if (topBar) {
+                topBar.textContent = message;
+                topBar.style.backgroundColor = color;
+            }
+        };
+
+        // Définir les variables globales pour la gestion du pair (mis à jour par match.js)
+        window.currentPartnerId = null; 
+        window.currentSessionId = crypto.randomUUID(); // Initialiser l'ID de session ici
+
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialisation de la caméra/liste (avant initMatch pour que le bon deviceId soit prêt)
+            listCameras(); 
+            const select = document.getElementById('cameraSelect');
+            select.addEventListener('change', () => {
+                const deviceId = select.value;
+                if (deviceId) {
+                    startCamera(deviceId);
+                }
+            });
+
+            // 2. Initialisation du matching PeerJS (obtient le flux média)
+            initMatch();
+            
+            // 3. Lier les événements (ex: bouton "Suivant")
+            bindMatchEvents();
+        });
+    </script>
+
+    <!-- SCRIPT DE SÉCURITÉ ET DISSUASION -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const remoteVideo = document.getElementById('remoteVideo');
+            const videoObscuredMessage = document.getElementById('videoObscuredMessage');
+
+            // --- Mesures de Dissuasion ---
+            document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
+                    e.preventDefault();
+                }
+            });
+
+            /**
+             * API de Visibilité du Document : Masque la vidéo si l'utilisateur change d'onglet/fenêtre.
+             */
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === 'hidden') {
+                    remoteVideo.style.opacity = '0';
+                    remoteVideo.style.pointerEvents = 'none'; 
+                    videoObscuredMessage.style.display = 'block';
+                } else {
+                    remoteVideo.style.opacity = '1';
+                    remoteVideo.style.pointerEvents = 'auto';
+                    videoObscuredMessage.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    <!-- FIN DU SCRIPT DE SÉCURITÉ ET DISSUASION -->
+
+    <!-- SCRIPT DE SIGNALEMENT (Contenu de report.js intégré ici) -->
+    <script>
+        
+        // Note: window.lastPeers est défini dans le bloc <script> précédent
+        
         /**
          * Capture une image (snapshot) à partir de l'élément vidéo distant.
          * @returns {string} L'image en Base64 JPEG, ou chaîne vide si échec.
@@ -323,14 +348,10 @@
 
         /**
          * Fonction unifiée pour envoyer le rapport au serveur.
-         * @param {string} partnerId L'ID PeerJS du signalé.
-         * @param {string} reason Le motif de signalement.
-         * @param {string} imageBase64 Capture d'écran en Base64.
          */
         async function sendReport(partnerId, reason, imageBase64) {
             const callerId = window.myPeerId;
-            // Utiliser l'ID de session actuel, ou un fallback
-            const sessionId = window.currentSessionId || `Manual_${Date.now()}`;
+            const sessionId = window.currentSessionId;
 
             if (!callerId || !partnerId) {
                 window.showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
@@ -353,7 +374,6 @@
                     body: formData,
                 });
                 
-                // Gérer les erreurs HTTP de bas niveau (ex: 500, 404)
                 if (!response.ok) {
                      const errorText = `Erreur HTTP ${response.status} lors de l'envoi du rapport.`;
                      throw new Error(errorText);
@@ -396,10 +416,8 @@
             
             // --- Fonction pour construire la liste des interlocuteurs (Étape 1) ---
             function buildPeerOptions() {
-                // Utiliser la dernière version de l'historique
-                const peerHistory = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
-                window.lastPeers = peerHistory; // Synchroniser la globale
-
+                // Utiliser la dernière version de l'historique (window.lastPeers est global)
+                const peerHistory = window.lastPeers; 
                 const peerHistoryCount = Object.keys(peerHistory).length;
                 let optionsHTML = `<option value="" disabled selected>👤 Étape 1 : Choisir l'interlocuteur (${peerHistoryCount} trouvés)</option>`;
 
