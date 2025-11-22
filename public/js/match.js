@@ -1,4 +1,7 @@
 // LOG: Module /js/match.js chargé. (Validation obligatoire)
+// Import de la logique de détection de visage (Assurez-vous que face-visible.js est chargé avant ou via import map)
+import { initFaceDetection, stopFaceDetection } from '/js/face-visible.js';
+
 function showTopbarLog(message) {
     if (typeof showTopbar === 'function') {
         showTopbar(message);
@@ -15,7 +18,7 @@ showTopbarLog("✅ Module match.js chargé.");
 
 let peer = null;
 let conn = null;
-let currentCall = null; 
+window.currentCall = null; // Rendu global pour être accessible dans camera.js
 window.currentPartnerId = null; // ID du partenaire actif
 window.myPeerId = null; // S'assurer que l'ID local est global
 window.mySessionId = crypto.randomUUID(); // Nouvelle variable pour le Session ID
@@ -98,24 +101,24 @@ function sendPing() {
 // ----------------------------------------------------------------------
 
 function closeCurrentCall() {
-    if (currentCall) {
+    if (window.currentCall) {
         logActivity('CALL_CLOSE', `Appel fermé avec ${window.currentPartnerId}.`);
-        currentCall.close();
-        currentCall = null;
+        window.currentCall.close();
+        window.currentCall = null;
     }
     window.currentPartnerId = null; // Nettoyage de l'ID du partenaire
     showTopbarLog("💔 Appel fermé.");
 }
 
 function setupOutgoingCall(partnerId, stream) {
-    if (currentCall) {
+    if (window.currentCall) {
         closeCurrentCall();
         showTopbarLog(`🔁 Fermeture de l'appel précédent avant appel vers ${partnerId}.`);
     }
 
     // 1. Lancer l'appel (Caller)
     const call = peer.call(partnerId, stream);
-    currentCall = call; 
+    window.currentCall = call; 
     window.currentPartnerId = partnerId; // 🚨 Mettre à jour l'ID du partenaire
     
     // 🔔 LOGGING: Début de l'appel sortant
@@ -173,6 +176,11 @@ async function initLocalStreamAndPeer() {
             localVideo.play(); 
             const btnNext = document.getElementById("btnNext");
             if (btnNext) { btnNext.disabled = false; }
+            
+            // 🚨 Démarre la détection de visage sur le flux local
+            if (typeof initFaceDetection === 'function') {
+                initFaceDetection(localVideo);
+            }
         }
         logActivity('MEDIA_ACCESS', 'Accès caméra/micro OK.');
         showTopbarLog("✅ Média capturé. En attente de l'ID Peer.");
@@ -180,6 +188,10 @@ async function initLocalStreamAndPeer() {
         console.error("❌ Impossible d'obtenir le flux média:", err);
         logActivity('MEDIA_ERROR', `Échec d'accès média: ${err.name}`);
         showTopbarLog("❌ ÉCHEC CRITIQUE: Accès Média Refusé.");
+        // 🚨 Arrêter la détection si le flux échoue
+        if (typeof stopFaceDetection === 'function') {
+            stopFaceDetection();
+        }
         throw new Error("Local Stream Failed"); 
     }
 
@@ -194,6 +206,7 @@ async function initLocalStreamAndPeer() {
         
         peer.on("open", id => {
           window.myPeerId = id;
+          window.updatePeerIdDisplay(id); // Afficher l'ID dans l'UI
           // 🔔 ENREGISTREMENT INITIAL + START PING
           sendToBackend('register-peer.php', { peerId: id }, 'POST').catch(err => console.error("Register Peer Failed:", err)); 
           sessionStorage.setItem("peerId", id);
@@ -206,14 +219,13 @@ async function initLocalStreamAndPeer() {
         // 3. Gestion centralisée des Appels Entrants (Callee)
         peer.on("call", call => {
             showTopbarLog(`📞 Appel entrant de ${call.peer}.`);
-            // 🔔 LOGGING: Appel entrant
             logActivity('CALL_INCOMING', `Appel reçu de ${call.peer}.`, call.peer);
             
-            if (currentCall) {
+            if (window.currentCall) {
                 closeCurrentCall();
                 showTopbarLog(`🔁 Fermeture de l'ancien appel avant de répondre.`);
             }
-            currentCall = call;
+            window.currentCall = call;
             window.currentPartnerId = call.peer; 
 
             if (window.updateLastPeers) {
@@ -226,7 +238,6 @@ async function initLocalStreamAndPeer() {
                 const remoteVideo = document.getElementById("remoteVideo");
                 if (remoteVideo) { remoteVideo.srcObject = remoteStream; remoteVideo.play(); }
                 showTopbarLog(`✅ Appel entrant établi avec ${call.peer}.`);
-                // 🔔 LOGGING: Flux reçu
                 logActivity('STREAM_RECEIVE', 'Flux distant reçu.', call.peer);
             });
             
@@ -262,7 +273,6 @@ async function initLocalStreamAndPeer() {
         });
         
         peer.on("close", () => {
-          // Ceci est l'événement final. On s'unregister.
           unregisterPeer('Fermeture connexion PeerJS');
           showTopbarLog("🔒 Connexion PeerJS fermée");
         });
@@ -280,7 +290,6 @@ async function initLocalStreamAndPeer() {
 
     // 🔔 Gérer la fermeture du navigateur/onglet (pour l'unregister)
     window.addEventListener('beforeunload', () => {
-        // Envoi synchrone de la déconnexion si possible, mais le serveur de ping gère le timeout.
         unregisterPeer('Fermeture navigateur');
     });
 }
@@ -304,7 +313,7 @@ export function nextMatch() {
   showTopbarLog("🔄 Recherche d’un interlocuteur...");
 
   // Fermer proprement l'appel précédent avant le shuffle
-  if (currentCall) {
+  if (window.currentCall) {
       closeCurrentCall();
   }
   if (conn) {
@@ -312,22 +321,13 @@ export function nextMatch() {
       conn = null;
   }
   
-  // 🔔 Utilisation de la nouvelle API de liste/shuffle pour le match
-  // Nous allons utiliser 'list-peers.php' et faire le shuffle côté client 
-  // pour cette démo, ou dépendre d'une API spécifique de shuffle si elle existe.
-  // Dans le code original, il semble y avoir un appel à 'get-peer.php'
-  // qui est étrange pour un shuffle. Je le remplace par 'list-peers.php'.
-  
-  // L'ancienne ligne: fetch(`/api/get-peer.php?callerId=${window.myPeerId}`)
-  
   fetch(`${window.location.origin}/api/list-peers.php`)
     .then(r => r.json())
     .then(peerList => {
-      // 1. Filtrer les pairs pour exclure soi-même et les pairs trop vieux/invalides (déjà géré par la purge côté serveur, mais on filtre le local)
+      // 1. Filtrer les pairs pour exclure soi-même
       const availablePeers = peerList.filter(p => p.peerId !== window.myPeerId);
       
       if (availablePeers.length > 0) {
-        // 2. Sélection aléatoire d'un pair (implémentation client du shuffle)
         const randomIndex = Math.floor(Math.random() * availablePeers.length);
         const partnerId = availablePeers[randomIndex].peerId;
         
