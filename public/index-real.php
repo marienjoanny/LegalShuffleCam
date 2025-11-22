@@ -195,8 +195,11 @@
         </p>
     </div>
 
-    <!-- Librairie PeerJS -->
+    <!-- LIBRAIRIES EXTERNES -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Chargement de tracking.js pour la détection faciale (IMPORTANT: DOIT ÊTRE AVANT LES MODULES) -->
+    <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/tracking.js"></script>
+    <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/data/face-min.js"></script>
     
     <!-- FONCTIONS GLOBALES POUR LE MATCHING/SIGNALEMENT -->
     <script>
@@ -249,6 +252,8 @@
     <script type="module">
         import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
         import { listCameras, startCamera } from "/js/camera.js"; 
+        
+        // L'import de /js/face-visible.js est géré dans match.js et camera.js.
 
         // Rendre nextMatch global
         window.nextMatch = nextMatch;
