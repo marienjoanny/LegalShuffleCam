@@ -89,6 +89,7 @@ export async function startCamera(deviceId) {
         const localVideo = document.getElementById("localVideo");
         if (localVideo) { 
             localVideo.srcObject = newStream;
+            localVideo.play();
             // Re-démarrer la détection de visage sur le nouveau flux si le module existe
             // La fonction est attachée au scope global par face-visible.js
             if (typeof initFaceDetection === 'function') {
