@@ -1,91 +1,172 @@
-// LegalShuffleCam • face-visible.js (version optimisée)
+// LegalShuffleCam • face-visible.js (Module ES)
 // Détection faciale avec tracking.js et gestion des événements personnalisés.
 
+// Variable pour maintenir la référence au tracker en cours
+let currentTracker = null;
+let lastDetectionTimer = null;
+let lastDetectionTime = 0;
+let videoElement = null;
+
+// Rendre la variable globale pour que l'UI puisse y réagir si nécessaire
+window.faceVisible = false;
+
 /**
- * Initialise la détection faciale sur un flux vidéo.
+ * Fonction utilitaire pour envoyer un log à la barre d'état.
+ */
+function showTopbarLog(message, color = '#2980b9') {
+    if (typeof showTopbar === 'function') {
+        showTopbar(`[FACE] ${message}`, color);
+    } else {
+        console.log(`[FACE] ${message}`);
+    }
+}
+
+/**
+ * Arrête la détection faciale en cours.
+ */
+export function stopFaceDetection() {
+    if (currentTracker && videoElement) {
+        currentTracker.removeAllListeners('track');
+        // Tentative d'arrêt du tracking sur l'élément vidéo
+        if (typeof tracking.stopTracking === 'function') {
+             tracking.stopTracking(videoElement);
+        } else {
+            console.warn("[FACE] tracking.stopTracking() non disponible. Le tracker pourrait rester actif.");
+        }
+        
+        currentTracker = null;
+        videoElement = null;
+        window.faceVisible = false;
+        
+        if (lastDetectionTimer) {
+            clearTimeout(lastDetectionTimer);
+            lastDetectionTimer = null;
+        }
+
+        // Mettre à jour l'UI pour indiquer l'arrêt
+        window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
+            detail: { isVisible: false }
+        }));
+
+        showTopbarLog("Détection faciale arrêtée.", "#f39c12");
+    }
+}
+
+
+/**
+ * Démarre la détection faciale sur un flux vidéo.
  * @param {HTMLVideoElement} video - Élément vidéo source pour la détection.
  * @param {Object} [options] - Options de configuration.
- * @param {number} [options.detectionTimeout=1500] - Délai (ms) avant de considérer qu'un visage n'est plus détecté.
- * @param {number} [options.initialScale=4] - Échelle initiale du tracker.
- * @param {number} [options.stepSize=2] - Taille du pas du tracker.
- * @param {number} [options.edgesDensity=0.1] - Densité des bords pour la détection.
  */
-window.initFaceVisible = function(video, options = {}) {
-  if (!window.tracking || !video) {
-    console.error("[FACE] tracking.js non chargé ou vidéo invalide.");
-    window.faceVisible = false;
-    window.dispatchEvent(new CustomEvent('faceDetectionError', {
-      detail: { message: "Détection faciale non disponible." }
-    }));
-    return;
-  }
-
-  const {
-    detectionTimeout = 1500,
-    initialScale = 4,
-    stepSize = 2,
-    edgesDensity = 0.1
-  } = options;
-
-  const tracker = new tracking.ObjectTracker('face');
-  tracker.setInitialScale(initialScale);
-  tracker.setStepSize(stepSize);
-  tracker.setEdgesDensity(edgesDensity);
-
-  let lastDetection = Date.now();
-  window.trackerInitialized = true;
-
-  tracking.track(video, tracker);
-
-  tracker.on('track', (event) => {
-    const detected = event.data.length > 0;
-    const now = Date.now();
-    const wasVisible = window.faceVisible;
-
-    if (detected) {
-      lastDetection = now;
+export function initFaceDetection(video, options = {}) {
+    if (!window.tracking || !video) {
+        showTopbarLog("tracking.js non chargé ou vidéo invalide. Détection impossible.", "#c0392b");
+        window.faceVisible = false;
+        return;
     }
+    
+    // Si un tracker est déjà actif, l'arrêter d'abord
+    stopFaceDetection(); 
 
-    window.faceVisible = (now - lastDetection) < detectionTimeout;
+    const {
+        detectionTimeout = 1500,
+        initialScale = 4,
+        stepSize = 2,
+        edgesDensity = 0.1
+    } = options;
 
-    if (wasVisible !== window.faceVisible) {
-      window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
-        detail: { isVisible: window.faceVisible }
-      }));
-    }
-  });
+    const tracker = new tracking.ObjectTracker('face');
+    tracker.setInitialScale(initialScale);
+    tracker.setStepSize(stepSize);
+    tracker.setEdgesDensity(edgesDensity);
 
-  tracker.on('error', (error) => {
-    console.error("[FACE] Erreur de détection faciale :", error);
-    window.dispatchEvent(new CustomEvent('faceDetectionError', {
-      detail: { message: "Erreur de détection faciale.", error }
-    }));
-  });
+    currentTracker = tracker;
+    videoElement = video;
+    
+    lastDetectionTime = Date.now();
+    
+    // Fonction pour gérer le changement d'état de visibilité après timeout
+    const checkVisibility = () => {
+        const now = Date.now();
+        const isVisible = (now - lastDetectionTime) < detectionTimeout;
+        
+        if (isVisible !== window.faceVisible) {
+            window.faceVisible = isVisible;
+            window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
+                detail: { isVisible: window.faceVisible }
+            }));
+            // showTopbarLog sera appelé par l'écouteur d'événement pour éviter la redondance
+        }
+        
+        // Relancer la vérification si le tracker est toujours actif
+        if (currentTracker) {
+            lastDetectionTimer = setTimeout(checkVisibility, detectionTimeout / 2);
+        }
+    };
+    
+    tracker.on('track', (event) => {
+        const detected = event.data.length > 0;
+        
+        if (detected) {
+            lastDetectionTime = Date.now();
+        }
 
-  return {
-    stop: () => {
-      if (tracker) {
-        tracker.removeAllListeners('track');
-        tracking.stopTracking(video);
-        window.trackerInitialized = false;
-        console.log("[FACE] Détection faciale arrêtée.");
-      }
-    }
-  };
-};
+        // Mise à jour immédiate si l'état change
+        if (window.faceVisible !== detected) {
+            window.faceVisible = detected;
+            window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
+                detail: { isVisible: detected, data: event.data }
+            }));
+        }
 
-window.addEventListener('faceDetectionError', (event) => {
-  console.warn("[FACE] Erreur :", event.detail.message);
-  if (window.topBar) {
-    window.topBar.textContent = `⚠ ${event.detail.message}`;
-  }
-});
+        // Gestion de la timeout : si le visage n'est plus visible, on lance/continue le timer
+        if (!detected && !lastDetectionTimer) {
+             lastDetectionTimer = setTimeout(checkVisibility, detectionTimeout);
+        } else if (detected && lastDetectionTimer) {
+             // Si détecté à nouveau, on réinitialise le timer de la timeout
+             clearTimeout(lastDetectionTimer);
+             lastDetectionTimer = null;
+        }
+    });
 
-window.addEventListener('faceVisibilityChanged', (event) => {
-  console.log(`[FACE] Visage ${event.detail.isVisible ? 'détecté' : 'non détecté'}.`);
-  if (window.faceFrame) {
-    window.faceFrame.style.border = event.detail.isVisible
-      ? "3px solid #10b981"
-      : "3px solid #ef4444";
-  }
+    tracker.on('error', (error) => {
+        console.error("[FACE] Erreur de détection faciale :", error);
+        stopFaceDetection();
+        showTopbarLog("Erreur de détection faciale critique.", "#c0392b");
+    });
+    
+    // Démarre le tracking sur l'élément vidéo
+    tracking.track(video, tracker);
+    showTopbarLog("Détection faciale démarrée.");
+}
+
+
+// --- GESTION DES ÉVÉNEMENTS GLOBALES (pour l'UI) ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Événement pour mettre à jour le style du conteneur vidéo local et la topbar
+    window.addEventListener('faceVisibilityChanged', (event) => {
+        const localVideoContainer = document.getElementById('localVideoContainer');
+        const isVisible = event.detail.isVisible;
+        
+        if (localVideoContainer) {
+            // Ajout du cadre vert/rouge sur la vidéo locale
+            localVideoContainer.style.border = isVisible
+                ? "3px solid #10b981" // Vert (visage détecté)
+                : "3px solid #ef4444"; // Rouge (visage perdu/flou)
+            localVideoContainer.style.transition = "border 0.3s ease";
+        }
+        
+        // Mise à jour de la bannière d'avertissement rouge
+        const warningIpSpan = document.querySelector('.warning-ip span');
+        if (warningIpSpan) {
+             warningIpSpan.innerHTML = isVisible
+                ? '⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L\'enregistrement est illégal !!'
+                : '✅ Visage masqué/perdu. Votre IP est loguée. (L\'enregistrement est illégal !)';
+            warningIpSpan.style.color = isVisible ? 'red' : '#2ecc71';
+        }
+        
+        // Mise à jour de la TopBar
+        showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? '#2ecc71' : '#e74c3c');
+    });
 });
