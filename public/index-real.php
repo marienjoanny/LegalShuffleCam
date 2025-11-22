@@ -63,7 +63,7 @@
             background-color: #c0392b;
         }
 
-        /* Styles spécifiques pour le sélecteur de signalement (inchangé) */
+        /* Styles spécifiques pour le sélecteur de signalement */
         #reportTarget {
             padding: 10px;
             background-color: #2c3e50;
@@ -178,7 +178,8 @@
                 <select class="control-select yellow" id="cameraSelect">
                     <option value="">Chargement...</option>
                 </select>
-                <button class="control-button small-icon" id="muteButton">🔇</button>
+                <!-- Bouton Mute: Initialement sur Mute (Son coupé 🔇) pour laisser l'utilisateur décider -->
+                <button class="control-button small-icon red" id="muteButton">🔇</button>
             </div>
 
             <!-- Ligne 4: Interlocuteur Suivant -->
@@ -345,6 +346,34 @@
             
             // 3. Lier les événements (ex: bouton "Suivant")
             bindMatchEvents();
+
+            // --- NOUVEAU : Logique du bouton Mute ---
+            const remoteVideo = document.getElementById('remoteVideo');
+            const muteButton = document.getElementById('muteButton');
+            
+            // Initialiser le son à coupé (muted: true) pour le respect de l'utilisateur
+            // C'est l'inverse du mute HTML attribute : video.muted = true coupe le son.
+            remoteVideo.muted = true; 
+            muteButton.textContent = '🔇'; // Symbole de muet
+            muteButton.classList.add('red'); // Couleur rouge pour indiquer muet
+
+            muteButton.addEventListener('click', () => {
+                const isMuted = !remoteVideo.muted;
+                remoteVideo.muted = isMuted;
+
+                if (isMuted) {
+                    muteButton.textContent = '🔊'; // Afficher Haut-parleur ON
+                    muteButton.classList.remove('red');
+                    muteButton.classList.add('green');
+                    window.showTopbar("🔊 Son de l'interlocuteur activé.", "#2ecc71");
+                } else {
+                    muteButton.textContent = '🔇'; // Afficher Mute OFF
+                    muteButton.classList.remove('green');
+                    muteButton.classList.add('red');
+                    window.showTopbar("🔇 Son de l'interlocuteur désactivé.", "#e74c3c");
+                }
+            });
+            // --- FIN NOUVEAU ---
         });
     </script>
 
@@ -632,3 +661,4 @@
     </script>
 </body>
 </html>
+
