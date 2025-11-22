@@ -1,8 +1,12 @@
 <?php
 // /public/api/register-peer.php
+/**
+ * Enregistre un nouvel ID de pair dans l'annuaire ou rafraîchit son statut.
+ * Cette API est appelée au démarrage de la connexion de l'utilisateur.
+ */
 header('Content-Type: application/json');
 
-// Inclure la fonction de logging et la gestion de l'annuaire
+// Inclure la fonction de logging et la gestion de l'annuaire (updatePeerAnnuaire)
 require_once __DIR__ . '/log_activity.php';
 
 // --- Récupération des données ---
@@ -18,41 +22,11 @@ if (!$peerId) {
 
 // 🔔 Récupérer l'adresse IP réelle de l'utilisateur
 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'N/A';
-$annuairePath = PEER_IP_ANNUAIRE;
 
-
-/**
- * Purge les entrées de l'annuaire trop vieilles (>10 minutes).
- */
-function purgeOldPeers(string $annuairePath, int $maxAgeSeconds = 600) {
-    $peersData = [];
-    if (file_exists($annuairePath)) {
-        $content = @file_get_contents($annuairePath);
-        if ($content !== false) {
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                $peersData = $decoded;
-            }
-        }
-    }
-
-    $now = time();
-    $peersData = array_filter($peersData, function($peerData) use ($now, $maxAgeSeconds) {
-        $ts = $peerData['timestamp'] ?? 0; 
-        return ($now - $ts) < $maxAgeSeconds;
-    });
-
-    // Réécrire l'annuaire purgé
-    $jsonContent = json_encode($peersData, JSON_PRETTY_PRINT);
-    @file_put_contents($annuairePath, $jsonContent, LOCK_EX);
-}
-
-
-// --- 1. Purge et Mise à Jour de l'Annuaire ---
-// La purge est exécutée pour nettoyer les entrées obsolètes.
-purgeOldPeers($annuairePath);
-
-// Mise à jour de l'entrée courante avec l'IP, le Session ID et le timestamp via l'utilitaire.
+// ----------------------------------------------------
+// 1. Mise à Jour de l'Annuaire 
+// (L'entrée est créée ou rafraîchie, assurant l'archivage de l'IP, du TS et de la Session ID.)
+// ----------------------------------------------------
 updatePeerAnnuaire($peerId, $ipAddress, $sessionId); 
 
 
