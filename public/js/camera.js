@@ -1,11 +1,15 @@
+// LegalShuffleCam • camera.js (Module ES)
+// Gestion de la liste des caméras et du démarrage du flux local.
+
 // LOG: Module /js/camera.js chargé. (Validation obligatoire)
-function showTopbarLog(message) {
+function showTopbarLog(message, color) {
     if (typeof showTopbar === 'function') {
-        showTopbar(message);
+        showTopbar(message, color);
     } else {
         const topBar = document.getElementById("topBar");
         if (topBar) {
             topBar.textContent = message;
+            // La couleur ne peut pas être gérée facilement ici sans fonction showTopbar globale
         } else {
             console.log(`[TOPBAR-LOG] ${message}`); 
         }
@@ -117,7 +121,22 @@ export async function startCamera(deviceId) {
         showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
 
     } catch (err) {
+        // --- DEBUT DE LA MODIFICATION (Patch 5) ---
         console.error(`Erreur lors du changement de caméra vers ${deviceId}:`, err);
-        showTopbarLog("❌ Échec de la sélection de caméra. (Permissions ?)");
+        
+        // 1. Extraire le message d'erreur du navigateur
+        let errorMsg = "Erreur inconnue";
+        if (err.name) {
+            // Pour les erreurs standard WebRTC comme NotAllowedError, NotReadableError, etc.
+            errorMsg = `${err.name}: ${err.message || 'Vérifiez les permissions !'}`;
+        } else {
+            // Pour toute autre erreur non standard
+            errorMsg = err.toString();
+        }
+        
+        // 2. Afficher l'erreur détaillée dans la TopBar
+        // Utiliser la couleur rouge (#c0392b) pour les erreurs critiques
+        showTopbarLog(`❌ ÉCHEC DÉMARRAGE CAMÉRA: ${errorMsg}`, "#c0392b");
+        // --- FIN DE LA MODIFICATION (Patch 5) ---
     }
 }
