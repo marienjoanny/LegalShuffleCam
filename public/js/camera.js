@@ -1,7 +1,7 @@
 // LegalShuffleCam • camera.js (Module ES)
 // Gestion de la liste des caméras et du démarrage du flux local.
 
-// LOG: Module /js/camera.js chargé. (Validation obligatoire)
+// LOG: Module /js/camera.js chargé.
 function showTopbarLog(message, color) {
     if (typeof showTopbar === 'function') {
         showTopbar(message, color);
@@ -17,7 +17,8 @@ function showTopbarLog(message, color) {
 showTopbarLog("✅ Module camera.js chargé.");
 
 /**
- * Liste les périphériques vidéo disponibles et peuple le sélecteur.
+ * Liste les périphériques vidéo disponibles, peuple le sélecteur, 
+ * et déclenche le démarrage de la première caméra (Patch 8).
  */
 export async function listCameras() {
     showTopbarLog("🔎 Recherche des caméras disponibles...");
@@ -26,14 +27,9 @@ export async function listCameras() {
         return;
     }
     
-    select.innerHTML = ''; 
+    select.innerHTML = ''; // Nettoyer les options précédentes
     
     try {
-        // NOTE IMPORTANTE: Appeler getUserMedia une fois SANS contraintes 
-        // est parfois nécessaire pour que enumerateDevices retourne les noms (labels) des périphériques.
-        // Si vous ne l'avez pas fait avant, les labels seront vides.
-        // On ne le fait pas ici pour éviter de redéclencher les permissions.
-        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
@@ -44,26 +40,35 @@ export async function listCameras() {
             return;
         }
 
+        let firstDeviceId = null; 
+        
         videoDevices.forEach((device, index) => {
             const option = document.createElement('option');
             option.value = device.deviceId;
-            // Si l'énumération a réussi à ce stade, les labels devraient être disponibles.
             option.textContent = device.label || `Caméra ${index + 1}`; 
             select.appendChild(option);
             
+            // Sélectionner la première caméra par défaut
             if (index === 0) {
                 option.selected = true;
+                firstDeviceId = device.deviceId; // Stocker l'ID de la première
             }
         });
         
         select.disabled = false;
         showTopbarLog(`✅ ${videoDevices.length} caméras détectées.`);
 
+        // --- DÉMARRAGE IMMÉDIAT DU FLUX (PATCH 8) ---
+        if (firstDeviceId) {
+            // Appeler startCamera avec l'ID de la première caméra
+            await startCamera(firstDeviceId); 
+        }
+
     } catch (err) {
         console.error("Erreur lors de l'énumération des périphériques:", err);
         select.innerHTML = '<option value="">Erreur de liste</option>';
         select.disabled = true;
-        showTopbarLog("❌ Échec de l'énumération des caméras (permission requise).");
+        showTopbarLog("❌ Échec de l'énumération des caméras (permission requise).", "#c0392b");
     }
 }
 
@@ -81,13 +86,10 @@ export async function startCamera(deviceId) {
             window.localStream.getTracks().forEach(track => track.stop());
         }
 
-        // 2. Définir les contraintes: Utiliser la contrainte 'ideal' au lieu de 'exact' 
-        // pour plus de tolérance sur mobile.
+        // 2. Définir les contraintes: Utilisation de 'ideal' pour plus de tolérance (Patch 6)
         const constraints = {
-            audio: true, // Toujours inclure l'audio
+            audio: true, 
             video: {
-                // Utiliser 'ideal' pour laisser le navigateur choisir la meilleure résolution 
-                // tout en ciblant le deviceId
                 deviceId: { ideal: deviceId },
                 width: { ideal: 1280 },
                 height: { ideal: 720 }
@@ -102,11 +104,10 @@ export async function startCamera(deviceId) {
         const localVideo = document.getElementById("localVideo");
         if (localVideo) { 
             localVideo.srcObject = newStream;
-            // Tenter de jouer, mais ne pas faire confiance à la lecture automatique
+            
+            // Tenter de jouer, en gérant l'échec d'autoplay sans arrêter le script
             localVideo.play().catch(e => {
-                // Cette erreur est courante si le navigateur bloque l'autoplay sans interaction
                 console.warn("Échec de la lecture automatique de la vidéo locale:", e);
-                // On considère que le flux est quand même attribué
             }); 
 
             // Re-démarrer la détection de visage sur le nouveau flux
@@ -115,7 +116,7 @@ export async function startCamera(deviceId) {
             }
         }
 
-        // 5. Remplacer les pistes dans la connexion P2P active
+        // 5. Remplacer les pistes dans la connexion P2P active (logique de match.js)
         if (window.currentCall && window.currentCall.peerConnection) {
             const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
             if (sender) {
@@ -133,7 +134,7 @@ export async function startCamera(deviceId) {
         showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
 
     } catch (err) {
-        // --- GESTION AMÉLIORÉE DE L'ERREUR (Si elle n'a pas de nom standard) ---
+        // --- GESTION AMÉLIORÉE DE L'ERREUR (Patch 5) ---
         console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
         
         let errorMsg = "Erreur inconnue (Vérifiez Console & Permissions !)";
