@@ -137,19 +137,15 @@
 
     <div id="topBar">Chargement...</div>
 
-    <!-- Canvas temporaire pour la capture d'écran (caché) -->
     <canvas id="screenshotCanvas" style="display: none;"></canvas>
 
-    <!-- ZONE VIDÉO PRINCIPALE (HAUT) -->
     <div id="remoteVideoContainer">
-        <!-- Message affiché si la vidéo est masquée (ex: changement d'onglet) -->
         <div id="videoObscuredMessage" style="position: absolute; color: white; background-color: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1em; display: none;">
             Vidéo masquée ! Revenez sur l'onglet pour continuer.
         </div>
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
-    <!-- TEXTE D'AVERTISSEMENT ROUGE (SOUS la cam du haut) -->
     <p class="warning-ip">
         <span style="color: red; font-size: 14px; font-weight: bold;">
             ⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L'enregistrement est illégal !!
@@ -157,32 +153,25 @@
         <span id="my-peer-id" style="color: #ccc; font-size: 10px; margin-left: 10px;">ID Peer: En attente...</span>
     </p>
 
-    <!-- ZONE INFÉRIEURE : CONTRÔLES (GAUCHE) / CAM LOCALE (DROITE) -->
     <div id="bottomLayout">
         
-        <!-- CONTRÔLES (GAUCHE) -->
         <div id="controls">
-            <!-- Ligne 1: Consentement et Wizz -->
             <div class="control-row">
                 <button class="control-button green" id="btnConsentement">👍 Consentement</button>
                 <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
             </div>
 
-            <!-- Ligne 2: Signaler -->
             <div class="control-row full-width-row">
                 <button class="control-button red" id="btnReport" data-partner-id="" data-session-id="">🚩 Signaler</button>
             </div>
 
-            <!-- Ligne 3: Caméra et Son -->
             <div class="control-row">
                 <select class="control-select yellow" id="cameraSelect">
                     <option value="">Chargement...</option>
                 </select>
-                <!-- Bouton Mute: Initialement sur Mute (Son coupé 🔇) pour laisser l'utilisateur décider -->
                 <button class="control-button small-icon red" id="muteButton">🔇</button>
             </div>
 
-            <!-- Ligne 4: Interlocuteur Suivant -->
             <div class="control-row full-width-row">
                 <button id="btnNext" disabled class="control-button blue">
                     ➔ Interlocuteur suivant
@@ -190,13 +179,11 @@
             </div>
         </div>
 
-        <!-- CAMÉRA LOCALE (DROITE) -->
         <div id="localVideoContainer">
             <video id="localVideo" muted autoplay playsinline></video> 
         </div>
     </div>
     
-    <!-- MODAL DE CONFIRMATION LOCALE (Étape 1 : Confirmation par l'utilisateur) -->
     <div id="localConsentModal" class="modal-overlay">
         <div class="modal-content">
             <h3>Je consens à désactiver le blocage visage pour un moment spécial avec un inconnu.</h3>
@@ -207,7 +194,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE REQUÊTE/RÉPONSE DISTANTE (Étape 2 : Reçu par le partenaire) -->
     <div id="remoteConsentModal" class="modal-overlay">
         <div class="modal-content">
             <h3>Consentez-vous à désactiver le blocage visage pour un moment spécial avec un inconnu ?</h3>
@@ -219,17 +205,13 @@
         </div>
     </div>
 
-    <!-- SÉLECTEUR DE SIGNALEMENT (Flottant au-dessus de tout) -->
     <select id="reportTarget" size="5"></select>
 
-    <!-- CONTENEUR POUR LA RAISON "AUTRE" (Flottant au-dessus de tout) -->
     <div id="otherReasonContainer">
         <label for="otherReasonInput">Décrivez brièvement le problème :</label>
         <input type="text" id="otherReasonInput" maxlength="100" placeholder="Ex: Musique trop forte, écran noir..." aria-label="Description du motif Autre">
         <button id="submitOtherReason">Envoyer le signalement</button>
     </div>
-    <!-- FIN DU NOUVEAU CONTENEUR -->
-
     <div id="footer">
         <p>
             <a href="/accessibilite.php">Accessibilité</a> | 
@@ -250,13 +232,10 @@
         </p>
     </div>
 
-    <!-- LIBRAIRIES EXTERNES -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Chargement de tracking.js pour la détection faciale (IMPORTANT: DOIT ÊTRE AVANT LES MODULES) -->
     <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/tracking.js"></script>
     <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/data/face-min.js"></script>
     
-    <!-- FONCTIONS GLOBALES POUR LE MATCHING/SIGNALEMENT -->
     <script>
         // Fonction globale pour mettre à jour l'ID Peer dans l'interface
         window.updatePeerIdDisplay = (id) => {
@@ -303,81 +282,7 @@
     </script>
 
 
-    <!-- SCRIPT DE BASE (gestion des imports de match.js et autres) -->
-    <script type="module">
-        import { initMatch, nextMatch, bindMatchEvents } from '/js/match.js';
-        import { listCameras, startCamera } from "/js/camera.js"; 
-        
-        // L'import de /js/face-visible.js est géré dans match.js et camera.js.
-
-        // Rendre nextMatch global
-        window.nextMatch = nextMatch;
-        
-        // Définition de showTopbar (utilisée par tous les modules)
-        window.showTopbar = (message, color = '#2980b9') => {
-            const topBar = document.getElementById("topBar");
-            if (topBar) {
-                topBar.textContent = message;
-                topBar.style.backgroundColor = color;
-            }
-        };
-
-        // Définir les variables globales pour la gestion du pair (mis à jour par match.js)
-        window.currentPartnerId = null; 
-        window.currentSessionId = crypto.randomUUID(); // Initialiser l'ID de session ici
-        
-        // État de consentement mutuel global
-        window.mutualConsentGiven = false; 
-
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. Initialisation de la caméra/liste (avant initMatch pour que le bon deviceId soit prêt)
-            listCameras(); 
-            const select = document.getElementById('cameraSelect');
-            select.addEventListener('change', () => {
-                const deviceId = select.value;
-                if (deviceId) {
-                    startCamera(deviceId);
-                }
-            });
-
-            // 2. Initialisation du matching PeerJS (obtient le flux média)
-            initMatch();
-            
-            // 3. Lier les événements (ex: bouton "Suivant")
-            bindMatchEvents();
-
-            // --- NOUVEAU : Logique du bouton Mute ---
-            const remoteVideo = document.getElementById('remoteVideo');
-            const muteButton = document.getElementById('muteButton');
-            
-            // Initialiser le son à coupé (muted: true) pour le respect de l'utilisateur
-            // C'est l'inverse du mute HTML attribute : video.muted = true coupe le son.
-            remoteVideo.muted = true; 
-            muteButton.textContent = '🔇'; // Symbole de muet
-            muteButton.classList.add('red'); // Couleur rouge pour indiquer muet
-
-            muteButton.addEventListener('click', () => {
-                const isMuted = !remoteVideo.muted;
-                remoteVideo.muted = isMuted;
-
-                if (isMuted) {
-                    muteButton.textContent = '🔊'; // Afficher Haut-parleur ON
-                    muteButton.classList.remove('red');
-                    muteButton.classList.add('green');
-                    window.showTopbar("🔊 Son de l'interlocuteur activé.", "#2ecc71");
-                } else {
-                    muteButton.textContent = '🔇'; // Afficher Mute OFF
-                    muteButton.classList.remove('green');
-                    muteButton.classList.add('red');
-                    window.showTopbar("🔇 Son de l'interlocuteur désactivé.", "#e74c3c");
-                }
-            });
-            // --- FIN NOUVEAU ---
-        });
-    </script>
-
-    <!-- SCRIPT DE SÉCURITÉ ET DISSUASION -->
+    <script type="module" src="/app-lite.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const remoteVideo = document.getElementById('remoteVideo');
@@ -407,9 +312,6 @@
             });
         });
     </script>
-    <!-- FIN DU SCRIPT DE SÉCURITÉ ET DISSUASION -->
-
-    <!-- SCRIPT DE SIGNALEMENT (Contenu de report.js intégré ici) -->
     <script>
         
         // Note: window.lastPeers est défini dans le bloc <script> précédent
@@ -661,4 +563,3 @@
     </script>
 </body>
 </html>
-
