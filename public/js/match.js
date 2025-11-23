@@ -1,7 +1,8 @@
 // LegalShuffleCam • match.js
 // Gestion de la connexion PeerJS, de l'état des boutons et du consentement mutuel.
 
-import { startCamera, getLocalStream } from './camera.js';
+// Correction: getLocalStream n'est plus exporté, le flux est dans window.localStream
+import { startCamera } from './camera.js'; 
 import { stopFaceDetection } from './face-visible.js';
 
 let peer = null;
@@ -139,6 +140,7 @@ export function initMatch() {
         registerPeer(); 
         
         // Démarrer la caméra pour obtenir le flux local et lancer la détection faciale
+        // L'appel à startCamera sans ID utilise le périphérique par défaut/sélectionné
         startCamera(); 
     });
 
@@ -149,7 +151,8 @@ export function initMatch() {
     
     // Écouter les appels entrants
     peer.on('call', (call) => {
-        const localStream = getLocalStream();
+        // Correction Patch 4: Utiliser window.localStream au lieu de getLocalStream()
+        const localStream = window.localStream; 
         if (!localStream) {
             console.error("[PEER] Appel reçu mais pas de stream local disponible.");
             return;
@@ -200,7 +203,8 @@ export function nextMatch() {
         .then(data => {
             if (data.peerIdToCall) {
                 // Si un pair est trouvé, initier l'appel
-                const localStream = getLocalStream();
+                // Correction Patch 4: Utiliser window.localStream au lieu de getLocalStream()
+                const localStream = window.localStream; 
                 if (localStream) {
                     const call = peer.call(data.peerIdToCall, localStream);
                     // Créer le canal de données manuellement si on est l'appelant
