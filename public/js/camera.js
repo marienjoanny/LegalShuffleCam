@@ -9,7 +9,6 @@ function showTopbarLog(message, color) {
         const topBar = document.getElementById("topBar");
         if (topBar) {
             topBar.textContent = message;
-            // La couleur ne peut pas être gérée facilement ici sans fonction showTopbar globale
         } else {
             console.log(`[TOPBAR-LOG] ${message}`); 
         }
@@ -24,17 +23,18 @@ export async function listCameras() {
     showTopbarLog("🔎 Recherche des caméras disponibles...");
     const select = document.getElementById('cameraSelect');
     if (!select) {
-        // console.warn("L'élément 'cameraSelect' est manquant. Fonctionnalité de sélection ignorée.");
         return;
     }
     
-    select.innerHTML = ''; // Nettoyer les options précédentes
+    select.innerHTML = ''; 
     
     try {
-        // Obtenir la liste des périphériques
-        const devices = await navigator.mediaDevices.enumerateDevices();
+        // NOTE IMPORTANTE: Appeler getUserMedia une fois SANS contraintes 
+        // est parfois nécessaire pour que enumerateDevices retourne les noms (labels) des périphériques.
+        // Si vous ne l'avez pas fait avant, les labels seront vides.
+        // On ne le fait pas ici pour éviter de redéclencher les permissions.
         
-        // Filtrer uniquement les périphériques vidéo
+        const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
         if (videoDevices.length === 0) {
@@ -47,11 +47,10 @@ export async function listCameras() {
         videoDevices.forEach((device, index) => {
             const option = document.createElement('option');
             option.value = device.deviceId;
-            // Utiliser un nom générique si le label est vide (problème de permissions initiales)
+            // Si l'énumération a réussi à ce stade, les labels devraient être disponibles.
             option.textContent = device.label || `Caméra ${index + 1}`; 
             select.appendChild(option);
             
-            // Sélectionner la première caméra par défaut
             if (index === 0) {
                 option.selected = true;
             }
@@ -82,31 +81,44 @@ export async function startCamera(deviceId) {
             window.localStream.getTracks().forEach(track => track.stop());
         }
 
-        // 2. Obtenir le nouveau flux média
-        const newStream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: deviceId } },
-            audio: true // Toujours inclure l'audio
-        });
+        // 2. Définir les contraintes: Utiliser la contrainte 'ideal' au lieu de 'exact' 
+        // pour plus de tolérance sur mobile.
+        const constraints = {
+            audio: true, // Toujours inclure l'audio
+            video: {
+                // Utiliser 'ideal' pour laisser le navigateur choisir la meilleure résolution 
+                // tout en ciblant le deviceId
+                deviceId: { ideal: deviceId },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
 
-        // 3. Mettre à jour le flux local global
+        // 3. Obtenir le nouveau flux média (Point de défaillance le plus probable)
+        const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // 4. Mettre à jour le flux local global
         window.localStream = newStream;
         const localVideo = document.getElementById("localVideo");
         if (localVideo) { 
             localVideo.srcObject = newStream;
-            localVideo.play();
-            // Re-démarrer la détection de visage sur le nouveau flux si le module existe
-            // La fonction est attachée au scope global par face-visible.js
+            // Tenter de jouer, mais ne pas faire confiance à la lecture automatique
+            localVideo.play().catch(e => {
+                // Cette erreur est courante si le navigateur bloque l'autoplay sans interaction
+                console.warn("Échec de la lecture automatique de la vidéo locale:", e);
+                // On considère que le flux est quand même attribué
+            }); 
+
+            // Re-démarrer la détection de visage sur le nouveau flux
             if (typeof initFaceDetection === 'function') {
                 initFaceDetection(localVideo);
             }
         }
 
-        // 4. Remplacer les pistes dans la connexion P2P active
-        // window.currentCall est défini dans match.js
+        // 5. Remplacer les pistes dans la connexion P2P active
         if (window.currentCall && window.currentCall.peerConnection) {
             const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
             if (sender) {
-                // Remplacer la piste vidéo avec la nouvelle piste du nouveau flux
                 const newVideoTrack = newStream.getVideoTracks()[0];
                 if (newVideoTrack) {
                     sender.replaceTrack(newVideoTrack)
@@ -121,22 +133,16 @@ export async function startCamera(deviceId) {
         showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
 
     } catch (err) {
-        // --- DEBUT DE LA MODIFICATION (Patch 5) ---
-        console.error(`Erreur lors du changement de caméra vers ${deviceId}:`, err);
+        // --- GESTION AMÉLIORÉE DE L'ERREUR (Si elle n'a pas de nom standard) ---
+        console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
         
-        // 1. Extraire le message d'erreur du navigateur
-        let errorMsg = "Erreur inconnue";
+        let errorMsg = "Erreur inconnue (Vérifiez Console & Permissions !)";
         if (err.name) {
-            // Pour les erreurs standard WebRTC comme NotAllowedError, NotReadableError, etc.
-            errorMsg = `${err.name}: ${err.message || 'Vérifiez les permissions !'}`;
-        } else {
-            // Pour toute autre erreur non standard
+            errorMsg = `${err.name}: ${err.message || 'Problème de périphérique ou de permission.'}`;
+        } else if (err.toString() !== 'Error: Error') {
             errorMsg = err.toString();
         }
         
-        // 2. Afficher l'erreur détaillée dans la TopBar
-        // Utiliser la couleur rouge (#c0392b) pour les erreurs critiques
         showTopbarLog(`❌ ÉCHEC DÉMARRAGE CAMÉRA: ${errorMsg}`, "#c0392b");
-        // --- FIN DE LA MODIFICATION (Patch 5) ---
     }
 }
