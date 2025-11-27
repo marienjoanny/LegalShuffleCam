@@ -10,17 +10,26 @@ let videoElement = null;
 // Rendre la variable globale pour que l'UI puisse y réagir si nécessaire
 window.faceVisible = false;
 
-// --- DÉFINITION DES COULEURS DES CADRES ---
-const FRAME_COLOR_VISIBLE = "#10b981"; // Vert (visage détecté)
-const FRAME_COLOR_HIDDEN = "#ef4444";  // Rouge (visage perdu/flou)
-const FRAME_COLOR_CONSENTED = "#3498db"; // Bleu (Neutre après consentement)
+// --- DÉFINITION DES COULEURS ---
+
+// COULEURS POUR LA BORDURE DE LA CAMÉRA LOCALE (#localVideo)
+// (Indique l'état de l'outil de DÉTECTION)
+const FRAME_COLOR_DETECTED = "#2ecc71";  // Vert (L'outil est ACTIF et a trouvé un visage)
+const FRAME_COLOR_LOST = "#e74c3c";      // Rouge (L'outil est ACTIF mais le visage est perdu/masqué)
+const FRAME_COLOR_CONSENTED = "#3498db"; // Bleu (Neutre après consentement ou détection arrêtée)
+
+// COULEURS POUR LE BANDEAU D'ALERTE (.warning-ip span)
+// (Indique l'état de CONFORMITÉ aux règles de la plateforme)
+const BANNER_COLOR_VIOLATION = '#ef4444'; // Rouge (Visage Visible / Violation de règle)
+const BANNER_COLOR_SAFE = '#2ecc71';      // Vert (Visage masqué / Respect des règles)
+const BANNER_COLOR_NEUTRAL = '#3498db';   // Bleu (Consentement / État neutre)
 
 
 /**
- * Fonction utilitaire pour envoyer un log à la barre d'état.
+ * Fonction utilitaire pour envoyer un log à la barre d'état (TopBar).
  */
 function showTopbarLog(message, color = '#2980b9') {
-    // S'assurer que la fonction globale showTopbar existe (définie dans index-real.php)
+    // Cible la barre fixe tout en haut
     if (typeof showTopbar === 'function') {
         showTopbar(`[FACE] ${message}`, color);
     } else {
@@ -34,7 +43,6 @@ function showTopbarLog(message, color = '#2980b9') {
 export function stopFaceDetection() {
     if (currentTracker && videoElement) {
         currentTracker.removeAllListeners('track');
-        // Tentative d'arrêt du tracking sur l'élément vidéo
         if (typeof tracking.stopTracking === 'function') {
              tracking.stopTracking(videoElement);
         } else {
@@ -50,12 +58,11 @@ export function stopFaceDetection() {
             lastDetectionTimer = null;
         }
 
-        // Mettre à jour l'UI pour indiquer l'arrêt (le visage n'est plus "activement" visible)
+        // Déclenche l'événement pour mettre à jour l'UI en mode arrêté/neutre
         window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
-            detail: { isVisible: false }
+            detail: { isVisible: false, isStopped: true }
         }));
 
-        // La TopBar affiche l'état "neutre" après l'arrêt par consentement
         showTopbarLog("Détection faciale arrêtée par consentement.", FRAME_COLOR_CONSENTED);
     }
 }
@@ -64,7 +71,6 @@ export function stopFaceDetection() {
 /**
  * Démarre la détection faciale sur un flux vidéo.
  * @param {HTMLVideoElement} video - Élément vidéo source pour la détection.
- * @param {Object} [options] - Options de configuration.
  */
 export function initFaceDetection(video, options = {}) {
     if (!window.tracking || !video) {
@@ -73,7 +79,6 @@ export function initFaceDetection(video, options = {}) {
         return;
     }
     
-    // Si un tracker est déjà actif, l'arrêter d'abord
     stopFaceDetection(); 
 
     const {
@@ -93,7 +98,6 @@ export function initFaceDetection(video, options = {}) {
     
     lastDetectionTime = Date.now();
     
-    // Fonction pour gérer le changement d'état de visibilité après timeout
     const checkVisibility = () => {
         const now = Date.now();
         const isVisible = (now - lastDetectionTime) < detectionTimeout;
@@ -101,11 +105,10 @@ export function initFaceDetection(video, options = {}) {
         if (isVisible !== window.faceVisible) {
             window.faceVisible = isVisible;
             window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
-                detail: { isVisible: window.faceVisible }
+                detail: { isVisible: window.faceVisible, isStopped: false }
             }));
         }
         
-        // Relancer la vérification si le tracker est toujours actif
         if (currentTracker) {
             lastDetectionTimer = setTimeout(checkVisibility, detectionTimeout / 2);
         }
@@ -118,19 +121,16 @@ export function initFaceDetection(video, options = {}) {
             lastDetectionTime = Date.now();
         }
 
-        // Mise à jour immédiate si l'état change
         if (window.faceVisible !== detected) {
             window.faceVisible = detected;
             window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
-                detail: { isVisible: detected, data: event.data }
+                detail: { isVisible: detected, data: event.data, isStopped: false }
             }));
         }
 
-        // Gestion de la timeout : si le visage n'est plus visible, on lance/continue le timer
         if (!detected && !lastDetectionTimer) {
              lastDetectionTimer = setTimeout(checkVisibility, detectionTimeout);
         } else if (detected && lastDetectionTimer) {
-             // Si détecté à nouveau, on réinitialise le timer de la timeout
              clearTimeout(lastDetectionTimer);
              lastDetectionTimer = null;
         }
@@ -142,7 +142,6 @@ export function initFaceDetection(video, options = {}) {
         showTopbarLog("Erreur de détection faciale critique.", "#c0392b");
     });
     
-    // Démarre le tracking sur l'élément vidéo
     tracking.track(video, tracker);
     showTopbarLog("Détection faciale démarrée.");
 }
@@ -151,58 +150,56 @@ export function initFaceDetection(video, options = {}) {
 // --- GESTION DES ÉVÉNEMENTS GLOBALES (pour l'UI) ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Événement pour mettre à jour le style du conteneur vidéo local et la topbar
+    
     window.addEventListener('faceVisibilityChanged', (event) => {
-        const localVideoContainer = document.getElementById('localVideoContainer');
+        // Cible l'élément VIDEO (#localVideo)
+        const localVideoElement = document.getElementById('localVideo');
         const isVisible = event.detail.isVisible;
-        
-        // La bannière est rouge pour "visible" et verte pour "masqué" dans votre logique de base.
-        const BANNER_COLOR_VISIBLE = '#ef4444'; // Votre logique utilise 'red'
-        const BANNER_COLOR_HIDDEN = '#2ecc71';  // Votre logique utilise '#2ecc71'
-        
-        // Vérifier si le consentement mutuel est donné
+        const isStopped = event.detail.isStopped || false;
         const isConsented = window.mutualConsentGiven;
+        
+        // Cible le SPAN dans le bandeau d'information permanent (.warning-ip)
+        const warningIpSpan = document.querySelector('.warning-ip span');
             
-        if (localVideoContainer) {
-             // CORRECTION CRITIQUE : Utilisation de style.setProperty pour forcer la priorité
-             // Ceci résout le problème du cadre bleu qui écrasait les autres styles.
-             let frameColor = FRAME_COLOR_HIDDEN; // Par défaut : Rouge
+        // --- 1. GESTION DE LA BORDURE (#localVideo) ---
+        // Logique demandée : VERT si visible, ROUGE si perdu
+        if (localVideoElement) {
+             let frameColor = FRAME_COLOR_LOST; // Par défaut : Rouge (si actif, mais perdu)
              
-             if (isConsented) {
-                 // Si consentement donné, cadre neutre bleu
+             if (isConsented || isStopped) {
+                 // Si consentement ou arrêt, bordure neutre
                  frameColor = FRAME_COLOR_CONSENTED;
              } else if (isVisible) {
-                 // Si visage visible (et pas de consentement), cadre vert
-                 frameColor = FRAME_COLOR_VISIBLE;
+                 // Si visage trouvé, bordure VERTE (VERT quand y a le visage)
+                 frameColor = FRAME_COLOR_DETECTED;
              }
              
-             // Utilisation de !important pour forcer le style à prendre le dessus sur le CSS externe
-             localVideoContainer.style.setProperty('border', `3px solid ${frameColor}`, 'important');
-             localVideoContainer.style.transition = "border 0.3s ease";
+             // Application du style avec !important à la balise vidéo
+             localVideoElement.style.setProperty('border', `3px solid ${frameColor}`, 'important');
+             localVideoElement.style.transition = "border 0.3s ease";
         }
         
-        // Mise à jour de la bannière d'avertissement rouge
-        const warningIpSpan = document.querySelector('.warning-ip span');
+        // --- 2. GESTION DU BANDEAU D'ALERTE PERMANENT (.warning-ip span) ---
+        // Logique des règles : ROUGE si visible, VERT si masqué
         if (warningIpSpan) {
-            
             if (isConsented) {
-                // Si consentement mutuel donné, afficher l'état "OK" permanent
+                // État de consentement (neutre)
                 warningIpSpan.innerHTML = '🟢 CONDUITE SANS SURVEILLANCE. Consentement mutuel actif.';
-                warningIpSpan.style.color = FRAME_COLOR_CONSENTED; // Couleur neutre/bleue
+                warningIpSpan.style.color = BANNER_COLOR_NEUTRAL; 
             } else {
-                // Logique de détection active
+                // État actif (règles de la plateforme)
                 warningIpSpan.innerHTML = isVisible
                     ? '⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L\'enregistrement est illégal !!'
                     : '✅ Visage masqué/perdu. Votre IP est loguée. (L\'enregistrement est illégal !)';
-                // Utilisation des couleurs d'origine pour la bannière
-                warningIpSpan.style.color = isVisible ? BANNER_COLOR_VISIBLE : BANNER_COLOR_HIDDEN;
+                
+                // Si visible (violation), couleur ROUGE pour le texte
+                warningIpSpan.style.color = isVisible ? BANNER_COLOR_VIOLATION : BANNER_COLOR_SAFE;
             }
         }
         
-        // Mise à jour de la TopBar
-        // On n'affiche les logs de détection que si le consentement n'est PAS donné
-        if (!isConsented) {
-            showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? FRAME_COLOR_VISIBLE : FRAME_COLOR_HIDDEN);
+        // --- 3. GESTION DU LOG TRANSITOIRE (TopBar) ---
+        if (!isConsented && !isStopped) {
+            showTopbarLog(`Détection active. Visage ${isVisible ? 'trouvé (Cadre Vert)' : 'perdu (Cadre Rouge)'}.`, isVisible ? FRAME_COLOR_DETECTED : FRAME_COLOR_LOST);
         }
     });
 });
