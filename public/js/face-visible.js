@@ -10,6 +10,12 @@ let videoElement = null;
 // Rendre la variable globale pour que l'UI puisse y réagir si nécessaire
 window.faceVisible = false;
 
+// --- DÉFINITION DES COULEURS DES CADRES ---
+const FRAME_COLOR_VISIBLE = "#10b981"; // Vert (visage détecté)
+const FRAME_COLOR_HIDDEN = "#ef4444";  // Rouge (visage perdu/flou)
+const FRAME_COLOR_CONSENTED = "#3498db"; // Bleu (Neutre après consentement)
+
+
 /**
  * Fonction utilitaire pour envoyer un log à la barre d'état.
  */
@@ -49,7 +55,8 @@ export function stopFaceDetection() {
             detail: { isVisible: false }
         }));
 
-        showTopbarLog("Détection faciale arrêtée par consentement.", "#10b981");
+        // La TopBar affiche l'état "neutre" après l'arrêt par consentement
+        showTopbarLog("Détection faciale arrêtée par consentement.", FRAME_COLOR_CONSENTED);
     }
 }
 
@@ -149,38 +156,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const localVideoContainer = document.getElementById('localVideoContainer');
         const isVisible = event.detail.isVisible;
         
+        // La bannière est rouge pour "visible" et verte pour "masqué" dans votre logique de base.
+        const BANNER_COLOR_VISIBLE = '#ef4444'; // Votre logique utilise 'red'
+        const BANNER_COLOR_HIDDEN = '#2ecc71';  // Votre logique utilise '#2ecc71'
+        
+        // Vérifier si le consentement mutuel est donné
+        const isConsented = window.mutualConsentGiven;
+            
         if (localVideoContainer) {
-            // Ajout du cadre vert/rouge sur la vidéo locale
-            localVideoContainer.style.border = isVisible
-                ? "3px solid #10b981" // Vert (visage détecté)
-                : "3px solid #ef4444"; // Rouge (visage perdu/flou)
-            localVideoContainer.style.transition = "border 0.3s ease";
+             // CORRECTION CRITIQUE : Utilisation de style.setProperty pour forcer la priorité
+             // Ceci résout le problème du cadre bleu qui écrasait les autres styles.
+             let frameColor = FRAME_COLOR_HIDDEN; // Par défaut : Rouge
+             
+             if (isConsented) {
+                 // Si consentement donné, cadre neutre bleu
+                 frameColor = FRAME_COLOR_CONSENTED;
+             } else if (isVisible) {
+                 // Si visage visible (et pas de consentement), cadre vert
+                 frameColor = FRAME_COLOR_VISIBLE;
+             }
+             
+             // Utilisation de !important pour forcer le style à prendre le dessus sur le CSS externe
+             localVideoContainer.style.setProperty('border', `3px solid ${frameColor}`, 'important');
+             localVideoContainer.style.transition = "border 0.3s ease";
         }
         
         // Mise à jour de la bannière d'avertissement rouge
         const warningIpSpan = document.querySelector('.warning-ip span');
         if (warningIpSpan) {
-            // Si la détection est arrêtée (par consentement), on ne met plus en rouge/vert, on montre un état neutre
-            // L'état 'faceVisible: false' est envoyé par stopFaceDetection, il faut donc vérifier si le consentement est donné
-            const isConsented = window.mutualConsentGiven;
             
             if (isConsented) {
                 // Si consentement mutuel donné, afficher l'état "OK" permanent
                 warningIpSpan.innerHTML = '🟢 CONDUITE SANS SURVEILLANCE. Consentement mutuel actif.';
-                warningIpSpan.style.color = '#10b981';
+                warningIpSpan.style.color = FRAME_COLOR_CONSENTED; // Couleur neutre/bleue
             } else {
                 // Logique de détection active
                 warningIpSpan.innerHTML = isVisible
                     ? '⚠️ VISAGE VISIBLE ! Votre IP est loguée ! Navigation Privée OBLIGATOIRE ! L\'enregistrement est illégal !!'
                     : '✅ Visage masqué/perdu. Votre IP est loguée. (L\'enregistrement est illégal !)';
-                warningIpSpan.style.color = isVisible ? 'red' : '#2ecc71';
+                // Utilisation des couleurs d'origine pour la bannière
+                warningIpSpan.style.color = isVisible ? BANNER_COLOR_VISIBLE : BANNER_COLOR_HIDDEN;
             }
         }
         
         // Mise à jour de la TopBar
-        // Si le consentement est donné, on n'affiche plus les logs de détection
-        if (!window.mutualConsentGiven) {
-            showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? '#2ecc71' : '#e74c3c');
+        // On n'affiche les logs de détection que si le consentement n'est PAS donné
+        if (!isConsented) {
+            showTopbarLog(`Visage ${isVisible ? 'détecté (Cadre vert)' : 'perdu (Cadre rouge)'}.`, isVisible ? FRAME_COLOR_VISIBLE : FRAME_COLOR_HIDDEN);
         }
     });
 });
