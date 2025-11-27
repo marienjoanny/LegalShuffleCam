@@ -1,7 +1,6 @@
 // LegalShuffleCam • match.js
 // Gestion de la connexion PeerJS, de l'état des boutons et du consentement mutuel.
 
-// Correction: getLocalStream n'est plus exporté, le flux est dans window.localStream
 import { startCamera } from './camera.js'; 
 import { stopFaceDetection } from './face-visible.js';
 
@@ -11,6 +10,7 @@ let dataConnection = null; // Canal de données PeerJS
 let heartbeatInterval = null; // Pour le ping périodique
 window.myPeerId = null; // Notre ID de pair, doit être global
 window.currentSessionId = crypto.randomUUID(); // Session ID généré au démarrage
+window.mutualConsentGiven = false; // État initial du consentement
 
 // Définition des types de messages pour le canal de données
 const MESSAGE_TYPES = {
@@ -25,6 +25,31 @@ let remoteVideo = null;
 let remoteVideoContainer = null;
 let localConsentModal = null;
 let remoteConsentModal = null;
+
+
+// --- UTILS DATA CHANNEL (CORRECTION CRITIQUE) ---
+
+/**
+ * Envoie des données au partenaire via le canal de données PeerJS.
+ * Cette fonction était manquante, causant l'échec du flux de consentement.
+ * @param {string} type - Le type de message (voir MESSAGE_TYPES).
+ * @param {object} [payload={}] - Les données spécifiques à inclure.
+ */
+function sendData(type, payload = {}) {
+    // Vérifie si la connexion de données est ouverte
+    if (!dataConnection || dataConnection.readyState !== 'open') {
+        console.warn(`[DATA] Impossible d'envoyer le message ${type}: Canal non ouvert ou non prêt.`);
+        return;
+    }
+    const message = {
+        type: type,
+        payload: payload,
+        timestamp: Date.now()
+    };
+    dataConnection.send(message);
+    console.log(`[DATA] Message envoyé: ${type}`, message);
+}
+
 
 // --- UTILS API SERVER ---
 
@@ -90,7 +115,6 @@ function unregisterPeer(reason = 'disconnect') {
 
 /**
  * Gère les messages entrants sur le canal de données.
- * ... (le reste de la fonction handleDataMessage est inchangé)
  */
 function handleDataMessage(data) {
     if (!data || !data.type) {
@@ -110,6 +134,12 @@ function handleDataMessage(data) {
         case MESSAGE_TYPES.CONSENT_RESPONSE:
             // Le partenaire a répondu à notre demande.
             handlePartnerConsentResponse(payload.response);
+            break;
+            
+        case 'WIZZ':
+            // Le partenaire a envoyé un Wizz
+            window.showTopbar("🔔 Wizz reçu de l'interlocuteur !", "#9b59b6");
+            // Optionnel: Ajouter une vibration ou une animation ici
             break;
 
         default:
@@ -151,7 +181,7 @@ export function initMatch() {
     
     // Écouter les appels entrants
     peer.on('call', (call) => {
-        // Correction Patch 4: Utiliser window.localStream au lieu de getLocalStream()
+        // Utiliser window.localStream
         const localStream = window.localStream; 
         if (!localStream) {
             console.error("[PEER] Appel reçu mais pas de stream local disponible.");
@@ -203,7 +233,6 @@ export function nextMatch() {
         .then(data => {
             if (data.peerIdToCall) {
                 // Si un pair est trouvé, initier l'appel
-                // Correction Patch 4: Utiliser window.localStream au lieu de getLocalStream()
                 const localStream = window.localStream; 
                 if (localStream) {
                     const call = peer.call(data.peerIdToCall, localStream);
@@ -293,6 +322,10 @@ function handleConnection(call) {
     
     // Le bouton "Suivant" est géré par la détection faciale ou par le consentement mutuel
     if (btnNext) btnNext.disabled = true;
+    
+    // Le flou est géré par l'événement faceVisibilityChanged.
+    // On s'assure qu'il est flou par défaut au début de chaque appel.
+    remoteVideoContainer.classList.add('blurred');
 }
 
 
@@ -380,7 +413,7 @@ function handlePartnerConsentResponse(response) {
  * Finalise l'action : désactivation de la détection faciale, log, et MAJ de l'UI.
  */
 function completeMutualConsent() {
-    // 1. Désactiver la détection faciale
+    // 1. Désactiver la détection faciale (car le filtre n'est plus requis)
     stopFaceDetection(); 
 
     // 2. Mettre à jour l'état global et l'UI du bouton
@@ -397,8 +430,8 @@ function completeMutualConsent() {
 
 
 /**
- * Gère le changement de visibilité du visage.
- * Désactive/Active le bouton "Interlocuteur suivant" et "Wizz".
+ * Gère le changement de visibilité du visage (via l'événement faceVisibilityChanged).
+ * Désactive/Active le bouton "Interlocuteur suivant" et "Wizz" et gère le flou distant.
  */
 function handleFaceVisibility(event) {
     const isVisible = event.detail.isVisible;
@@ -411,8 +444,8 @@ function handleFaceVisibility(event) {
     }
     
     if (btnNext) {
-        const canConnect = isVisible; // Actif uniquement si visible ET non consenti
-        btnNext.disabled = !canConnect;
+        // Actif uniquement si le visage est visible
+        btnNext.disabled = !isVisible;
     }
     
     const btnVibre = document.getElementById('btnVibre');
@@ -421,7 +454,7 @@ function handleFaceVisibility(event) {
          btnVibre.disabled = !isVisible; 
     }
     
-    // Flouter la vidéo distante si le visage est perdu et le consentement non donné
+    // Flouter la vidéo distante si le visage est perdu
     if (!isVisible) {
          remoteVideoContainer.classList.add('blurred');
     } else {
@@ -440,7 +473,7 @@ export function bindMatchEvents() {
     localConsentModal = document.getElementById('localConsentModal');
     remoteConsentModal = document.getElementById('remoteConsentModal');
 
-    // Écouteur pour la détection faciale
+    // Écouteur pour la détection faciale (Cœur de la modération)
     window.addEventListener('faceVisibilityChanged', handleFaceVisibility);
     
     // Écouteur pour le bouton "Interlocuteur suivant"
@@ -468,7 +501,7 @@ export function bindMatchEvents() {
         btnVibre.disabled = true; 
     }
     
-    // Initialiser le flou pour dissuasion
+    // Initialiser le flou pour dissuasion, jusqu'à ce que la détection démarre et trouve un visage.
     remoteVideoContainer.classList.add('blurred');
 }
 
