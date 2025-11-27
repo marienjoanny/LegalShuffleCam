@@ -71,9 +71,11 @@ function startTrackingInternal() {
 
     // 1. Initialisation du Tracker
     tracker = new window.tracking.ObjectTracker('face');
+    
+    // ⚙️ AJUSTEMENT CLÉ ICI : Assouplissement des paramètres pour améliorer la détection
     tracker.setInitialScale(4);
-    tracker.setStepSize(2);
-    tracker.setEdgesDensity(0.1);
+    tracker.setStepSize(1.5); // Réduit la taille du pas de 2 à 1.5
+    tracker.setEdgesDensity(0.15); // Augmente légèrement la densité des bords de 0.1 à 0.15
     
     // 2. Écoute des Résultats de la Détection
     tracker.on('track', function(event) {
@@ -92,10 +94,12 @@ function startTrackingInternal() {
     });
 
     // 3. Lancement du Tracker
-    // Utiliser window.tracking.track avec l'élément vidéo
     window.tracking.track(videoElement, tracker); 
     isTrackerRunning = true;
-    console.log("Tracking.js: Tracker démarré sur l'élément vidéo.");
+    console.log("Tracking.js: Tracker démarré sur l'élément vidéo avec paramètres ajustés.");
+
+    // Initialiser lastDetectionTime pour éviter un passage au rouge immédiat
+    lastDetectionTime = Date.now();
     
     // 4. Intervalle de Vérification pour "Visage Perdu" (Le tracker ne signale pas l'absence)
     detectionIntervalId = setInterval(() => {
