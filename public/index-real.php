@@ -181,6 +181,8 @@
 
         <div id="localVideoContainer">
             <video id="localVideo" muted autoplay playsinline></video> 
+            <!-- NOUVEAUTÉ : Ajouter un canvas pour stabiliser le tracking.js -->
+            <canvas id="faceTrackingCanvas" style="display:none;"></canvas> 
         </div>
     </div>
     
