@@ -1,6 +1,9 @@
 // LegalShuffleCam • camera.js (Module ES)
 // Gestion de la liste des caméras et du démarrage du flux local.
 
+// 🚨 IMPORT CRITIQUE : Les fonctions de détection faciale
+import { initFaceDetection, stopFaceDetection } from "/js/face-visible.js"; 
+
 // LOG: Module /js/camera.js chargé.
 function showTopbarLog(message, color) {
     if (typeof showTopbar === 'function') {
@@ -83,6 +86,8 @@ export async function startCamera(deviceId) {
     try {
         // 1. Arrêter les anciennes pistes du flux local s'il existe
         if (window.localStream) {
+            // 🛑 CRITIQUE : Arrêter le moteur de détection avant de changer de flux
+            stopFaceDetection(); 
             window.localStream.getTracks().forEach(track => track.stop());
         }
 
@@ -110,12 +115,12 @@ export async function startCamera(deviceId) {
                 console.warn("Échec de la lecture automatique de la vidéo locale:", e);
             }); 
 
-            // Re-démarrer la détection de visage sur le nouveau flux
-            if (typeof initFaceDetection === 'function') {
-                initFaceDetection(localVideo);
-            }
+            // 🟢 CRITIQUE : Démarrer la détection de visage sur le nouveau flux
+            initFaceDetection(localVideo, { 
+                detectionTimeout: 1500 // Surcharge optionnelle de 1.5s
+            });
         }
-
+        
         // 5. Remplacer les pistes dans la connexion P2P active (logique de match.js)
         if (window.currentCall && window.currentCall.peerConnection) {
             const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
@@ -131,7 +136,7 @@ export async function startCamera(deviceId) {
             }
         }
         
-        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
+        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}. Détection faciale lancée.`);
 
     } catch (err) {
         // --- GESTION AMÉLIORÉE DE L'ERREUR (Patch 5) ---
@@ -146,4 +151,33 @@ export async function startCamera(deviceId) {
         
         showTopbarLog(`❌ ÉCHEC DÉMARRAGE CAMÉRA: ${errorMsg}`, "#c0392b");
     }
+}
+
+/**
+ * Arrête le flux vidéo local et la détection faciale.
+ * Cette fonction est exportée pour être utilisée par d'autres modules (ex: app-lite.js ou match.js).
+ */
+export function stopCamera() {
+    if (window.localStream) {
+        // Arrêter les pistes
+        window.localStream.getTracks().forEach(track => track.stop());
+        window.localStream = null;
+        
+        const localVideo = document.getElementById("localVideo");
+        if (localVideo) {
+             localVideo.srcObject = null;
+        }
+
+        // 🛑 CRITIQUE : Arrêter le moteur de détection
+        stopFaceDetection();
+        
+        showTopbarLog("Caméra et détection faciale arrêtées.", "#3498db");
+    }
+}
+
+/**
+ * Retourne le flux local actuel.
+ */
+export function getLocalStream() {
+    return window.localStream;
 }
