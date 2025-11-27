@@ -72,14 +72,14 @@ function startTrackingInternal() {
     // 1. Initialisation du Tracker
     tracker = new window.tracking.ObjectTracker('face');
     
-    // ⚙️ Paramètres ajustés pour la tolérance et la performance.
+    // ⚙️ PARAMÈTRES EXTRÊMEMENT ASSOUPLIS pour maximiser la détection (CLÉ)
     tracker.setInitialScale(4);
-    tracker.setStepSize(1.0); 
-    tracker.setEdgesDensity(0.18); 
+    tracker.setStepSize(1.0); // Le plus petit pas possible pour ne rien manquer
+    tracker.setEdgesDensity(0.1); // Très faible densité, n'importe quel contour suffit
     
-    // ⚙️ DÉTECTION OPTIMISÉE : Détection toutes les 10 frames (environ 3 fois par seconde)
+    // DÉTECTION OPTIMISÉE : Détection toutes les 10 frames (environ 3 fois par seconde)
     tracker.setSkip(10); 
-    console.log("Tracking.js: Détection fixée à environ 3 fois par seconde (setSkip=10).");
+    console.log("Tracking.js: Détection démarrée avec des paramètres très tolérants.");
 
     // 2. Écoute des Résultats de la Détection
     tracker.on('track', function(event) {
@@ -157,19 +157,21 @@ export function initFaceDetection(video, customOptions = {}) {
         ...customOptions
     };
 
-    // 🛑 ÉVÉNEMENT CRITIQUE : Démarrer le tracking seulement quand la vidéo peut être jouée
-    // On utilise { once: true } pour s'assurer que l'écouteur n'est déclenché qu'une seule fois.
-    videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
-    
-    // Si la vidéo est déjà en lecture (ex: si le canplay est déjà passé), on peut forcer le démarrage
-    if (videoElement.readyState >= 3) { // READY_STATE.HAVE_FUTURE_DATA
-        startTrackingInternal();
-    }
-    
-    // Afficher une bordure neutre au démarrage tant que la détection n'a pas commencé
+    // 1. Afficher une bordure neutre au démarrage tant que la détection n'a pas commencé
     if (container) {
         container.style.border = '4px solid #95a5a6'; /* Gris neutre/éteint */
         container.style.boxShadow = 'none';
+    }
+
+    // 2. ÉVÉNEMENT CRITIQUE : Démarrer le tracking seulement quand la vidéo peut être jouée
+    // On utilise { once: true } pour s'assurer que l'écouteur n'est déclenché qu'une seule fois.
+    videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
+    
+    // 3. 🛑 NOUVEAU : Si la vidéo a déjà des données, forcer le démarrage immédiatement
+    // On vérifie si la vidéo a déjà une taille valide (signe qu'elle reçoit un flux)
+    if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) { 
+        console.log("Flux vidéo déjà actif, forçage du démarrage immédiat du tracker.");
+        startTrackingInternal();
     }
 }
 
