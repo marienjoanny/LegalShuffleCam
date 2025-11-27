@@ -1,62 +1,101 @@
 <?php
 // /public/api/report-handler.php
+// Gère l'enregistrement des signalements complets (avec image) et des logs de consentement.
+
 header('Content-Type: application/json');
 
-// Inclure le logger général et l'annuaire IP. 
-// Cela importe logActivity(), updatePeerAnnuaire() et la constante PEER_IP_ANNUAIRE.
+// Inclure le logger général et l'annuaire IP.
+// Ceci importe logActivity(), updatePeerAnnuaire() et la constante PEER_IP_ANNUAIRE.
 require_once __DIR__ . '/log_activity.php'; 
 
 // --- CHEMINS ---
 const REPORT_PENDING_DIR = __DIR__ . '/../../logs/reports/pending_review'; 
 const REPORT_IMAGES_DIR = __DIR__ . '/../../logs/reports/images'; 
+const CONSENT_LOG_FILE = __DIR__ . '/../../logs/consent_log.json';
 
-// Récupération des données POST
-$reporterId = $_POST['callerId'] ?? null;
-$reportedId = $_POST['partnerId'] ?? null;
-$reason = $_POST['reason'] ?? 'Raison non spécifiée';
-$imageBase64 = $_POST['imageBase64'] ?? '';
-$sessionId = $_POST['sessionId'] ?? uniqid('session_'); 
+// --- 1. RÉCUPÉRATION ET UNIFICATION DES DONNÉES (Utilisation de $_REQUEST pour GET/POST) ---
+// Note: Le reporterId est 'peerId' dans les logs de match.js et 'callerId' dans les rapports de index-real.php
+$reporterId = $_REQUEST['callerId'] ?? $_REQUEST['peerId'] ?? null;
+$reportedId = $_REQUEST['partnerId'] ?? null;
+$reason = $_REQUEST['reason'] ?? 'Raison non spécifiée';
+$action = $_REQUEST['action'] ?? 'report'; // 'report' ou 'log_consent'
+$sessionId = $_REQUEST['sessionId'] ?? uniqid('session_'); 
 
-// 🔔 Récupérer l'IP du signaleur actuel
 $reporterIP = $_SERVER['REMOTE_ADDR'] ?? 'N/A';
 
-if (!$reporterId || !$reportedId) {
+if (!$reporterId) {
     http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Missing ID (callerId or partnerId)']);
+    echo json_encode(['status' => 'error', 'message' => 'Missing Reporter ID (callerId or peerId)']);
     exit;
 }
 
 // ----------------------------------------------------
-// NOUVEAU: 1. Mise à jour de l'annuaire du signaleur (reporter)
-// Ceci est CRUCIAL pour archiver l'IP de celui qui signale en temps réel.
+// NOUVEAU: 2. Branchement de la logique (Consentement vs. Signalement)
 // ----------------------------------------------------
+
+// Mise à jour de l'annuaire du signaleur (reporter) pour archiver son IP en temps réel.
 updatePeerAnnuaire($reporterId, $reporterIP, $sessionId);
 
-
-// ----------------------------------------------------
-// 2. Gestion de l'IP du signalé (via annuaire)
-// ----------------------------------------------------
-$reportedIP = 'NOT_FOUND_IN_ANNUAIRE';
-
-// Utilisation de la constante PEER_IP_ANNUAIRE définie dans log_activity.php
-if (file_exists(PEER_IP_ANNUAIRE)) {
-    // Lecture directe de l'annuaire temporaire
-    $peersData = json_decode(@file_get_contents(PEER_IP_ANNUAIRE), true);
+if ($action === 'log_consent') {
+    // --- GESTION DU LOG DE CONSENTEMENT (Requête GET/callPeerApi) ---
     
-    // Vérifier l'existence de l'ID et de la clé 'ip'
+    $consentStatus = $_REQUEST['consentStatus'] ?? 'STATUS_MISSING';
+    
+    // Log dans l'activité générale
+    logActivity('CONSENT_STATUS', $reporterId, $reportedId, $consentStatus, $reporterIP);
+    
+    // Log détaillé dans un fichier JSON séparé pour l'audit
+    $consentLogEntry = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'reporterId' => $reporterId,
+        'reportedId' => $reportedId,
+        'reporterIP' => $reporterIP,
+        'status' => $consentStatus,
+        'sessionId' => $sessionId
+    ];
+
+    // Sauvegarde atomique (pour éviter la corruption lors de l'écriture concurrente)
+    @file_put_contents(
+        CONSENT_LOG_FILE, 
+        json_encode($consentLogEntry) . ",\n", 
+        FILE_APPEND | LOCK_EX
+    );
+    
+    echo json_encode(['status' => 'success', 'message' => "Log de consentement enregistré: $consentStatus"]);
+    exit;
+}
+
+// ----------------------------------------------------
+// GESTION DU SIGNALEMENT COMPLET (Requête POST, avec Image Base64)
+// ----------------------------------------------------
+
+// La capture d'écran est attendue dans le corps POST
+$imageBase64 = $_POST['imageBase64'] ?? ''; 
+
+if (!$reportedId) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Missing Partner ID (partnerId) for full report']);
+    exit;
+}
+
+
+// 3. Gestion de l'IP du signalé (via annuaire)
+$reportedIP = 'NOT_FOUND_IN_ANNUAIRE';
+if (file_exists(PEER_IP_ANNUAIRE)) {
+    $peersData = json_decode(@file_get_contents(PEER_IP_ANNUAIRE), true);
     if (isset($peersData[$reportedId]['ip'])) {
         $reportedIP = $peersData[$reportedId]['ip'];
     }
 }
 
-// 3. Vérification des dossiers de rapports (ils devraient exister, mais on sécurise)
+// 4. Vérification des dossiers de rapports
 if (!is_dir(REPORT_PENDING_DIR) || !is_dir(REPORT_IMAGES_DIR)) {
      @mkdir(REPORT_PENDING_DIR, 0775, true);
      @mkdir(REPORT_IMAGES_DIR, 0775, true);
 }
 
 
-// --- 4. SAUVEGARDE DE LA CAPTURE D'ÉCRAN ---
+// --- 5. SAUVEGARDE DE LA CAPTURE D'ÉCRAN ---
 $imageFilename = 'None';
 $reportTimestamp = time();
 
@@ -70,14 +109,14 @@ if (!empty($imageBase64)) {
 
     if (@file_put_contents($imagePath, $imageData) === false) {
         logActivity('REPORT_ERROR', $reporterId, $reportedId, "Failed to save screenshot at: " . $imagePath, $reportedIP);
-        $imageFilename = 'Failed to save screenshot';
+        $imageFilename = 'Failed to save screenshot (Check permissions)';
     } else {
         logActivity('REPORT_INFO', $reporterId, $reportedId, "Screenshot saved: " . $imageFilename, $reportedIP);
     }
 }
 
 
-// 5. Préparation et Écriture du fichier JSON du rapport détaillé
+// 6. Préparation et Écriture du fichier JSON du rapport détaillé
 $reportData = [
     'timestamp' => date('Y-m-d H:i:s', $reportTimestamp),
     'reporterId' => $reporterId,
@@ -100,8 +139,9 @@ if (@file_put_contents($jsonPath, json_encode($reportData, JSON_PRETTY_PRINT)) =
     exit;
 }
 
-// 6. Log général (pour la traçabilité dans activity.log)
+// 7. Log général (pour la traçabilité dans activity.log)
 logActivity('REPORT', $reporterId, $reportedId, $reason, $reportedIP); 
 
 echo json_encode(['status' => 'success', 'message' => 'Signalement enregistré avec capture d\'écran: ' . $imageFilename]);
+
 ?>
