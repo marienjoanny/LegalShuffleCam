@@ -72,11 +72,15 @@ function startTrackingInternal() {
     // 1. Initialisation du Tracker
     tracker = new window.tracking.ObjectTracker('face');
     
-    // ⚙️ AJUSTEMENT CLÉ ICI : Assouplissement des paramètres pour améliorer la détection
+    // ⚙️ Paramètres ajustés pour la tolérance et la performance.
     tracker.setInitialScale(4);
-    tracker.setStepSize(1.5); // Réduit la taille du pas de 2 à 1.5
-    tracker.setEdgesDensity(0.15); // Augmente légèrement la densité des bords de 0.1 à 0.15
+    tracker.setStepSize(1.0); 
+    tracker.setEdgesDensity(0.18); 
     
+    // ⚙️ DÉTECTION OPTIMISÉE : Détection toutes les 10 frames (environ 3 fois par seconde)
+    tracker.setSkip(10); 
+    console.log("Tracking.js: Détection fixée à environ 3 fois par seconde (setSkip=10).");
+
     // 2. Écoute des Résultats de la Détection
     tracker.on('track', function(event) {
         // Si le consentement mutuel est actif, ignorer les détections
@@ -96,12 +100,11 @@ function startTrackingInternal() {
     // 3. Lancement du Tracker
     window.tracking.track(videoElement, tracker); 
     isTrackerRunning = true;
-    console.log("Tracking.js: Tracker démarré sur l'élément vidéo avec paramètres ajustés.");
 
-    // Initialiser lastDetectionTime pour éviter un passage au rouge immédiat
+    // Initialiser lastDetectionTime pour éviter un passage au rouge immédiat au démarrage
     lastDetectionTime = Date.now();
     
-    // 4. Intervalle de Vérification pour "Visage Perdu" (Le tracker ne signale pas l'absence)
+    // 4. Intervalle de Vérification pour "Visage Perdu" (Le délai est de 3s)
     detectionIntervalId = setInterval(() => {
         // Si le consentement mutuel est actif, on ne vérifie pas l'absence et on garde la bordure bleue
         if (window.mutualConsentGiven) {
@@ -111,6 +114,7 @@ function startTrackingInternal() {
 
         const timeSinceLastDetection = Date.now() - lastDetectionTime;
         
+        // Si la dernière détection remonte à plus que le délai de 3 secondes
         if (timeSinceLastDetection > options.detectionTimeout) {
             // Pas de détection récente (visage perdu)
             if (window.faceVisible) {
@@ -119,7 +123,7 @@ function startTrackingInternal() {
                 dispatchVisibilityEvent(false);
             }
         } else {
-             // Si on était en "perdu" mais qu'une détection est récente, on revient au Vert
+             // Si le visage est ré-identifié avant le timeout, on confirme l'état Vert
              if (!window.faceVisible) {
                  window.faceVisible = true;
                  updateBorder(true);
@@ -148,15 +152,16 @@ export function initFaceDetection(video, customOptions = {}) {
 
     videoElement = video;
     options = {
-        detectionTimeout: 1000, // Défaut : 1 seconde
+        // Le délai est maintenu à 3 secondes, pour donner au tracker le temps de se rattraper.
+        detectionTimeout: 3000, 
         ...customOptions
     };
 
     // 🛑 ÉVÉNEMENT CRITIQUE : Démarrer le tracking seulement quand la vidéo peut être jouée
-    // Ceci garantit que le flux média est bien chargé.
+    // On utilise { once: true } pour s'assurer que l'écouteur n'est déclenché qu'une seule fois.
     videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
     
-    // Si la vidéo est déjà en lecture (ex: changement de caméra rapide), on peut forcer le démarrage
+    // Si la vidéo est déjà en lecture (ex: si le canplay est déjà passé), on peut forcer le démarrage
     if (videoElement.readyState >= 3) { // READY_STATE.HAVE_FUTURE_DATA
         startTrackingInternal();
     }
@@ -182,7 +187,7 @@ export function stopFaceDetection() {
         videoElement.removeEventListener('canplay', startTrackingInternal);
     }
     
-    // tracking.js n'a pas de méthode stop, on doit se contenter de désactiver les mécanismes JS
+    // On met à null les références pour le garbage collector
     tracker = null;
     isTrackerRunning = false;
     videoElement = null;
