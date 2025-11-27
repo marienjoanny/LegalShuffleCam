@@ -6,12 +6,14 @@ let lastDetectionTime = 0;
 let detectionIntervalId = null;
 let videoElement = null;
 let options = {};
+let isTrackerRunning = false; // État pour gérer les cycles de vie du tracker
 
 // Référence au conteneur (nous appliquons la bordure au conteneur pour plus de visibilité)
 const container = document.getElementById('localVideoContainer'); 
 
 // Global pour synchroniser avec d'autres modules (match.js, app-lite.js)
 window.faceVisible = false;
+// window.mutualConsentGiven est supposé être géré par d'autres modules et est utilisé ici.
 
 // ----------------------------------------------------------------------
 // Fonctions de Mise à Jour de l'UI
@@ -24,21 +26,22 @@ window.faceVisible = false;
 function updateBorder(isVisible) {
     if (!container) return;
 
-    // Si le consentement mutuel est donné (géré par app-lite.js/match.js), la bordure est bleue/neutre.
+    // 🛑 Cas 1 : Consentement mutuel ACTIF
     if (window.mutualConsentGiven) {
-        container.style.border = '4px solid #3498db'; /* Bleu neutre */
+        // Bordure Bleue (Indique que la détection est désactivée et le flux est libre)
+        container.style.border = '4px solid #3498db'; 
         container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
         return;
     }
 
-    // Mode anti-enregistrement ACTIF (Bordure dynamique)
+    // 🟢 Cas 2 : Mode anti-enregistrement ACTIF
     if (isVisible) {
         // Visage visible = OK (Vert)
-        container.style.border = '4px solid #2ecc71'; /* Vert */
+        container.style.border = '4px solid #2ecc71'; 
         container.style.boxShadow = '0 0 10px rgba(46, 204, 113, 0.8)';
     } else {
         // Visage masqué = DANGER/ATTENTION (Rouge)
-        container.style.border = '4px solid #e74c3c'; /* Rouge */
+        container.style.border = '4px solid #e74c3c'; 
         container.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
     }
 }
@@ -60,27 +63,13 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
 // ----------------------------------------------------------------------
 
 /**
- * Initialise et lance la détection faciale sur l'élément vidéo donné.
- * @param {HTMLVideoElement} video - L'élément vidéo à tracker.
- * @param {object} customOptions - Options de configuration (ex: detectionTimeout).
+ * Fonction interne pour démarrer le tracker une fois que la vidéo est prête (écouteur 'canplay').
  */
-export function initFaceDetection(video, customOptions = {}) {
-    if (!container) {
-         console.error("Erreur Face Detection: Le conteneur #localVideoContainer est introuvable.");
-         return;
-    }
-    
-    // Si un tracker est déjà actif, l'arrêter d'abord.
-    stopFaceDetection(); 
-
-    videoElement = video;
-    options = {
-        detectionTimeout: 1000, // Défaut : 1 seconde
-        ...customOptions
-    };
+function startTrackingInternal() {
+    // Vérifier si le tracker tourne déjà
+    if (isTrackerRunning || !videoElement) return;
 
     // 1. Initialisation du Tracker
-    // Utiliser la fonction globale 'tracking' fournie par tracking.js
     tracker = new window.tracking.ObjectTracker('face');
     tracker.setInitialScale(4);
     tracker.setStepSize(2);
@@ -88,6 +77,9 @@ export function initFaceDetection(video, customOptions = {}) {
     
     // 2. Écoute des Résultats de la Détection
     tracker.on('track', function(event) {
+        // Si le consentement mutuel est actif, ignorer les détections
+        if (window.mutualConsentGiven) return; 
+
         if (event.data.length > 0) {
             // Un visage est détecté
             lastDetectionTime = Date.now();
@@ -100,13 +92,16 @@ export function initFaceDetection(video, customOptions = {}) {
     });
 
     // 3. Lancement du Tracker
-    window.tracking.track(videoElement, tracker, { camera: true }); 
+    // Utiliser window.tracking.track avec l'élément vidéo
+    window.tracking.track(videoElement, tracker); 
+    isTrackerRunning = true;
+    console.log("Tracking.js: Tracker démarré sur l'élément vidéo.");
     
     // 4. Intervalle de Vérification pour "Visage Perdu" (Le tracker ne signale pas l'absence)
     detectionIntervalId = setInterval(() => {
-        // Si le consentement mutuel est actif, on ne vérifie pas et on garde la bordure bleue
+        // Si le consentement mutuel est actif, on ne vérifie pas l'absence et on garde la bordure bleue
         if (window.mutualConsentGiven) {
-            updateBorder(false); // Force le bleu/neutre
+            updateBorder(true); // Force l'état visuel "OK/Bleu" (consentement)
             return;
         }
 
@@ -116,15 +111,57 @@ export function initFaceDetection(video, customOptions = {}) {
             // Pas de détection récente (visage perdu)
             if (window.faceVisible) {
                 window.faceVisible = false;
-                updateBorder(false);
+                updateBorder(false); // Force le Rouge
                 dispatchVisibilityEvent(false);
             }
+        } else {
+             // Si on était en "perdu" mais qu'une détection est récente, on revient au Vert
+             if (!window.faceVisible) {
+                 window.faceVisible = true;
+                 updateBorder(true);
+                 dispatchVisibilityEvent(true);
+             }
         }
     }, 200); // Vérifie toutes les 200ms
 
     // Force une première mise à jour (bordure rouge/verte selon l'état initial)
     updateBorder(window.faceVisible); 
     dispatchVisibilityEvent(window.faceVisible);
+}
+
+/**
+ * Initialise et lance la détection faciale sur l'élément vidéo donné.
+ * @param {HTMLVideoElement} video - L'élément vidéo à tracker.
+ * @param {object} customOptions - Options de configuration (ex: detectionTimeout).
+ */
+export function initFaceDetection(video, customOptions = {}) {
+    if (!container) {
+         console.error("Erreur Face Detection: Le conteneur #localVideoContainer est introuvable.");
+         return;
+    }
+    
+    stopFaceDetection(); // S'assurer que tout est nettoyé avant de relancer
+
+    videoElement = video;
+    options = {
+        detectionTimeout: 1000, // Défaut : 1 seconde
+        ...customOptions
+    };
+
+    // 🛑 ÉVÉNEMENT CRITIQUE : Démarrer le tracking seulement quand la vidéo peut être jouée
+    // Ceci garantit que le flux média est bien chargé.
+    videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
+    
+    // Si la vidéo est déjà en lecture (ex: changement de caméra rapide), on peut forcer le démarrage
+    if (videoElement.readyState >= 3) { // READY_STATE.HAVE_FUTURE_DATA
+        startTrackingInternal();
+    }
+    
+    // Afficher une bordure neutre au démarrage tant que la détection n'a pas commencé
+    if (container) {
+        container.style.border = '4px solid #95a5a6'; /* Gris neutre/éteint */
+        container.style.boxShadow = 'none';
+    }
 }
 
 /**
@@ -136,17 +173,18 @@ export function stopFaceDetection() {
         detectionIntervalId = null;
     }
     
-    if (tracker && videoElement) {
-        // tracking.js n'a pas de méthode stop officielle simple,
-        // mais le fait d'arrêter la caméra et de ne pas relancer le tracking suffit.
-        // On retire l'écoute d'événements si possible.
-        // On arrête aussi les pistes de la caméra dans camera.js, ce qui arrête le tracking.
-        tracker = null;
+    // Important : retirer l'écoute de l'événement pour éviter les doubles lancements
+    if (videoElement) {
+        videoElement.removeEventListener('canplay', startTrackingInternal);
     }
+    
+    // tracking.js n'a pas de méthode stop, on doit se contenter de désactiver les mécanismes JS
+    tracker = null;
+    isTrackerRunning = false;
+    videoElement = null;
 
     window.faceVisible = false;
     lastDetectionTime = 0;
-    videoElement = null;
 
     // Nettoyer l'UI : Bordure bleue neutre pour indiquer que le service est éteint
     if (container) {
@@ -156,4 +194,5 @@ export function stopFaceDetection() {
 
     // Signaler que le tracking est arrêté
     dispatchVisibilityEvent(false, true); 
+    console.log("Tracking.js: Tracker arrêté et nettoyé.");
 }
