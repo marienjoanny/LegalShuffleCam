@@ -13,13 +13,16 @@ window.faceVisible = false;
 // --- DÉFINITION DES COULEURS ---
 
 // COULEURS POUR LA BORDURE DE LA CAMÉRA LOCALE (#localVideo)
-// (Indique l'état de l'outil de DÉTECTION)
 const FRAME_COLOR_DETECTED = "#2ecc71";  // Vert (L'outil est ACTIF et a trouvé un visage)
 const FRAME_COLOR_LOST = "#e74c3c";      // Rouge (L'outil est ACTIF mais le visage est perdu/masqué)
 const FRAME_COLOR_CONSENTED = "#3498db"; // Bleu (Neutre après consentement ou détection arrêtée)
 
+// Ajout de styles d'ombre pour accentuer la couleur de la bordure
+const FRAME_SHADOW_DETECTED = `0 0 8px ${FRAME_COLOR_DETECTED}, 0 0 15px ${FRAME_COLOR_DETECTED}`; // Ombre Verte intense
+const FRAME_SHADOW_LOST = `0 0 8px ${FRAME_COLOR_LOST}`;                                           // Ombre Rouge simple
+const FRAME_SHADOW_NEUTRAL = "0 4px 10px rgba(0, 0, 0, 0.5)";                                       // Ombre neutre par défaut
+
 // COULEURS POUR LE BANDEAU D'ALERTE (.warning-ip span)
-// (Indique l'état de CONFORMITÉ aux règles de la plateforme)
 const BANNER_COLOR_VIOLATION = '#ef4444'; // Rouge (Visage Visible / Violation de règle)
 const BANNER_COLOR_SAFE = '#2ecc71';      // Vert (Visage masqué / Respect des règles)
 const BANNER_COLOR_NEUTRAL = '#3498db';   // Bleu (Consentement / État neutre)
@@ -161,26 +164,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cible le SPAN dans le bandeau d'information permanent (.warning-ip)
         const warningIpSpan = document.querySelector('.warning-ip span');
             
-        // --- 1. GESTION DE LA BORDURE (#localVideo) ---
-        // Logique demandée : VERT si visible, ROUGE si perdu
+        // --- 1. GESTION DE LA BORDURE et SHADOW (#localVideo) ---
         if (localVideoElement) {
-             let frameColor = FRAME_COLOR_LOST; // Par défaut : Rouge (si actif, mais perdu)
+             let frameColor = FRAME_COLOR_LOST; 
+             let shadowStyle = FRAME_SHADOW_LOST;
              
              if (isConsented || isStopped) {
-                 // Si consentement ou arrêt, bordure neutre
+                 // Mode Neutre
                  frameColor = FRAME_COLOR_CONSENTED;
+                 shadowStyle = FRAME_SHADOW_NEUTRAL;
              } else if (isVisible) {
-                 // Si visage trouvé, bordure VERTE (VERT quand y a le visage)
+                 // Mode Détection OK (Vert)
                  frameColor = FRAME_COLOR_DETECTED;
+                 shadowStyle = FRAME_SHADOW_DETECTED; // Ombre lumineuse pour accentuer l'état "actif/trouvé"
              }
              
-             // Application du style avec !important à la balise vidéo
+             // Forcer le style de la bordure et de l'ombre avec !important
              localVideoElement.style.setProperty('border', `3px solid ${frameColor}`, 'important');
-             localVideoElement.style.transition = "border 0.3s ease";
+             localVideoElement.style.setProperty('box-shadow', shadowStyle, 'important');
+             localVideoElement.style.transition = "border 0.3s ease, box-shadow 0.3s ease";
         }
         
         // --- 2. GESTION DU BANDEAU D'ALERTE PERMANENT (.warning-ip span) ---
-        // Logique des règles : ROUGE si visible, VERT si masqué
         if (warningIpSpan) {
             if (isConsented) {
                 // État de consentement (neutre)
