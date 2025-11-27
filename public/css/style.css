@@ -154,7 +154,8 @@ body {
     width: 100px; /* Taille fixe réduite pour la cam sur mobile */
     height: 75px; 
     object-fit: cover;
-    border: 3px solid #3498db;
+    /* CORRECTION : Ligne commentée pour laisser le JS gérer la bordure de couleur */
+    /* border: 3px solid #3498db; */
     border-radius: 6px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     z-index: 50;
