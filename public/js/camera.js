@@ -88,14 +88,16 @@ export async function startCamera(deviceId) {
         const localVideo = document.getElementById("localVideo");
         if (localVideo) { 
             localVideo.srcObject = newStream;
+
             localVideo.play().catch(e => {
                 console.warn("Échec de la lecture automatique de la vidéo locale:", e);
-            }); 
-
-            // ✅ Timeout ajusté à 3000 ms pour plus de stabilité
-            initFaceDetection(localVideo, { 
-                detectionTimeout: 3000 
             });
+
+            // ✅ Patch terrain : démarrage détection après lecture réelle
+            localVideo.addEventListener('playing', () => {
+                showTopbarLog("📺 Vidéo en lecture, démarrage détection forcée", "#2ecc71");
+                initFaceDetection(localVideo, { detectionTimeout: 3000 });
+            }, { once: true });
         }
         
         if (window.currentCall && window.currentCall.peerConnection) {
@@ -112,7 +114,7 @@ export async function startCamera(deviceId) {
             }
         }
         
-        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}. Détection faciale lancée.`);
+        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
 
     } catch (err) {
         console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
