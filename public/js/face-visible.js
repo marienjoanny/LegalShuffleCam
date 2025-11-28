@@ -49,7 +49,7 @@ function startTrackingInternal() {
     tracker.setEdgesDensity(0.1);
     tracker.setSkip(10);
 
-    showTopbarLog("🟢 Détection faciale activée (ratio ≥ 30%)");
+    showTopbarLog("🟢 Détection faciale activée (ratio ≥ 10%)");
 
     tracker.on('track', function(event) {
         if (window.mutualConsentGiven) return;
@@ -66,7 +66,8 @@ function startTrackingInternal() {
             event.data.forEach(rect => {
                 const faceArea = rect.width * rect.height;
                 const ratio = faceArea / videoArea;
-                if (ratio >= 0.3) {
+                showTopbarLog(`🧠 Face détectée: ${rect.width}×${rect.height} → ratio ${(ratio * 100).toFixed(1)}%`, "#9b59b6");
+                if (ratio >= 0.1) {
                     valid = true;
                 }
             });
