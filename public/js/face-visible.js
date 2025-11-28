@@ -131,15 +131,19 @@ export function initFaceDetection(video, customOptions = {}) {
     container.style.boxShadow = 'none';
 
     videoElement.addEventListener('canplay', () => {
-        setTimeout(() => {
+        let tries = 0;
+        const waitForLayout = setInterval(() => {
             const w = videoElement.clientWidth;
             const h = videoElement.clientHeight;
             if (w > 0 && h > 0) {
+                clearInterval(waitForLayout);
+                showTopbarLog(`📏 Taille vidéo détectée: ${w}×${h}`, "#2ecc71");
                 startTrackingInternal();
-            } else {
-                showTopbarLog("⚠️ Vidéo visible mais layout non prêt (clientWidth = 0)", "#f39c12");
+            } else if (++tries > 10) {
+                clearInterval(waitForLayout);
+                showTopbarLog("❌ Échec layout vidéo après 10 tentatives", "#e74c3c");
             }
-        }, 300);
+        }, 200);
     }, { once: true });
 
     if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) { 
