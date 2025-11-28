@@ -238,8 +238,9 @@
 
     <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/build/tracking-min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/data/face-min.js"></script>
+    <!-- JSDELIVR CDN, version sans le numéro de version pour la dernière stable -->
+    <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
 
     <!-- Scripts internes (sans type="module") -->
     <script src="/js/camera.js"></script>
@@ -485,3 +486,4 @@
     </script>
 </body>
 </html>
+
