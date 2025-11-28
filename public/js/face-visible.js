@@ -56,7 +56,7 @@ function startTrackingInternal() {
 
         const videoArea = videoElement.clientWidth * videoElement.clientHeight;
         if (videoArea === 0) {
-            showTopbarLog("⚠️ Zone vidéo invisible ou non rendue (clientWidth = 0)", "#f39c12");
+            showTopbarLog("⚠️ Vidéo visible mais layout non prêt (clientWidth = 0)", "#f39c12");
             return;
         }
 
@@ -130,7 +130,17 @@ export function initFaceDetection(video, customOptions = {}) {
     container.style.border = '4px solid #95a5a6';
     container.style.boxShadow = 'none';
 
-    videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
+    videoElement.addEventListener('canplay', () => {
+        setTimeout(() => {
+            const w = videoElement.clientWidth;
+            const h = videoElement.clientHeight;
+            if (w > 0 && h > 0) {
+                startTrackingInternal();
+            } else {
+                showTopbarLog("⚠️ Vidéo visible mais layout non prêt (clientWidth = 0)", "#f39c12");
+            }
+        }, 300);
+    }, { once: true });
 
     if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) { 
         showTopbarLog("📹 Flux vidéo actif, démarrage immédiat du tracker");
