@@ -27,11 +27,10 @@ let localConsentModal = null;
 let remoteConsentModal = null;
 
 
-// --- UTILS DATA CHANNEL (CORRECTION CRITIQUE) ---
+// --- UTILS DATA CHANNEL ---
 
 /**
  * Envoie des données au partenaire via le canal de données PeerJS.
- * Cette fonction était manquante, causant l'échec du flux de consentement.
  * @param {string} type - Le type de message (voir MESSAGE_TYPES).
  * @param {object} [payload={}] - Les données spécifiques à inclure.
  */
@@ -51,7 +50,7 @@ function sendData(type, payload = {}) {
 }
 
 
-// --- UTILS API SERVER ---
+// --- UTILS API SERVER (Amélioration de la robustesse) ---
 
 /**
  * Fonction générique pour appeler les APIs PHP (register, unregister, ping).
@@ -66,13 +65,22 @@ function callPeerApi(endpoint, data = {}) {
         ...data 
     }).toString();
 
-    fetch(`${url}?${params}`, { method: 'GET' })
-        .then(response => response.json())
+    // Ajout d'une gestion plus robuste des erreurs HTTP
+    return fetch(`${url}?${params}`, { method: 'GET' })
+        .then(response => {
+            if (!response.ok) {
+                 throw new Error(`API ${endpoint} Erreur HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(result => {
             console.log(`[API] ${endpoint} Success:`, result);
+            return result;
         })
         .catch(error => {
-            console.error(`[API] ${endpoint} Error:`, error);
+            console.error(`[API] ${endpoint} Error:`, error.message);
+            // Rejeter la promesse pour permettre aux fonctions appelantes de gérer l'échec
+            throw error; 
         });
 }
 
@@ -85,7 +93,10 @@ function startHeartbeat() {
     // Ping toutes les 30 secondes (inférieur au timeout de purge de 10 minutes)
     heartbeatInterval = setInterval(() => {
         if (window.myPeerId) {
-            callPeerApi('ping-peer.php', { action: 'HEARTBEAT' });
+            // Utiliser un catch pour ne pas interrompre l'intervalle en cas d'erreur ponctuelle
+            callPeerApi('ping-peer.php', { action: 'HEARTBEAT' }).catch(e => {
+                console.warn("[HEARTBEAT] Échec du ping API:", e.message);
+            });
         }
     }, 30000); 
     console.log("[HEARTBEAT] Démarré (intervalle 30s).");
@@ -99,6 +110,9 @@ function registerPeer() {
         .then(() => {
             // Après l'enregistrement réussi, démarrer le heartbeat
             startHeartbeat(); 
+        })
+        .catch(() => {
+             window.showTopbar("❌ Erreur d'enregistrement API. Vérifiez votre backend.", "#e74c3c");
         });
 }
 
@@ -108,45 +122,12 @@ function registerPeer() {
 function unregisterPeer(reason = 'disconnect') {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     heartbeatInterval = null;
-    callPeerApi('unregister-peer.php', { reason: reason });
+    callPeerApi('unregister-peer.php', { reason: reason }).catch(e => {
+        console.warn("[UNREGISTER] Échec de la désinscription:", e.message);
+    });
 }
 
-// --- LOGIQUE PEERJS ---
-
-/**
- * Gère les messages entrants sur le canal de données.
- */
-function handleDataMessage(data) {
-    if (!data || !data.type) {
-        console.warn("[DATA] Message de données reçu invalide.", data);
-        return;
-    }
-
-    const { type, payload } = data;
-    console.log(`[DATA] Message reçu: ${type}`, payload);
-
-    switch (type) {
-        case MESSAGE_TYPES.CONSENT_REQUEST:
-            // Le partenaire demande le consentement. Afficher la modale distante.
-            showRemoteConsentModal(payload.requesterId);
-            break;
-
-        case MESSAGE_TYPES.CONSENT_RESPONSE:
-            // Le partenaire a répondu à notre demande.
-            handlePartnerConsentResponse(payload.response);
-            break;
-            
-        case 'WIZZ':
-            // Le partenaire a envoyé un Wizz
-            window.showTopbar("🔔 Wizz reçu de l'interlocuteur !", "#9b59b6");
-            // Optionnel: Ajouter une vibration ou une animation ici
-            break;
-
-        default:
-            console.warn(`[DATA] Type de message inconnu: ${type}`);
-    }
-}
-
+// --- LOGIQUE PEERJS (Correction Critique du Host) ---
 
 /**
  * 1. Initialise la connexion PeerJS et récupère le flux média.
@@ -154,11 +135,12 @@ function handleDataMessage(data) {
 export function initMatch() {
     window.showTopbar("⏳ Initialisation PeerJS...", "#3498db");
     
-    // Initialiser Peer
+    // Initialiser Peer - CORRECTION CRITIQUE HOST ET PATH
     peer = new Peer(null, {
-        host: 'peerjs-server.example.com', // À remplacer par votre propre serveur
-        port: 443,
-        secure: true
+        host: 'legalshufflecam.ovh', // <--- Mettez votre domaine réel ici
+        port: 443, // Le port HTTPS exposé par Nginx
+        path: '/peerjs', // <--- CHEMIN OBLIGATOIRE pour le reverse proxy Nginx
+        secure: true // Nécessaire car nous utilisons HTTPS (port 443)
     });
 
     peer.on('open', (id) => {
@@ -166,22 +148,25 @@ export function initMatch() {
         window.updatePeerIdDisplay(id);
         window.showTopbar(`✅ PeerJS OK. ID: ${id.substring(0, 8)}... En attente de la caméra.`, "#2ecc71");
         
-        // --- NOUVEAU : Enregistrement du pair et démarrage du Heartbeat ---
         registerPeer(); 
         
         // Démarrer la caméra pour obtenir le flux local et lancer la détection faciale
-        // L'appel à startCamera sans ID utilise le périphérique par défaut/sélectionné
         startCamera(); 
     });
 
     peer.on('error', (err) => {
         console.error("[PEER] Erreur PeerJS:", err);
-        window.showTopbar(`❌ Erreur PeerJS: ${err.type}. Rechargez.`, "#c0392b");
+        let msg = `❌ Erreur PeerJS: ${err.type}. `;
+        if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'peer-unavailable') {
+             msg += "Vérifiez le service Node.js/PeerJS Server et la configuration Nginx (Host/Path/Reverse Proxy).";
+        } else {
+             msg += "Rechargez.";
+        }
+        window.showTopbar(msg, "#c0392b");
     });
     
     // Écouter les appels entrants
     peer.on('call', (call) => {
-        // Utiliser window.localStream
         const localStream = window.localStream; 
         if (!localStream) {
             console.error("[PEER] Appel reçu mais pas de stream local disponible.");
@@ -224,14 +209,14 @@ export function nextMatch() {
     unregisterPeer('next_match');
     registerPeer(); 
 
-    // 3. Simuler la recherche du pair à appeler via l'annuaire
-    // --- À IMPLÉMENTER : Logique d'appel à get-peers.php ou autre API de matching ---
-    
-    // Simulation du matching (Devra être remplacé par un fetch vers une API)
-    fetch('/public/api/get-peer.php?exclude=' + window.myPeerId) // API simulée
-        .then(res => res.json())
+    // 3. Logique de matching via l'API
+    fetch('/public/api/get-peer.php?exclude=' + window.myPeerId) 
+        .then(res => {
+            if (!res.ok) throw new Error(`API get-peer.php Erreur HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
-            if (data.peerIdToCall) {
+            if (data.peerIdToCall && data.peerIdToCall !== window.myPeerId) {
                 // Si un pair est trouvé, initier l'appel
                 const localStream = window.localStream; 
                 if (localStream) {
@@ -240,6 +225,8 @@ export function nextMatch() {
                     const conn = peer.connect(data.peerIdToCall);
                     setupDataConnection(conn);
                     handleConnection(call);
+                } else {
+                    window.showTopbar("❌ Erreur: Caméra non initialisée pour l'appel.", "#c0392b");
                 }
             } else {
                 window.showTopbar("🤷‍♂️ Personne trouvée. Réessayez.", "#3498db");
@@ -247,11 +234,10 @@ export function nextMatch() {
             }
         })
         .catch(err => {
-            console.error("Erreur de matching simulé:", err);
+            console.error("Erreur de matching:", err);
             window.showTopbar("❌ Erreur de l'API de matching. Réessayez.", "#c0392b");
             if (btnNext) btnNext.disabled = false; // Réactiver le bouton
         });
-    // -----------------------------------------------------------------------------
     
     window.mutualConsentGiven = false; // Réinitialiser l'état du consentement
 }
@@ -271,6 +257,7 @@ function setupDataConnection(conn) {
     dataConnection.on('close', () => {
         console.log("[DATA] Canal de données fermé.");
         dataConnection = null;
+        // Optionnel: Gérer la déconnexion vidéo ici si le canal de données se ferme seul
     });
 
     dataConnection.on('error', (err) => {
@@ -290,8 +277,7 @@ function handleConnection(call) {
     window.showTopbar(`🤝 Connecté à ${call.peer.substring(0, 8)}... !`, "#2ecc71");
     window.updateLastPeers(call.peer); 
     
-    // Si nous sommes l'initiateur de l'appel (on a appelé call.peer()), on crée le canal de données 
-    // s'il n'existe pas déjà (car PeerJS le crée parfois automatiquement).
+    // Si nous sommes l'initiateur de l'appel, on s'assure que le canal de données est initié
     if (!dataConnection || dataConnection.peer !== call.peer) {
          const conn = peer.connect(call.peer);
          setupDataConnection(conn);
@@ -308,7 +294,6 @@ function handleConnection(call) {
 
     call.on('close', () => {
         console.log("[PEER] Connexion fermée.");
-        // --- NOUVEAU : Désenregistrement lors de la déconnexion d'un appel ---
         unregisterPeer('call_close'); 
         
         remoteVideo.srcObject = null;
@@ -318,6 +303,9 @@ function handleConnection(call) {
         
         // Relancer l'enregistrement pour pouvoir être rappelé
         registerPeer(); 
+        
+        // Réactiver le bouton "Suivant"
+        if (btnNext) btnNext.disabled = false; 
     });
     
     // Le bouton "Suivant" est géré par la détection faciale ou par le consentement mutuel
