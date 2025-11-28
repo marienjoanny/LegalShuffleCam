@@ -236,18 +236,28 @@
         </p>
     </div>
 
-   <!-- Scripts externes -->
+    <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/build/tracking-min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/data/face-min.js"></script>
 
-    <!-- Scripts internes -->
+    <!-- Scripts internes (sans type="module") -->
     <script src="/js/camera.js"></script>
     <script src="/js/face-visible.js"></script>
     <script src="/js/match.js"></script>
+
+    <!-- Script principal (module) -->
     <script type="module" src="/app-lite.js"></script>
-    <!-- Scripts globaux -->
+
+    <!-- Fonction showTopbar par défaut -->
     <script>
+        // Fonction showTopbar par défaut
+        window.showTopbar = window.showTopbar || function(message, color) {
+            console.log(`[TOPBAR] ${message}`);
+            const topBar = document.getElementById("topBar");
+            if (topBar) topBar.textContent = message;
+        };
+
         // Fonction globale pour mettre à jour l'ID Peer dans l'interface
         window.updatePeerIdDisplay = (id) => {
             const el = document.getElementById('my-peer-id');
@@ -473,8 +483,5 @@
             window.buildPeerOptions = buildPeerOptions;
         });
     </script>
-
-    <!-- Script principal (module) -->
-    <script type="module" src="/app-lite.js"></script>
 </body>
 </html>
