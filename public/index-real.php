@@ -236,16 +236,16 @@
         </p>
     </div>
 
-    <!-- Scripts externes -->
+   <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="/js/tracking-min.js"></script>
-    <script src="/js/face-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/build/tracking-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tracking.js@1.1.3/data/face-min.js"></script>
 
     <!-- Scripts internes -->
     <script src="/js/camera.js"></script>
     <script src="/js/face-visible.js"></script>
     <script src="/js/match.js"></script>
-
+    <script type="module" src="/app-lite.js"></script>
     <!-- Scripts globaux -->
     <script>
         // Fonction globale pour mettre à jour l'ID Peer dans l'interface
