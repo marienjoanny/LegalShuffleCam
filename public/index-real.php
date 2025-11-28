@@ -114,81 +114,14 @@
     <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
 
+    <script src="/js/utilities.js"></script>
+    <script src="/js/ui-enhancements.js"></script>
+    
     <script type="module" src="/js/camera.js"></script>
     <script type="module" src="/js/face-visible.js"></script>
     <script type="module" src="/js/match.js"></script>
     <script type="module" src="/js/signalement.js"></script> 
-
     <script type="module" src="/app-lite.js"></script>
-
-    <script>
-        // Fonction showTopbar par défaut
-        window.showTopbar = window.showTopbar || function(message, color) {
-            console.log(`[TOPBAR] ${message}`);
-            const topBar = document.getElementById("topBar");
-            if (topBar) topBar.textContent = message;
-        };
-        
-        // Fonction globale pour mettre à jour l'ID Peer dans l'interface
-        window.updatePeerIdDisplay = (id) => {
-            const el = document.getElementById('my-peer-id');
-            if (el) {
-                el.textContent = `ID Peer: ${id.substring(0, 10)}...`;
-            }
-            window.myPeerId = id;
-            document.getElementById('btnReport').setAttribute('data-session-id', window.currentSessionId || `Manual_${Date.now()}`);
-        };
-
-        const MAX_HISTORY = 5;
-        window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {};
-
-        window.updateLastPeers = (newPeerId) => {
-            if (!newPeerId || newPeerId === window.myPeerId) return;
-            window.lastPeers[newPeerId] = Date.now();
-            let peerArray = Object.entries(window.lastPeers);
-            peerArray.sort((a, b) => b[1] - a[1]);
-            if (peerArray.length > MAX_HISTORY) {
-                peerArray = peerArray.slice(0, MAX_HISTORY);
-            }
-            window.lastPeers = Object.fromEntries(peerArray);
-            localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
-            
-            // Appelle la fonction buildPeerOptions si le sélecteur de signalement est visible
-            const reportTarget = document.getElementById('reportTarget');
-            if (reportTarget && reportTarget.classList.contains('visible') && typeof window.buildPeerOptions === 'function') {
-                window.buildPeerOptions();
-            }
-        };
-    </script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const remoteVideo = document.getElementById('remoteVideo');
-            const videoObscuredMessage = document.getElementById('videoObscuredMessage');
-
-            // Mesures de dissuasion
-            document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-            document.addEventListener('keydown', (e) => {
-                // Bloque F12, Ctrl+Shift+I/Meta+Shift+I pour empêcher l'ouverture des DevTools
-                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
-                    e.preventDefault();
-                }
-            });
-
-            // Masquage de la vidéo si l'onglet n'est pas actif
-            document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === 'hidden') {
-                    remoteVideo.style.opacity = '0';
-                    remoteVideo.style.pointerEvents = 'none';
-                    videoObscuredMessage.style.display = 'block';
-                } else {
-                    remoteVideo.style.opacity = '1';
-                    remoteVideo.style.pointerEvents = 'auto';
-                    videoObscuredMessage.style.display = 'none';
-                }
-            });
-        });
-    </script>
-
-    </body>
+    
+</body>
 </html>
