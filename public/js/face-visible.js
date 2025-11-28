@@ -9,13 +9,16 @@ let options = {};
 let isTrackerRunning = false;
 
 const container = document.getElementById('localVideoContainer'); 
+const showTopbarLog = window.showTopbar || ((msg, color) => {
+    const topBar = document.getElementById("topBar");
+    if (topBar) topBar.textContent = msg;
+});
 
 window.faceVisible = false;
 
 function updateBorder(isVisible) {
     if (!container) return;
 
-    // 🛑 Consentement mutuel actif → bordure bleue
     if (window.mutualConsentGiven) {
         container.style.border = '4px solid #3498db'; 
         container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
@@ -46,20 +49,24 @@ function startTrackingInternal() {
     tracker.setEdgesDensity(0.1);
     tracker.setSkip(10);
 
-    console.log("Tracking.js: Détection démarrée avec filtrage ratio ≥ 30% (basé sur taille affichée).");
+    showTopbarLog("🟢 Détection faciale activée (ratio ≥ 30%)");
 
     tracker.on('track', function(event) {
-        if (window.mutualConsentGiven) return; // 🔒 Respect du consentement mutuel
+        if (window.mutualConsentGiven) return;
+
+        const videoArea = videoElement.clientWidth * videoElement.clientHeight;
+        if (videoArea === 0) {
+            showTopbarLog("⚠️ Zone vidéo invisible ou non rendue (clientWidth = 0)", "#f39c12");
+            return;
+        }
 
         if (event.data.length > 0) {
-            // ⚠️ Utiliser la taille affichée (CSS) plutôt que la résolution réelle
-            const videoArea = videoElement.clientWidth * videoElement.clientHeight;
             let valid = false;
 
             event.data.forEach(rect => {
                 const faceArea = rect.width * rect.height;
                 const ratio = faceArea / videoArea;
-                if (ratio >= 0.3) { // ✅ seuil 30% basé sur affichage
+                if (ratio >= 0.3) {
                     valid = true;
                 }
             });
@@ -81,7 +88,7 @@ function startTrackingInternal() {
 
     detectionIntervalId = setInterval(() => {
         if (window.mutualConsentGiven) {
-            updateBorder(true); // 🔒 Bordure bleue
+            updateBorder(true);
             return;
         }
 
@@ -108,7 +115,7 @@ function startTrackingInternal() {
 
 export function initFaceDetection(video, customOptions = {}) {
     if (!container) {
-        console.error("Erreur Face Detection: Le conteneur #localVideoContainer est introuvable.");
+        showTopbarLog("❌ Erreur Face Detection: #localVideoContainer introuvable", "#e74c3c");
         return;
     }
     
@@ -126,7 +133,7 @@ export function initFaceDetection(video, customOptions = {}) {
     videoElement.addEventListener('canplay', startTrackingInternal, { once: true });
 
     if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) { 
-        console.log("Flux vidéo déjà actif, démarrage immédiat du tracker.");
+        showTopbarLog("📹 Flux vidéo actif, démarrage immédiat du tracker");
         startTrackingInternal();
     }
 }
@@ -154,5 +161,5 @@ export function stopFaceDetection() {
     }
 
     dispatchVisibilityEvent(false, true); 
-    console.log("Tracking.js: Tracker arrêté et nettoyé.");
+    showTopbarLog("🔴 Détection faciale arrêtée");
 }
