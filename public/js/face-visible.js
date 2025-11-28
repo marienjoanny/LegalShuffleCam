@@ -46,19 +46,20 @@ function startTrackingInternal() {
     tracker.setEdgesDensity(0.1);
     tracker.setSkip(10);
 
-    console.log("Tracking.js: Détection démarrée avec filtrage ratio ≥ 30%.");
+    console.log("Tracking.js: Détection démarrée avec filtrage ratio ≥ 30% (basé sur taille affichée).");
 
     tracker.on('track', function(event) {
         if (window.mutualConsentGiven) return; // 🔒 Respect du consentement mutuel
 
         if (event.data.length > 0) {
-            const videoArea = videoElement.videoWidth * videoElement.videoHeight;
+            // ⚠️ Utiliser la taille affichée (CSS) plutôt que la résolution réelle
+            const videoArea = videoElement.clientWidth * videoElement.clientHeight;
             let valid = false;
 
             event.data.forEach(rect => {
                 const faceArea = rect.width * rect.height;
                 const ratio = faceArea / videoArea;
-                if (ratio >= 0.3) { // ✅ seuil 30%
+                if (ratio >= 0.3) { // ✅ seuil 30% basé sur affichage
                     valid = true;
                 }
             });
