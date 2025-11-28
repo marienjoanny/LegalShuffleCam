@@ -8,130 +8,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LegalShuffleCam - Chat Vidéo Aléatoire Sécurisé</title>
-    <link rel="stylesheet" href="/css/style.css?v=20251122">
-    <style>
-        /* --- Styles Spécifiques aux Modales de Consentement --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
-        .modal-content {
-            background-color: #2c3e50;
-            color: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            max-width: 90%;
-            width: 450px;
-            text-align: center;
-        }
-        .modal-content h3 {
-            margin-top: 0;
-            color: #ecf0f1;
-            font-size: 1.3em;
-            margin-bottom: 20px;
-        }
-        .modal-buttons button {
-            padding: 12px 25px;
-            margin: 0 10px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        .modal-buttons .btn-yes {
-            background-color: #2ecc71;
-            color: white;
-        }
-        .modal-buttons .btn-yes:hover {
-            background-color: #27ae60;
-        }
-        .modal-buttons .btn-no {
-            background-color: #e74c3c;
-            color: white;
-        }
-        .modal-buttons .btn-no:hover {
-            background-color: #c0392b;
-        }
-
-        /* Styles spécifiques pour le sélecteur de signalement */
-        #reportTarget {
-            padding: 10px;
-            background-color: #2c3e50;
-            color: white;
-            border: 1px solid #c0392b;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            display: none;
-            font-size: 1em;
-            min-height: 150px;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            cursor: pointer;
-            text-align: left;
-            position: fixed;
-            bottom: 200px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 400px;
-        }
-        #reportTarget.visible {
-            display: block;
-        }
-        #otherReasonContainer {
-            padding: 15px;
-            background-color: #2c3e50;
-            border: 2px solid #3498db;
-            border-radius: 8px;
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
-            z-index: 1005;
-            display: none;
-            color: #ecf0f1;
-            position: fixed;
-            bottom: 200px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 400px;
-        }
-        #otherReasonInput {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            border: 1px solid #3498db;
-            background-color: #1c1c1c;
-            color: white;
-            box-sizing: border-box;
-        }
-        #submitOtherReason {
-            background-color: #27ae60;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            margin-top: 10px;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.2s;
-        }
-        #submitOtherReason:hover {
-            background-color: #2ecc71;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/style.css?v=20251122"> 
 </head>
 <body>
 
@@ -184,7 +61,6 @@
         </div>
     </div>
 
-    <!-- Modales de consentement -->
     <div id="localConsentModal" class="modal-overlay">
         <div class="modal-content">
             <h3>Je consens à désactiver le blocage visage pour un moment spécial avec un inconnu.</h3>
@@ -206,7 +82,6 @@
         </div>
     </div>
 
-    <!-- Sélecteur de signalement -->
     <select id="reportTarget" size="5"></select>
 
     <div id="otherReasonContainer">
@@ -215,7 +90,6 @@
         <button id="submitOtherReason">Envoyer le signalement</button>
     </div>
 
-    <!-- Pied de page -->
     <div id="footer">
         <p>
             <a href="/accessibilite.php">Accessibilité</a> |
@@ -236,21 +110,16 @@
         </p>
     </div>
 
-    <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- CORRECTION DE LA SOURCE TRACKING.JS vers l'officiel et stable (CDN jsdelivr) -->
     <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
 
-    <!-- Scripts internes (modules) - Ajout de type="module" -->
     <script type="module" src="/js/camera.js"></script>
     <script type="module" src="/js/face-visible.js"></script>
     <script type="module" src="/js/match.js"></script>
 
-    <!-- Script principal (module) -->
     <script type="module" src="/app-lite.js"></script>
 
-    <!-- Fonctions globales (chargées avant les modules qui pourraient les utiliser) -->
     <script>
         // Fonction showTopbar par défaut
         window.showTopbar = window.showTopbar || function(message, color) {
@@ -288,7 +157,6 @@
         };
     </script>
 
-    <!-- Scripts de gestion de l'interface -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const remoteVideo = document.getElementById('remoteVideo');
@@ -318,7 +186,6 @@
         });
     </script>
 
-    <!-- Scripts de signalement -->
     <script>
         function getRemoteVideoSnapshot() {
             const remoteVideo = document.getElementById('remoteVideo');
