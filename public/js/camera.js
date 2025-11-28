@@ -1,10 +1,8 @@
 // LegalShuffleCam • camera.js (Module ES)
 // Gestion de la liste des caméras et du démarrage du flux local.
 
-// 🚨 IMPORT CRITIQUE : Les fonctions de détection faciale
 import { initFaceDetection, stopFaceDetection } from "/js/face-visible.js"; 
 
-// LOG: Module /js/camera.js chargé.
 function showTopbarLog(message, color) {
     if (typeof showTopbar === 'function') {
         showTopbar(message, color);
@@ -19,18 +17,12 @@ function showTopbarLog(message, color) {
 }
 showTopbarLog("✅ Module camera.js chargé.");
 
-/**
- * Liste les périphériques vidéo disponibles, peuple le sélecteur, 
- * et déclenche le démarrage de la première caméra (Patch 8).
- */
 export async function listCameras() {
     showTopbarLog("🔎 Recherche des caméras disponibles...");
     const select = document.getElementById('cameraSelect');
-    if (!select) {
-        return;
-    }
+    if (!select) return;
     
-    select.innerHTML = ''; // Nettoyer les options précédentes
+    select.innerHTML = '';
     
     try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -51,19 +43,16 @@ export async function listCameras() {
             option.textContent = device.label || `Caméra ${index + 1}`; 
             select.appendChild(option);
             
-            // Sélectionner la première caméra par défaut
             if (index === 0) {
                 option.selected = true;
-                firstDeviceId = device.deviceId; // Stocker l'ID de la première
+                firstDeviceId = device.deviceId;
             }
         });
         
         select.disabled = false;
         showTopbarLog(`✅ ${videoDevices.length} caméras détectées.`);
 
-        // --- DÉMARRAGE IMMÉDIAT DU FLUX (PATCH 8) ---
         if (firstDeviceId) {
-            // Appeler startCamera avec l'ID de la première caméra
             await startCamera(firstDeviceId); 
         }
 
@@ -75,53 +64,40 @@ export async function listCameras() {
     }
 }
 
-/**
- * Démarre un nouveau flux média avec le deviceId spécifié et met à jour
- * le flux local (window.localStream) ainsi que le flux P2P si un appel est actif.
- * @param {string} deviceId - L'ID du périphérique vidéo à utiliser.
- */
 export async function startCamera(deviceId) {
     showTopbarLog(`🎥 Démarrage de la caméra ID: ${deviceId}...`);
     
     try {
-        // 1. Arrêter les anciennes pistes du flux local s'il existe
         if (window.localStream) {
-            // 🛑 CRITIQUE : Arrêter le moteur de détection avant de changer de flux
             stopFaceDetection(); 
             window.localStream.getTracks().forEach(track => track.stop());
         }
 
-        // 2. Définir les contraintes: Utilisation de 'ideal' pour plus de tolérance (Patch 6)
         const constraints = {
             audio: true, 
             video: {
                 deviceId: { ideal: deviceId },
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                width: { ideal: 1280, min: 640 },
+                height: { ideal: 720, min: 480 }
             }
         };
 
-        // 3. Obtenir le nouveau flux média (Point de défaillance le plus probable)
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        // 4. Mettre à jour le flux local global
         window.localStream = newStream;
         const localVideo = document.getElementById("localVideo");
         if (localVideo) { 
             localVideo.srcObject = newStream;
-            
-            // Tenter de jouer, en gérant l'échec d'autoplay sans arrêter le script
             localVideo.play().catch(e => {
                 console.warn("Échec de la lecture automatique de la vidéo locale:", e);
             }); 
 
-            // 🟢 CRITIQUE : Démarrer la détection de visage sur le nouveau flux
+            // ✅ Timeout ajusté à 3000 ms pour plus de stabilité
             initFaceDetection(localVideo, { 
-                detectionTimeout: 1500 // Surcharge optionnelle de 1.5s
+                detectionTimeout: 3000 
             });
         }
         
-        // 5. Remplacer les pistes dans la connexion P2P active (logique de match.js)
         if (window.currentCall && window.currentCall.peerConnection) {
             const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
             if (sender) {
@@ -139,7 +115,6 @@ export async function startCamera(deviceId) {
         showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}. Détection faciale lancée.`);
 
     } catch (err) {
-        // --- GESTION AMÉLIORÉE DE L'ERREUR (Patch 5) ---
         console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
         
         let errorMsg = "Erreur inconnue (Vérifiez Console & Permissions !)";
@@ -153,13 +128,8 @@ export async function startCamera(deviceId) {
     }
 }
 
-/**
- * Arrête le flux vidéo local et la détection faciale.
- * Cette fonction est exportée pour être utilisée par d'autres modules (ex: app-lite.js ou match.js).
- */
 export function stopCamera() {
     if (window.localStream) {
-        // Arrêter les pistes
         window.localStream.getTracks().forEach(track => track.stop());
         window.localStream = null;
         
@@ -168,16 +138,12 @@ export function stopCamera() {
              localVideo.srcObject = null;
         }
 
-        // 🛑 CRITIQUE : Arrêter le moteur de détection
         stopFaceDetection();
         
         showTopbarLog("Caméra et détection faciale arrêtées.", "#3498db");
     }
 }
 
-/**
- * Retourne le flux local actuel.
- */
 export function getLocalStream() {
     return window.localStream;
 }
