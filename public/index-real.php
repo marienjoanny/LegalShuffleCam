@@ -18,10 +18,10 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
-            display: none; /* Caché par défaut */
+            display: none;
             justify-content: center;
             align-items: center;
-            z-index: 2000; /* Doit être au-dessus de tout le reste */
+            z-index: 2000;
         }
         .modal-content {
             background-color: #2c3e50;
@@ -73,14 +73,14 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             display: none;
-            font-size: 1em; 
+            font-size: 1em;
             min-height: 150px;
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             cursor: pointer;
-            text-align: left; 
-            position: fixed; 
+            text-align: left;
+            position: fixed;
             bottom: 200px;
             left: 50%;
             transform: translateX(-50%);
@@ -91,16 +91,16 @@
             display: block;
         }
         #otherReasonContainer {
-            padding: 15px; 
+            padding: 15px;
             background-color: #2c3e50;
-            border: 2px solid #3498db; 
-            border-radius: 8px; 
+            border: 2px solid #3498db;
+            border-radius: 8px;
             box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
-            z-index: 1005; 
-            display: none; 
+            z-index: 1005;
+            display: none;
             color: #ecf0f1;
-            position: fixed; 
-            bottom: 200px; 
+            position: fixed;
+            bottom: 200px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -115,10 +115,10 @@
             border: 1px solid #3498db;
             background-color: #1c1c1c;
             color: white;
-            box-sizing: border-box; 
+            box-sizing: border-box;
         }
         #submitOtherReason {
-            background-color: #27ae60; 
+            background-color: #27ae60;
             color: white;
             padding: 10px 15px;
             border: none;
@@ -154,7 +154,6 @@
     </p>
 
     <div id="bottomLayout">
-        
         <div id="controls">
             <div class="control-row">
                 <button class="control-button green" id="btnConsentement">👍 Consentement</button>
@@ -180,12 +179,12 @@
         </div>
 
         <div id="localVideoContainer">
-            <video id="localVideo" muted autoplay playsinline></video> 
-            <!-- NOUVEAUTÉ : Ajouter un canvas pour stabiliser le tracking.js -->
-            <canvas id="faceTrackingCanvas" style="display:none;"></canvas> 
+            <video id="localVideo" muted autoplay playsinline></video>
+            <canvas id="faceTrackingCanvas" style="display:none;"></canvas>
         </div>
     </div>
-    
+
+    <!-- Modales de consentement -->
     <div id="localConsentModal" class="modal-overlay">
         <div class="modal-content">
             <h3>Je consens à désactiver le blocage visage pour un moment spécial avec un inconnu.</h3>
@@ -207,6 +206,7 @@
         </div>
     </div>
 
+    <!-- Sélecteur de signalement -->
     <select id="reportTarget" size="5"></select>
 
     <div id="otherReasonContainer">
@@ -214,19 +214,21 @@
         <input type="text" id="otherReasonInput" maxlength="100" placeholder="Ex: Musique trop forte, écran noir..." aria-label="Description du motif Autre">
         <button id="submitOtherReason">Envoyer le signalement</button>
     </div>
+
+    <!-- Pied de page -->
     <div id="footer">
         <p>
-            <a href="/accessibilite.php">Accessibilité</a> | 
-            <a href="/cgu.php">CGU</a> | 
-            <a href="/contact.php">Contact</a> | 
-            <a href="/confidentialite.php">Confidentialité</a> | 
-            <a href="/cookies.php">Cookies</a> | 
-            <a href="/mentions-legales.php">Mentions légales</a> | 
-            <a href="/fonctionnement.php">Fonctionnement</a> | 
-            <a href="/moderation.php">Modération</a> | 
-            <a href="/reglement.php">Règlement</a> | 
-            <a href="/plan-du-site.php">Plan du site</a> | 
-            <a href="/annuaire.php">Annuaire</a> | 
+            <a href="/accessibilite.php">Accessibilité</a> |
+            <a href="/cgu.php">CGU</a> |
+            <a href="/contact.php">Contact</a> |
+            <a href="/confidentialite.php">Confidentialité</a> |
+            <a href="/cookies.php">Cookies</a> |
+            <a href="/mentions-legales.php">Mentions légales</a> |
+            <a href="/fonctionnement.php">Fonctionnement</a> |
+            <a href="/moderation.php">Modération</a> |
+            <a href="/reglement.php">Règlement</a> |
+            <a href="/plan-du-site.php">Plan du site</a> |
+            <a href="/annuaire.php">Annuaire</a> |
             <a href="/signalements.php">Signalements</a>
         </p>
         <p>
@@ -234,63 +236,54 @@
         </p>
     </div>
 
+    <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/tracking.js"></script>
-    <script src="https://cdn.rawgit.com/eduardolundgren/tracking.js/master/build/data/face-min.js"></script>
-    
+    <script src="/js/tracking-min.js"></script>
+    <script src="/js/face-min.js"></script>
+
+    <!-- Scripts internes -->
+    <script src="/js/camera.js"></script>
+    <script src="/js/face-visible.js"></script>
+    <script src="/js/match.js"></script>
+
+    <!-- Scripts globaux -->
     <script>
         // Fonction globale pour mettre à jour l'ID Peer dans l'interface
         window.updatePeerIdDisplay = (id) => {
             const el = document.getElementById('my-peer-id');
             if (el) {
                 el.textContent = `ID Peer: ${id.substring(0, 10)}...`;
-                // On peut aussi mettre à jour l'ID complet pour le debug si on voulait
             }
             window.myPeerId = id;
-            // On s'assure que le bouton de report a aussi l'ID pour le cas où il faut l'inclure dans les logs
             document.getElementById('btnReport').setAttribute('data-session-id', window.currentSessionId || `Manual_${Date.now()}`);
         };
 
         const MAX_HISTORY = 5;
-        window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {}; 
-        
-        /**
-         * Met à jour l'historique des interlocuteurs récents (stocké dans localStorage).
-         * Appelée par match.js pour synchroniser l'historique.
-         */
+        window.lastPeers = JSON.parse(localStorage.getItem('lastPeers')) || {};
+
         window.updateLastPeers = (newPeerId) => {
-            if (!newPeerId || newPeerId === window.myPeerId) return; 
-
-            window.lastPeers[newPeerId] = Date.now(); 
-
+            if (!newPeerId || newPeerId === window.myPeerId) return;
+            window.lastPeers[newPeerId] = Date.now();
             let peerArray = Object.entries(window.lastPeers);
-            peerArray.sort((a, b) => b[1] - a[1]); 
-
+            peerArray.sort((a, b) => b[1] - a[1]);
             if (peerArray.length > MAX_HISTORY) {
-                // Garder seulement les MAX_HISTORY plus récents
                 peerArray = peerArray.slice(0, MAX_HISTORY);
             }
-            
             window.lastPeers = Object.fromEntries(peerArray);
             localStorage.setItem('lastPeers', JSON.stringify(window.lastPeers));
-            
-            // Si le menu de signalement est ouvert sur l'étape 1, le reconstruire
             if (document.getElementById('reportTarget').classList.contains('visible') && typeof window.buildPeerOptions === 'function') {
                 window.buildPeerOptions();
             }
         };
-        
-        // La fonction window.buildPeerOptions est définie plus bas dans le script de signalement
     </script>
 
-
-    <script type="module" src="/app-lite.js"></script>
+    <!-- Scripts de gestion de l'interface -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const remoteVideo = document.getElementById('remoteVideo');
             const videoObscuredMessage = document.getElementById('videoObscuredMessage');
 
-            // --- Mesures de Dissuasion ---
+            // Mesures de dissuasion
             document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
@@ -298,13 +291,11 @@
                 }
             });
 
-            /**
-             * API de Visibilité du Document : Masque la vidéo si l'utilisateur change d'onglet/fenêtre.
-             */
+            // Masquage de la vidéo si l'onglet n'est pas actif
             document.addEventListener("visibilitychange", () => {
                 if (document.visibilityState === 'hidden') {
                     remoteVideo.style.opacity = '0';
-                    remoteVideo.style.pointerEvents = 'none'; 
+                    remoteVideo.style.pointerEvents = 'none';
                     videoObscuredMessage.style.display = 'block';
                 } else {
                     remoteVideo.style.opacity = '1';
@@ -314,68 +305,44 @@
             });
         });
     </script>
+
+    <!-- Scripts de signalement -->
     <script>
-        
-        // Note: window.lastPeers est défini dans le bloc <script> précédent
-        
-        /**
-         * Capture une image (snapshot) à partir de l'élément vidéo distant.
-         * @returns {string} L'image en Base64 JPEG, ou chaîne vide si échec.
-         */
         function getRemoteVideoSnapshot() {
             const remoteVideo = document.getElementById('remoteVideo');
             const canvas = document.getElementById('screenshotCanvas');
-
             if (!remoteVideo || remoteVideo.paused || remoteVideo.ended || remoteVideo.videoWidth === 0) {
                 console.warn("Impossible de prendre la capture: Vidéo distante non active/pas de dimensions.");
-                return ''; 
+                return '';
             }
-
             canvas.width = remoteVideo.videoWidth;
             canvas.height = remoteVideo.videoHeight;
-            
-            // Dessiner la vidéo sur le canvas
             canvas.getContext('2d').drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
-            
-            // Retourner l'image en Base64 JPEG pour un meilleur rapport qualité/taille
-            return canvas.toDataURL('image/jpeg', 0.8); 
+            return canvas.toDataURL('image/jpeg', 0.8);
         }
 
-        /**
-         * Fonction unifiée pour envoyer le rapport au serveur.
-         */
         async function sendReport(partnerId, reason, imageBase64) {
             const callerId = window.myPeerId;
             const sessionId = window.currentSessionId;
-
             if (!callerId || !partnerId) {
                 window.showTopbar("❌ Erreur: ID manquant pour le signalement.", "#a00");
                 return;
             }
-
             const formData = new URLSearchParams();
             formData.append('callerId', callerId);
             formData.append('partnerId', partnerId);
             formData.append('reason', reason);
             formData.append('imageBase64', imageBase64);
             formData.append('sessionId', sessionId);
-
             window.showTopbar(`⏳ Envoi du signalement de ${partnerId}...`, "#f39c12");
-
             try {
                 const response = await fetch('/api/report-handler.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData,
                 });
-                
-                if (!response.ok) {
-                     const errorText = `Erreur HTTP ${response.status} lors de l'envoi du rapport.`;
-                     throw new Error(errorText);
-                }
-
+                if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
                 const data = await response.json();
-                
                 if (data.status === 'success') {
                     window.showTopbar(`✅ Signalement de ${partnerId.substring(0, 8)}... pour "${reason}" enregistré !`, "#2ecc71");
                 } else {
@@ -387,80 +354,53 @@
                 console.error("Report Error:", err);
             }
         }
-        
-        // Initialisation de la logique de signalement
+
         document.addEventListener('DOMContentLoaded', () => {
             const btnReport = document.getElementById('btnReport');
             const reportTargetSelect = document.getElementById('reportTarget');
             const otherReasonContainer = document.getElementById('otherReasonContainer');
             const otherReasonInput = document.getElementById('otherReasonInput');
             const submitOtherReason = document.getElementById('submitOtherReason');
-
             let report_peerId = null;
             let report_reason = null;
-
-            // Définition des raisons pour une meilleure gestion
             const reasons = [
                 { value: "Nudite", label: "Nudité (Violation de cadrage)" },
                 { value: "Sexuel", label: "Comportement sexuel / explicite" },
                 { value: "Harcèlement", label: "Harcèlement, Insultes, Discrimination" },
                 { value: "Mineur", label: "Suspicion de minorité" },
                 { value: "Fraude", label: "Fraude (Bot, Deepfake)" },
-                { value: "Autre", label: "Autre (nécessite une description)" } 
+                { value: "Autre", label: "Autre (nécessite une description)" }
             ];
-            
-            // --- Fonction pour construire la liste des interlocuteurs (Étape 1) ---
+
             function buildPeerOptions() {
-                // Utiliser la dernière version de l'historique (window.lastPeers est global)
-                const peerHistory = window.lastPeers; 
+                const peerHistory = window.lastPeers;
                 const peerHistoryCount = Object.keys(peerHistory).length;
                 let optionsHTML = `<option value="" disabled selected>👤 Étape 1 : Choisir l'interlocuteur (${peerHistoryCount} trouvés)</option>`;
-
                 const sortedPeers = Object.keys(peerHistory).sort((a, b) => peerHistory[b] - peerHistory[a]);
-                
                 sortedPeers.forEach(id => {
-                    // Masquer mon propre ID si présent par erreur
-                    if (id === window.myPeerId) return; 
-                    
+                    if (id === window.myPeerId) return;
                     const isCurrent = (id === window.currentPartnerId) ? ' (Actif 🔴)' : '';
                     const timeAgoMs = Date.now() - peerHistory[id];
                     const timeAgoSec = Math.floor(timeAgoMs / 1000);
-                    let timeText;
-
-                    if (timeAgoSec < 60) {
-                        timeText = `il y a ${timeAgoSec} sec`;
-                    } else {
-                        const timeAgoMin = Math.floor(timeAgoSec / 60);
-                        timeText = `il y a ${timeAgoMin} min`;
-                    }
-                    
+                    let timeText = timeAgoSec < 60 ? `il y a ${timeAgoSec} sec` : `il y a ${Math.floor(timeAgoSec / 60)} min`;
                     optionsHTML += `<option value="ID|${id}">[${id.substring(0, 8)}] - ${timeText}${isCurrent}</option>`;
                 });
-                
                 reportTargetSelect.innerHTML = optionsHTML;
-                // Ajuster la taille pour afficher plus d'options
-                reportTargetSelect.size = Math.min(6, peerHistoryCount + 1); 
+                reportTargetSelect.size = Math.min(6, peerHistoryCount + 1);
             }
 
-            // --- Fonction pour construire la liste des raisons (Étape 2) ---
             function buildReasonOptions() {
                 const peerIdShort = report_peerId.substring(0, 8);
                 const isCurrent = (report_peerId === window.currentPartnerId) ? ' (Capture vidéo possible)' : '';
-                
-                let optionsHTML = `<option value="" disabled selected>🚨 Raison pour ID: ${peerIdShort}...${isCurrent}</option>`;
-                optionsHTML += '<option value="" disabled>────────────────────────</option>';
-                
+                let optionsHTML = `<option value="" disabled selected>🚨 Raison pour ID: ${peerIdShort}...${isCurrent}</option><option value="" disabled>────────────────────────</option>`;
                 reasons.forEach(r => {
                     optionsHTML += `<option value="REASON|${r.value}">${r.label}</option>`;
                 });
-                
                 reportTargetSelect.innerHTML = optionsHTML;
-                reportTargetSelect.size = reasons.length + 2; 
+                reportTargetSelect.size = reasons.length + 2;
             }
 
-            // --- Étape 1: Afficher le sélecteur d'interlocuteur ---
             btnReport.addEventListener('click', () => {
-                // Si le menu est ouvert et cliqué à nouveau, le fermer (toggle)
                 if (reportTargetSelect.classList.contains('visible')) {
                     reportTargetSelect.classList.remove('visible');
                     otherReasonContainer.style.display = 'none';
@@ -468,100 +408,73 @@
                     report_peerId = null;
                     return;
                 }
-                
-                // S'assurer que le champ "Autre" est masqué si on ouvre le menu
                 otherReasonContainer.style.display = 'none';
-
-                // Reconstruire l'historique avant d'afficher
                 buildPeerOptions();
                 const peerHistoryCount = Object.keys(window.lastPeers).length;
-                
                 if (peerHistoryCount === 0) {
                     window.showTopbar("⚠ Aucun interlocuteur récent ou actif à signaler.", "#fbbf24");
                     return;
                 }
-
-                reportTargetSelect.classList.add('visible'); // Ouvrir le menu
+                reportTargetSelect.classList.add('visible');
                 window.showTopbar(`Sélectionnez un interlocuteur parmi les ${peerHistoryCount} derniers.`, "#2ecc71");
             });
 
-            // --- Gestion des sélections (ID et Raison) ---
             reportTargetSelect.addEventListener('change', async (event) => {
                 const selectedValue = event.target.value;
-                
                 if (selectedValue.startsWith('ID|')) {
-                    // Étape 1 : ID sélectionné
                     report_peerId = selectedValue.substring(3);
                     window.showTopbar(`Interlocuteur sélectionné ! Maintenant, choisissez la raison.`, "#f1c40f");
                     buildReasonOptions();
-                    
-                    // Réinitialiser la valeur pour ne pas resélectionner l'ID par erreur
-                    event.target.value = event.target.options[0].value; 
-                    return; 
-                } 
-                
+                    event.target.value = event.target.options[0].value;
+                    return;
+                }
                 if (selectedValue.startsWith('REASON|')) {
-                    // Étape 2 : Raison sélectionnée
                     report_reason = selectedValue.substring(7);
-
                     if (!report_peerId) {
-                         window.showTopbar("⚠ Choisissez d'abord l'interlocuteur.", "#fbbf24");
-                         event.target.value = event.target.options[0].value;
-                         return;
+                        window.showTopbar("⚠ Choisissez d'abord l'interlocuteur.", "#fbbf24");
+                        event.target.value = event.target.options[0].value;
+                        return;
                     }
-
-                    // --- Cas spécial "AUTRE" : Afficher le champ de texte ---
                     if (report_reason === 'Autre') {
                         reportTargetSelect.classList.remove('visible');
                         otherReasonContainer.style.display = 'block';
                         otherReasonInput.focus();
                         window.showTopbar("Décrivez votre motif 'Autre' et envoyez.", "#3498db");
-                        // Nettoyer la sélection du select
-                        event.target.value = event.target.options[0].value; 
-                        return; 
+                        event.target.value = event.target.options[0].value;
+                        return;
                     }
-
-                    // --- Cas général : Envoi immédiat (Autres motifs) ---
-                    // Capture d'écran uniquement si on signale le partenaire ACTUEL
-                    const imageBase64 = (report_peerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
-                    
+                    const imageBase64 = (report_peerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : '';
                     await sendReport(report_peerId, report_reason, imageBase64);
-                    
-                    // Réinitialiser et masquer l'interface
                     reportTargetSelect.classList.remove('visible');
                     report_peerId = null;
                     report_reason = null;
                 }
             });
 
-            // --- Gestion du bouton d'envoi pour le motif "Autre" ---
             submitOtherReason.addEventListener('click', async () => {
                 const customReason = otherReasonInput.value.trim();
-
                 if (customReason.length < 5) {
                     window.showTopbar("⚠ La description doit contenir au moins 5 caractères.", "#fbbf24");
                     return;
                 }
-                
                 if (report_peerId && report_reason === 'Autre') {
                     const finalReason = `Autre: ${customReason}`;
-                    const imageBase64 = (report_peerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : ''; 
-                    
+                    const imageBase64 = (report_peerId === window.currentPartnerId) ? getRemoteVideoSnapshot() : '';
                     await sendReport(report_peerId, finalReason, imageBase64);
-
-                    // Réinitialiser et masquer l'interface
                     otherReasonContainer.style.display = 'none';
                     otherReasonInput.value = '';
                     report_peerId = null;
                     report_reason = null;
                 } else {
-                     window.showTopbar("❌ Erreur: Tentative d'envoi 'Autre' sans ID de pair ou sans motif.", "#e74c3c");
+                    window.showTopbar("❌ Erreur: Tentative d'envoi 'Autre' sans ID de pair ou sans motif.", "#e74c3c");
                 }
             });
-            
-            // Ajouter la fonction au scope global pour que match.js puisse la forcer
+
             window.buildPeerOptions = buildPeerOptions;
         });
     </script>
+
+    <!-- Script principal (module) -->
+    <script type="module" src="/app-lite.js"></script>
 </body>
 </html>
