@@ -49,7 +49,7 @@ function startTrackingInternal() {
     tracker.setEdgesDensity(0.1);
     tracker.setSkip(10);
 
-    showTopbarLog("🟢 Détection faciale activée (ratio ≥ 10%)");
+    showTopbarLog("🟢 Détection faciale activée (ratio ≥ 30%)");
 
     tracker.on('track', function(event) {
         if (window.mutualConsentGiven) return;
@@ -60,6 +60,13 @@ function startTrackingInternal() {
             return;
         }
 
+        // ✅ Injection test terrain
+        event.data.push({ width: 60, height: 60, x: 10, y: 10 });
+
+        if (event.data.length === 0) {
+            showTopbarLog("🔍 Aucun rectangle détecté par tracking.js", "#f39c12");
+        }
+
         if (event.data.length > 0) {
             let valid = false;
 
@@ -67,7 +74,7 @@ function startTrackingInternal() {
                 const faceArea = rect.width * rect.height;
                 const ratio = faceArea / videoArea;
                 showTopbarLog(`🧠 Face détectée: ${rect.width}×${rect.height} → ratio ${(ratio * 100).toFixed(1)}%`, "#9b59b6");
-                if (ratio >= 0.1) {
+                if (ratio >= 0.3) {
                     valid = true;
                 }
             });
@@ -84,6 +91,8 @@ function startTrackingInternal() {
     });
 
     window.tracking.track(videoElement, tracker); 
+    showTopbarLog("📡 tracking.track() lancé sur videoElement", "#f1c40f");
+
     isTrackerRunning = true;
     lastDetectionTime = Date.now();
 
