@@ -238,8 +238,9 @@
 
     <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+    <!-- CORRECTION DE LA SOURCE TRACKING.JS vers l'officiel et stable -->
+    <script src="https://trackingjs.com/build/tracking.js"></script>
+    <script src="https://trackingjs.com/build/data/face-min.js"></script>
 
     <!-- Scripts internes (modules) - Ajout de type="module" -->
     <script type="module" src="/js/camera.js"></script>
@@ -296,6 +297,7 @@
             // Mesures de dissuasion
             document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
             document.addEventListener('keydown', (e) => {
+                // Bloque F12, Ctrl+Shift+I/Meta+Shift+I pour empêcher l'ouverture des DevTools
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.metaKey && e.shiftKey && e.key === 'I')) {
                     e.preventDefault();
                 }
