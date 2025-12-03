@@ -192,7 +192,8 @@ export function initFaceDetection(video, options = {}) {
     consentTriggeredStop = false;
 
     if (!videoElement.videoWidth || !videoElement.videoHeight) {
-        videoElement.addEventListener("loadeddata", () => {
+        // ⚡ Patch : attendre playing au lieu de loadeddata
+        videoElement.addEventListener("playing", () => {
             checkTrackingReadyAndStart();
         }, { once: true });
         return;
