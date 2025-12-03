@@ -50,7 +50,7 @@ function sendData(type, payload = {}) {
 }
 
 
-// --- UTILS API SERVER (Amélioration de la robustesse) ---
+// --- UTILS API SERVER (Corrigé : POST et chemin d'URL) ---
 
 /**
  * Fonction générique pour appeler les APIs PHP (register, unregister, ping).
@@ -58,17 +58,28 @@ function sendData(type, payload = {}) {
  * @param {object} data Données à envoyer (peerId, sessionId, etc.)
  */
 function callPeerApi(endpoint, data = {}) {
-    const url = `/public/api/${endpoint}`;
-    const params = new URLSearchParams({ 
+    // CORRECTION 1: Retirer /public/ car Nginx est configuré pour rooter à /public
+    const url = `/api/${endpoint}`; 
+
+    // Préparer les données pour le corps POST
+    const bodyParams = new URLSearchParams({ 
         peerId: window.myPeerId, 
         sessionId: window.currentSessionId, 
         ...data 
-    }).toString();
+    });
 
-    // Ajout d'une gestion plus robuste des erreurs HTTP
-    return fetch(`${url}?${params}`, { method: 'GET' })
+    // CORRECTION 2: Utiliser la méthode POST pour envoyer les données dans le corps
+    return fetch(url, {
+        method: 'POST', 
+        headers: {
+            // Indiquer au serveur que le corps est encodé en formulaire
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: bodyParams.toString() 
+    })
         .then(response => {
             if (!response.ok) {
+                 // Si le statut HTTP n'est pas 200, lever une erreur
                  throw new Error(`API ${endpoint} Erreur HTTP ${response.status}`);
             }
             return response.json();
@@ -210,7 +221,8 @@ export function nextMatch() {
     registerPeer(); 
 
     // 3. Logique de matching via l'API
-    fetch('/public/api/get-peer.php?exclude=' + window.myPeerId) 
+    // CORRECTION: Retirer /public/ ici aussi, mais utiliser GET est acceptable pour get-peer
+    fetch('/api/get-peer.php?exclude=' + window.myPeerId) 
         .then(res => {
             if (!res.ok) throw new Error(`API get-peer.php Erreur HTTP ${res.status}`);
             return res.json();
