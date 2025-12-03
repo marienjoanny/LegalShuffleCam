@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Détection Faciale - Tracking.js</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chargement des librairies Tracking.js -->
+    <script src="https://unpkg.com/tracking@1.1.3/build/tracking-min.js"></script>
+    <script src="https://unpkg.com/tracking@1.1.3/build/data/face-min.js"></script>
+    <style>
+        /* Styles pour la démo */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1f2937; /* Gris foncé */
+        }
+        #video-container {
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #000;
+            width: 90vw;
+            max-width: 600px;
+        }
+        #video-element {
+            display: block;
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1); /* Effet miroir, plus confortable pour l'utilisateur */
+        }
+        /* Style pour la boîte de détection (surlignage du visage) */
+        .rect {
+            border: 2px solid yellow;
+            position: absolute;
+            pointer-events: none; 
+            box-shadow: 0 0 10px yellow;
+        }
+        .message-box {
+            background-color: #374151;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .detected { color: #10b981; font-weight: bold; }
+        .not-detected { color: #ef4444; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="flex flex-col items-center">
+    <h1 class="text-3xl font-bold text-white mb-6">Tracking.js - Test de Détection</h1>
+    
+    <div id="video-container">
+        <!-- L'élément vidéo pour le flux de la caméra -->
+        <video id="video-element" autoplay playsinline></video>
+    </div>
+
+    <div id="status-message" class="message-box w-full max-w-sm">
+        <p>Statut : <span id="status-text">Initialisation...</span></p>
+    </div>
+</div>
+
+<script>
+    const videoElement = document.getElementById('video-element');
+    const container = document.getElementById('video-container');
+    const statusText = document.getElementById('status-text');
+    let tracker = null;
+    let isTracking = false;
+
+    /**
+     * Nettoie les boîtes de détection jaunes sur l'UI.
+     */
+    function clearRects() {
+        const rects = document.querySelectorAll('#video-container .rect');
+        rects.forEach(r => r.remove());
+    }
+
+    /**
+     * Affiche une boîte jaune de détection sur le visage trouvé.
+     * @param {object} rect - { x, y, width, height }
+     */
+    function drawRect(rect) {
+        const div = document.createElement('div');
+        div.classList.add('rect');
+        // Mise à l'échelle des coordonnées pour correspondre à la taille affichée de la vidéo
+        const scaleX = container.offsetWidth / videoElement.videoWidth;
+        const scaleY = container.offsetHeight / videoElement.videoHeight;
+        
+        div.style.left = (rect.x * scaleX) + 'px';
+        div.style.top = (rect.y * scaleY) + 'px';
+        div.style.width = (rect.width * scaleX) + 'px';
+        div.style.height = (rect.height * scaleY) + 'px';
+        
+        container.appendChild(div);
+    }
+    
+    /**
+     * Initialise et lance la détection faciale.
+     */
+    function startFaceDetection() {
+        if (isTracking) return;
+        
+        // 1. Initialisation du Tracker
+        tracker = new tracking.ObjectTracker('face');
+        
+        // PARAMÈTRES EXTRÊMEMENT ASSOUPLIS
+        tracker.setInitialScale(4);
+        tracker.setStepSize(1.0); 
+        tracker.setEdgesDensity(0.1); 
+        tracker.setSkip(10); 
+        
+        console.log("Tracker initialisé avec paramètres très tolérants (skip=10).");
+        
+        // 2. Écoute des Résultats de la Détection
+        tracker.on('track', function(event) {
+            clearRects(); // Efface les anciennes boîtes
+            
+            if (event.data.length > 0) {
+                // Visage(s) détecté(s)
+                statusText.innerHTML = `<span class="detected">Visage(s) détecté(s) (${event.data.length})</span>`;
+                event.data.forEach(drawRect);
+            } else {
+                // Aucun visage détecté
+                statusText.innerHTML = '<span class="not-detected">Aucun visage détecté</span>';
+            }
+        });
+
+        // 3. Lancement du Tracker
+        tracking.track(videoElement, tracker, { camera: true });
+        isTracking = true;
+        statusText.textContent = "Détection faciale lancée.";
+    }
+
+    // ----------------------------------------------------
+    // Lancement du Flux Caméra
+    // ----------------------------------------------------
+    
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+            .then(function(stream) {
+                videoElement.srcObject = stream;
+                
+                // IMPORTANT : Démarrer la détection seulement quand les données sont chargées
+                videoElement.addEventListener('loadeddata', startFaceDetection, { once: true });
+                
+                videoElement.play().catch(e => {
+                    statusText.innerHTML = `<span class="not-detected">Erreur : Impossible de jouer la vidéo. ${e.name}</span>`;
+                });
+            })
+            .catch(function(err) {
+                console.error("Erreur d'accès à la caméra : ", err);
+                statusText.innerHTML = `<span class="not-detected">Erreur : Accès caméra refusé. ${err.name}</span>`;
+            });
+    } else {
+        statusText.innerHTML = '<span class="not-detected">Erreur : Votre navigateur ne supporte pas getUserMedia.</span>';
+    }
+
+</script>
+
+</body>
+</html>

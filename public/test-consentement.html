@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Consentement - Détection faciale</title>
+  <style>
+    body { background:#111; color:#eee; font-family:sans-serif; text-align:center; }
+    video, canvas { display:block; margin:20px auto; border-radius:8px; }
+    #topBar { background:#222; color:#fff; padding:8px; font-weight:bold; }
+    button { margin:10px; padding:10px 20px; font-size:16px; }
+    #statusPanel { margin-top:20px; padding:10px; background:#222; border-radius:8px; display:inline-block; }
+    #statusPanel span { display:block; margin:5px 0; font-weight:bold; }
+    #eventLog { margin-top:20px; max-height:200px; overflow-y:auto; background:#222; padding:10px; border-radius:8px; text-align:left; }
+    #eventLog div { margin:4px 0; font-size:14px; }
+    #localVideoContainer { border:4px solid #e74c3c; box-shadow:0 0 10px rgba(231,76,60,0.8); padding:4px; border-radius:8px; display:inline-block; }
+  </style>
+</head>
+<body>
+  <div id="topBar">Initialisation...</div>
+
+  <div id="localVideoContainer">
+    <video id="localVideo" width="640" height="480" autoplay muted playsinline></video>
+    <canvas id="faceTrackingCanvas" width="640" height="480"></canvas>
+  </div>
+
+  <div>
+    <button id="btnConsentTrue">Activer consentement mutuel</button>
+    <button id="btnConsentFalse">Désactiver consentement mutuel</button>
+  </div>
+
+  <div id="statusPanel">
+    <span>mutualConsentGiven: <span id="consentValue">false</span></span>
+    <span>faceVisible: <span id="faceValue">false</span></span>
+  </div>
+
+  <div id="eventLog"><strong>Logs des événements :</strong></div>
+
+  <!-- Librairies -->
+  <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+
+  <!-- Ton script corrigé -->
+  <script src="/js/face-visible.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const video = document.getElementById('localVideo');
+      const consentValue = document.getElementById('consentValue');
+      const faceValue = document.getElementById('faceValue');
+      const eventLog = document.getElementById('eventLog');
+      const container = document.getElementById('localVideoContainer');
+
+      navigator.mediaDevices.getUserMedia({ video:true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { console.error("Erreur webcam:", err); });
+
+      if (typeof initFaceDetection === 'function') {
+        initFaceDetection(video, { minFaceRatio: 0.05, detectionTimeout: 3000 });
+      }
+
+      document.getElementById('btnConsentTrue').addEventListener('click', () => {
+        window.mutualConsentGiven = true;
+        consentValue.textContent = "true";
+        updateBorder();
+        logEvent("Consentement mutuel activé");
+      });
+
+      document.getElementById('btnConsentFalse').addEventListener('click', () => {
+        window.mutualConsentGiven = false;
+        consentValue.textContent = "false";
+        updateBorder();
+        logEvent("Consentement mutuel désactivé");
+      });
+
+      setInterval(() => {
+        consentValue.textContent = window.mutualConsentGiven ? "true" : "false";
+        faceValue.textContent = window.faceVisible ? "true" : "false";
+        updateBorder();
+      }, 500);
+
+      window.addEventListener('faceVisibilityChanged', e => {
+        const { isVisible, isStopped } = e.detail;
+        logEvent(`faceVisibilityChanged → visible=${isVisible}, stopped=${isStopped}`);
+      });
+
+      function updateBorder() {
+        if (!container) return;
+        if (window.mutualConsentGiven === true) {
+          container.style.border = '4px solid #3498db';
+          container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
+        } else if (window.faceVisible === true) {
+          container.style.border = '4px solid #2ecc71';
+          container.style.boxShadow = '0 0 10px rgba(46, 204, 113, 0.8)';
+        } else {
+          container.style.border = '4px solid #e74c3c';
+          container.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
+        }
+      }
+
+      function logEvent(msg) {
+        const div = document.createElement('div');
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        eventLog.appendChild(div);
+        eventLog.scrollTop = eventLog.scrollHeight;
+      }
+    });
+  </script>
+</body>
+</html>

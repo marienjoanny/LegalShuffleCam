@@ -1,2 +1,13 @@
 User-agent: *
 Disallow: /
+
+# Autoriser l’indexation des pages légales et conformité
+Allow: /mentions-legales.html
+Allow: /cgu.html
+Allow: /confidentialite.html
+Allow: /cookies.html
+Allow: /accessibilite.html
+Allow: /reglement.html
+Allow: /contact.html
+Allow: /fonctionnement.html
+Allow: /sitemap.html

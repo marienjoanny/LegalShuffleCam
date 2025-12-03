@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Détection de visage avec Tracking.js (Ratio ≥ 30%)</title>
+  <style>
+    body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
+    #statusbar { background:#222; color:#fff; padding:8px; font-weight:bold; }
+    video, canvas { display:block; margin:20px auto; border:2px solid #333; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div id="statusbar">Initialisation...</div>
+  <h1>Détection de visage avec Tracking.js (Ratio ≥ 30%)</h1>
+  <video id="video" width="640" height="480" autoplay muted></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const statusbar = document.getElementById('statusbar');
+
+    let lastAcceptedRects = [];
+    let lastAcceptedTime = 0;
+    const MIN_FACE_RATIO = 0.3;      // seuil de surface ajusté à 30%
+    const MAX_VALID_AGE = 2000;      // ms de tolérance après perte
+
+    navigator.mediaDevices.getUserMedia({ video:true })
+      .then(stream => { video.srcObject = stream; statusbar.textContent="Webcam initialisée ✅"; statusbar.style.color="#0a0"; })
+      .catch(err => { console.error("Erreur webcam:",err); statusbar.textContent="Erreur webcam ❌"; statusbar.style.color="#a00"; });
+
+    const tracker = new tracking.ObjectTracker('face');
+    tracker.setInitialScale(4); tracker.setStepSize(2); tracker.setEdgesDensity(0.1);
+    tracking.track('#video', tracker);
+
+    tracker.on('track', event => {
+      context.clearRect(0,0,canvas.width,canvas.height);
+      const now = Date.now();
+      const videoArea = video.width * video.height;
+      let acceptedThisFrame = false;
+
+      if(event.data.length > 0){
+        event.data.forEach(rect => {
+          const faceArea = rect.width * rect.height;
+          const ratio = faceArea / videoArea;
+          if(ratio >= MIN_FACE_RATIO){
+            lastAcceptedRects = [rect];
+            lastAcceptedTime = now;
+            acceptedThisFrame = true;
+          }
+        });
+      }
+
+      const age = now - lastAcceptedTime;
+
+      if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
+        lastAcceptedRects.forEach(rect => {
+          context.strokeStyle = 'lime';
+          context.lineWidth = 4;
+          context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        });
+        statusbar.textContent = "Visage détecté (≥ 30%) ✅";
+        statusbar.style.color = "#0a0";
+      } else {
+        context.strokeStyle = 'red';
+        context.lineWidth = 4;
+        context.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+        statusbar.textContent = "Aucun visage détecté ❌";
+        statusbar.style.color = "#a00";
+      }
+    });
+  </script>
+</body>
+</html>

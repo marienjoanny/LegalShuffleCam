@@ -1,137 +1,141 @@
 #!/bin/bash
-# Ce script permet de boucler sur les rapports et d'appliquer des actions
-# telles que les marquer 'traiter', les 'supprimer', ou les 'mail_pharos',
-# ou de débannir un 'faux_positif'.
+# Script interactif pour la revue humaine des rapports de bannissement.
+# Ce script DOIT être exécuté avec SUDO.
 
-# --- Configuration ---
-REPORT_DIR="../logs/reports"
-LOG_FILE="../logs/report_actions.log"
-PHAROS_MAIL="pharos_contact@legalshufflecam.com"
+# --- Configuration et chemins (Relatif à l'exécution dans /scripts) ---
+REPORT_DIR="../logs/reports/"
+STAGING_DIR="${REPORT_DIR}banned_but_pending_review/" # C'est le dossier qui contient les bans en attente de validation humaine
+PROCESSED_DIR="${REPORT_DIR}processed/"
+ESCALATED_DIR="${REPORT_DIR}escalated/"
+UNBAN_SCRIPT="./unban_ip_manually.sh"
+ACTION_LOG="../logs/report_actions.log" 
+IP_REGEX="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
 
 # --- Fonctions de Log ---
 log_action() {
     local TYPE="$1"
     local MESSAGE="$2"
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - [$TYPE] - $MESSAGE" | tee -a "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - [$TYPE] - $MESSAGE" | tee -a "$ACTION_LOG"
 }
 
-# --- Fonction d'Usage ---
-usage() {
-    echo "Usage: $0 <action>"
-    echo "Actions disponibles :"
-    echo "  traiter             : Simule la mise à jour du statut dans une base de données externe."
-    echo "  supprimer           : Supprime le fichier JSON du rapport."
-    echo "  mail_pharos         : Envoie le contenu du rapport à $PHAROS_MAIL."
-    echo "  faux_positif        : Déban l'IP signalée et supprime le rapport (NÉCESSITE SUDO)."
-    echo ""
+# --- Initialisation et Prérequis ---
+if [ "$(id -u)" -ne 0 ]; then
+    log_action "ERREUR" "Doit être exécuté avec 'sudo' ou par 'root'."
+    echo "ERREUR: Veuillez exécuter ce script avec 'sudo'."
     exit 1
-}
-
-# --- Vérification des Arguments ---
-
-if [ "$#" -ne 1 ]; then
-    usage
 fi
 
-ACTION="$1"
-REPORT_COUNT=0
-PROCESSED_COUNT=0
+if ! command -v jq &> /dev/null; then
+    log_action "ERREUR" "L'outil 'jq' est manquant. Veuillez l'installer (sudo apt install jq)."
+    echo "ERREUR: 'jq' est manquant. Installation nécessaire."
+    exit 1
+fi
 
-# --- Boucle de Traitement des Fichiers JSON ---
+log_action "INFO" "Démarrage de la session de modération interactive."
 
-log_action "INFO" "Démarrage du traitement de l'action '$ACTION' dans le répertoire: $REPORT_DIR"
+# --- Fonction principale de traitement d'un rapport ---
+process_report() {
+    local REPORT_PATH="$1"
+    local REPORT_FILE_NAME=$(basename "$REPORT_PATH")
+    
+    # Lecture des données du JSON (CORRIGÉ : utilisation des clés miniuscules 'reportedId', 'reporterId', 'screenshotFile')
+    local IP_TO_AFFECT=$(jq -r '.reportedIP' "$REPORT_PATH" 2>/dev/null)
+    local REASON=$(jq -r '.reason' "$REPORT_PATH" 2>/dev/null)
+    local REPORTED_ID=$(jq -r '.reportedId' "$REPORT_PATH" 2>/dev/null)
+    local REPORTER_ID=$(jq -r '.reporterId' "$REPORT_PATH" 2>/dev/null)
+    local IMAGE_FILE=$(jq -r '.screenshotFile' "$REPORT_PATH" 2>/dev/null)
 
-# Parcourir tous les fichiers *.json dans le répertoire de rapports
-for REPORT_PATH in "$REPORT_DIR"/*.json; do
-
-    # Vérifier si l'opération find a retourné un fichier ou le motif de recherche
-    if [ ! -f "$REPORT_PATH" ]; then
-        continue
-    fi
-
-    REPORT_COUNT=$((REPORT_COUNT + 1))
-    REPORT_FILE_NAME=$(basename "$REPORT_PATH")
-
-    # 1. Extraction des informations du JSON
-    IP_TO_ACT_ON=$(jq -r '.reportedIP' "$REPORT_PATH" 2>/dev/null)
-
-    # 2. Vérification de l'extraction de l'IP
-    if [ -z "$IP_TO_ACT_ON" ] || [ "$IP_TO_ACT_ON" == "null" ]; then
-        log_action "AVERTISSEMENT" "Impossible d'extraire reportedIP du fichier $REPORT_FILE_NAME. Fichier ignoré."
-        continue
-    fi
-
-    log_action "TENTATIVE" "Traitement du rapport $REPORT_FILE_NAME (IP: $IP_TO_ACT_ON)"
-
-    # 3. Exécution de l'action
-    case "$ACTION" in
-        traiter)
-            echo " Rapport $REPORT_FILE_NAME : Mise 'en cours de traitement'..."
-            # Simule l'appel à votre DB/API.
-            sleep 0.1 # Remplacer par la vraie commande DB/API
-
-            if [ $? -eq 0 ]; then
-                log_action "SUCCES" "Simulé: Mise à jour du statut dans la DB pour IP $IP_TO_ACT_ON."
-                PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-            else
-                log_action "ECHEC" "Échec du traitement simulé pour IP $IP_TO_ACT_ON."
-            fi
-            ;;
-
-        supprimer)
-            echo " Rapport $REPORT_FILE_NAME : Suppression du fichier JSON..."
-            rm -f "$REPORT_PATH"
-
-            if [ $? -eq 0 ]; then
-                log_action "SUCCES" "Fichier JSON du rapport supprimé."
-                PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-            else
-                log_action "ECHEC" "Échec de la suppression du fichier JSON."
-            fi
-            ;;
-
-        mail_pharos)
-            echo " Rapport $REPORT_FILE_NAME : Envoi de mail à PHAROS ($PHAROS_MAIL)..."
-
-            # Utilisation du contenu du fichier JSON dans le corps du mail (nécessite 'mailx')
-            mailx -s "Signalement Urgent IP $IP_TO_ACT_ON" "$PHAROS_MAIL" < "$REPORT_PATH"
-
-            if [ $? -eq 0 ]; then
-                log_action "SUCCES" "Mail PHAROS envoyé pour IP $IP_TO_ACT_ON."
-                PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-            else
-                log_action "ECHEC" "Échec envoi mail PHAROS."
-            fi
-            ;;
-
-        faux_positif)
-            echo " Rapport $REPORT_FILE_NAME : Déban de l'IP $IP_TO_ACT_ON et suppression du rapport..."
+    # Affichage des informations
+    echo ""
+    echo "------------------------------------------------------------------------"
+    echo "FICHIER: $REPORT_FILE_NAME"
+    echo "IP BANNIE: $IP_TO_AFFECT"
+    echo "ID Signalé: $REPORTED_ID / ID Signaleur: $REPORTER_ID"
+    echo "RAISON: $REASON"
+    # Affichage de la commande SCP avec le nom de fichier correct
+    echo "Capture : scp root@<SERVEUR>:/var/www/legalshufflecam/logs/reports/images/$IMAGE_FILE ~/temp/"
+    echo "------------------------------------------------------------------------"
+    
+    # Boucle de demande d'action
+    while true; do
+        echo "Action [V/U/E/S/Q] : V)alider le Ban, U)nban (Faux Positif), E)scalader, S)auter (Passer), Q)uitter la session"
+        read -r -n 1 -p "Votre choix : " ACTION
+        echo "" # Nouvelle ligne après la saisie
+        
+        case "$ACTION" in
+            [Vv])
+                # VALIDER (Ban OK, Archiver)
+                mv "$REPORT_PATH" "$PROCESSED_DIR"
+                log_action "MOD_VALIDATE" "Validation manuelle du ban pour IP $IP_TO_AFFECT. Rapport $REPORT_FILE_NAME archivé."
+                echo "✅ Ban validé. Rapport archivé."
+                return 0
+                ;;
             
-            # Appel du script de déban sécurisé (Nécessite SUDO !)
-            sudo ../scripts/unban_ip_manually.sh "$IP_TO_ACT_ON"
+            [Uu])
+                # UNBAN (Faux Positif)
+                if [[ ! "$IP_TO_AFFECT" =~ $IP_REGEX ]]; then
+                    echo "ERREUR: IP invalide ('$IP_TO_AFFECT'). Impossible de débannir."
+                    log_action "ERREUR" "Tentative de déban pour IP invalide: $IP_TO_AFFECT dans $REPORT_FILE_NAME."
+                    continue
+                fi
+                
+                # Exécution du script de déban
+                "$UNBAN_SCRIPT" "$IP_TO_AFFECT"
+                
+                # Archivage du rapport après le déban
+                mv "$REPORT_PATH" "$PROCESSED_DIR"
+                log_action "MOD_UNBAN" "Faux Positif: IP $IP_TO_AFFECT débannie. Rapport $REPORT_FILE_NAME archivé."
+                echo "❌ Faux Positif traité. IP débannie et rapport archivé."
+                return 0
+                ;;
+                
+            [Ee])
+                # ESCALADER (Mettre de côté pour une seconde opinion)
+                mv "$REPORT_PATH" "$ESCALATED_DIR"
+                log_action "MOD_ESCALATE" "Escalade: Rapport $REPORT_FILE_NAME déplacé vers escalated."
+                echo "⬆️ Rapport escaladé et mis de côté."
+                return 0
+                ;;
 
-            if [ $? -eq 0 ]; then
-                # Si le déban réussit, supprimer le fichier du rapport
-                rm -f "$REPORT_PATH"
-                log_action "SUCCES" "Déban et Suppression du rapport pour IP $IP_TO_ACT_ON (Faux Positif)."
-                PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-            else
-                log_action "ECHEC" "Échec du Déban pour IP $IP_TO_ACT_ON. Rapport non supprimé."
-            fi
-            ;;
+            [Ss])
+                # SAUTER (Passer le rapport pour le traiter plus tard)
+                echo "⏩ Rapport sauté. Repassez le script plus tard."
+                return 0
+                ;;
+                
+            [Qq])
+                # QUITTER (Arrêter la session)
+                log_action "INFO" "Session de modération interrompue par l'utilisateur."
+                exit 0
+                ;;
+            
+            *)
+                echo "Choix invalide. Veuillez saisir V, U, E, S ou Q."
+                ;;
+        esac
+    done
+}
 
-        *)
-            echo "❌  ERREUR: Action '$ACTION' inconnue."
-            log_action "ECHEC" "Action '$ACTION' inconnue. Arrêt du traitement."
-            usage
-            ;;
-    esac
+# --- Boucle principale sur tous les fichiers ---
+
+echo "Début de la revue des rapports dans le dossier : $STAGING_DIR"
+
+while true; do
+    # Recherche du premier fichier JSON dans le dossier de staging
+    FIRST_REPORT=$(find "$STAGING_DIR" -maxdepth 1 -type f -name "*.json" | head -n 1)
+
+    if [ -z "$FIRST_REPORT" ]; then
+        echo ""
+        echo "------------------------------------------------------------------------"
+        log_action "INFO" "Fin du traitement. Dossier $STAGING_DIR vide."
+        echo "🎉 Tous les rapports en revue humaine ont été traités. Fin de session."
+        echo "------------------------------------------------------------------------"
+        break
+    fi
+
+    # Traiter le rapport trouvé
+    process_report "$FIRST_REPORT"
 
 done
-
-# --- Conclusion ---
-
-log_action "INFO" "Fin du traitement. $PROCESSED_COUNT rapports traités sur $REPORT_COUNT trouvés."
-echo "Traitement de l'action '$ACTION' terminé. $PROCESSED_COUNT rapports traités."
 
 exit 0
