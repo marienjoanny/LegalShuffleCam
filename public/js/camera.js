@@ -10,6 +10,7 @@ function showTopbarLog(message, color) {
         const topBar = document.getElementById("topBar");
         if (topBar) {
             topBar.textContent = message;
+            if (color) topBar.style.backgroundColor = color;
         } else {
             console.log(`[TOPBAR-LOG] ${message}`); 
         }
@@ -39,21 +40,25 @@ export async function listCameras() {
         
         videoDevices.forEach((device, index) => {
             const option = document.createElement('option');
-            option.value = device.deviceId;
+            option.value = device.deviceId || ""; // fallback vide
             option.textContent = device.label || `Caméra ${index + 1}`; 
             select.appendChild(option);
             
             if (index === 0) {
                 option.selected = true;
-                firstDeviceId = device.deviceId;
+                firstDeviceId = device.deviceId || null;
             }
         });
         
         select.disabled = false;
         showTopbarLog(`✅ ${videoDevices.length} caméras détectées.`);
 
+        // 🚦 Démarrage automatique sur la première caméra si ID valide
         if (firstDeviceId) {
             await startCamera(firstDeviceId); 
+        } else {
+            showTopbarLog("⚠ Aucun deviceId valide, utilisation caméra par défaut...");
+            await startCamera(null); 
         }
 
     } catch (err) {
@@ -65,7 +70,7 @@ export async function listCameras() {
 }
 
 export async function startCamera(deviceId) {
-    showTopbarLog(`🎥 Démarrage de la caméra ID: ${deviceId}...`);
+    showTopbarLog(`🎥 Démarrage de la caméra ID: ${deviceId || "default"}...`);
     
     try {
         if (window.localStream) {
@@ -75,11 +80,11 @@ export async function startCamera(deviceId) {
 
         const constraints = {
             audio: true, 
-            video: {
-                deviceId: { ideal: deviceId },
+            video: deviceId ? {
+                deviceId: { exact: deviceId },
                 width: { ideal: 1280, min: 640 },
                 height: { ideal: 720, min: 480 }
-            }
+            } : true // fallback : caméra par défaut
         };
 
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -100,6 +105,7 @@ export async function startCamera(deviceId) {
             }, { once: true });
         }
         
+        // 🔄 Mise à jour flux P2P si appel actif
         if (window.currentCall && window.currentCall.peerConnection) {
             const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
             if (sender) {
@@ -114,7 +120,7 @@ export async function startCamera(deviceId) {
             }
         }
         
-        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId}.`);
+        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId || "default"}.`);
 
     } catch (err) {
         console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
