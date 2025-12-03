@@ -112,14 +112,16 @@
 
     <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-   <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+
     <!-- Scripts internes -->
     <script src="/js/utilities.js"></script>
     <script src="/js/ui-enhancements.js"></script>
     <script src="/js/camera.js"></script>
-    <script src="/js/face-visible.js"></script>
+    <!-- Charger match.js AVANT face-visible.js -->
     <script src="/js/match.js"></script>
+    <script src="/js/face-visible.js"></script>
     <script src="/js/signalement.js"></script>
     <script type="module" src="/app-lite.js"></script>
     
