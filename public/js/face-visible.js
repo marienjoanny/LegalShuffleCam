@@ -1,4 +1,3 @@
-// /public/js/face-visible.js
 // Détection faciale avec tracking.js, filtrage sur la taille du visage et respect du consentement mutuel
 
 let trackerTask = null;
@@ -7,26 +6,18 @@ let lastDetectionTime = 0;
 let detectionIntervalId = null;
 let videoElement = null;
 let customOptions = {};
+let consentTriggeredStop = false;
 
-// FIX RACING CONDITION: Variables de gestion du polling
-let attempts = 0;
-const MAX_ATTEMPTS = 50; // Max 5 secondes d'attente @ 100ms
-
-// Conteneur pour la bordure
 const container = document.getElementById('localVideoContainer');
-
-// Référence vers la fonction showTopbar
 const showTopbarLog = window.showTopbar || ((msg, color) => {
     const topBar = document.getElementById("topBar");
     if (topBar) topBar.textContent = msg;
 });
 
-// État global
 if (typeof window.mutualConsentGiven === 'undefined') {
-    window.mutualConsentGiven = false; // valeur par défaut
+    window.mutualConsentGiven = false;
 }
 window.faceVisible = false;
-
 
 // ----------------------------
 //       BORDURE
@@ -34,7 +25,7 @@ window.faceVisible = false;
 function updateBorder(isVisible) {
     if (!container) return;
 
-    if (window.mutualConsentGiven === true) {
+    if (window.mutualConsentGiven === true && consentTriggeredStop) {
         container.style.border = '4px solid #3498db';
         container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
         return;
@@ -49,7 +40,6 @@ function updateBorder(isVisible) {
     }
 }
 
-
 // ----------------------------
 //    EVENT FACE VISIBILITY
 // ----------------------------
@@ -60,13 +50,13 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
 
     const warningIp = document.querySelector('.warning-ip');
     if (warningIp) {
-        const highlight = isVisible && window.mutualConsentGiven !== true;
+        const highlight = isVisible && !window.mutualConsentGiven;
         warningIp.style.backgroundColor = highlight ? 'rgba(255, 0, 0, 0.7)' : 'transparent';
         warningIp.style.transition = 'background-color 0.5s';
         warningIp.style.borderRadius = '5px';
     }
 
-    if (window.mutualConsentGiven !== true && !isStopped) {
+    if (!window.mutualConsentGiven && !isStopped) {
         const message = isVisible
             ? "✅ Visage détecté et au centre. Bouton Suivant actif."
             : "⚠ Visage perdu/trop petit. Bouton Suivant désactivé.";
@@ -77,7 +67,6 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
         showTopbarLog("🔴 Détection faciale arrêtée (non consentement)", "#e74c3c");
     }
 }
-
 
 // ----------------------------
 //     TRACKING PRINCIPAL
@@ -94,8 +83,6 @@ function startTrackingInternal() {
     showTopbarLog("🟢 Détection faciale activée (ratio min: " + (customOptions.minFaceRatio * 100) + "%)");
 
     tracker.on('track', event => {
-        if (window.mutualConsentGiven === true) return;
-
         const vw = videoElement.videoWidth || videoElement.clientWidth;
         const vh = videoElement.videoHeight || videoElement.clientHeight;
         if (!vw || !vh) return;
@@ -109,6 +96,15 @@ function startTrackingInternal() {
             if (ratio >= customOptions.minFaceRatio) validFaceFound = true;
         });
 
+        // Si consentement mutuel ET visage détecté → arrêt
+        if (window.mutualConsentGiven === true && validFaceFound) {
+            consentTriggeredStop = true;
+            stopFaceDetection();
+            updateBorder(true);
+            dispatchVisibilityEvent(true, true);
+            return;
+        }
+
         if (validFaceFound) {
             lastDetectionTime = Date.now();
             if (!window.faceVisible) {
@@ -121,15 +117,13 @@ function startTrackingInternal() {
 
     trackerTask = window.tracking.track(videoElement, tracker);
 
-    showTopbarLog("📡 Tâche de tracking lancée.", "#f1c40f");
-
     lastDetectionTime = Date.now();
     window.faceVisible = true;
     updateBorder(true);
     dispatchVisibilityEvent(true);
 
     detectionIntervalId = setInterval(() => {
-        if (window.mutualConsentGiven === true) {
+        if (window.mutualConsentGiven === true && consentTriggeredStop) {
             updateBorder(true);
             if (!window.faceVisible) {
                 window.faceVisible = true;
@@ -144,7 +138,7 @@ function startTrackingInternal() {
             if (window.faceVisible) {
                 window.faceVisible = false;
                 updateBorder(false);
-                dispatchVisibilityEvent(false); // visage perdu
+                dispatchVisibilityEvent(false);
             }
         } else {
             if (!window.faceVisible) {
@@ -155,7 +149,6 @@ function startTrackingInternal() {
         }
     }, 200);
 }
-
 
 // ----------------------------
 //     FIX DE LA RACE CONDITION
@@ -173,7 +166,6 @@ function checkTrackingReadyAndStart() {
         updateBorder(false);
     }
 }
-
 
 // ----------------------------
 //       INIT PUBLIC
@@ -197,6 +189,7 @@ export function initFaceDetection(video, options = {}) {
     container.style.boxShadow = 'none';
     
     attempts = 0;
+    consentTriggeredStop = false;
 
     if (!videoElement.videoWidth || !videoElement.videoHeight) {
         videoElement.addEventListener("loadeddata", () => {
@@ -207,7 +200,6 @@ export function initFaceDetection(video, options = {}) {
 
     checkTrackingReadyAndStart();
 }
-
 
 // ----------------------------
 //        STOP PUBLIC
@@ -239,7 +231,6 @@ export function stopFaceDetection() {
 
     dispatchVisibilityEvent(false, true);
 }
-
 
 // ----------------------------
 //  VALIDATION POUR MATCH.JS
