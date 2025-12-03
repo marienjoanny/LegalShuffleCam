@@ -71,7 +71,7 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
     } else if (window.mutualConsentGiven && !isStopped) {
         showTopbarLog("Consentement mutuel donné. Visage non masqué.", "#3498db");
     } else if (isStopped) {
-        showTopbarLog("🔴 Détection faciale arrêtée", "#e74c3c");
+        showTopbarLog("🔴 Détection faciale arrêtée non consentement", "#e74c3c");
     }
 }
 
