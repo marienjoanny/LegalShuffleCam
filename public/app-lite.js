@@ -1,27 +1,19 @@
-// /public/js/app-lite.js
 import { initMatch, nextMatch, bindMatchEvents } from "/js/match.js";
 import { listCameras, startCamera } from "/js/camera.js";
 import { initFaceDetection, stopFaceDetection } from "/js/face-visible.js";
-import { showTopbarLog } from "/js/utilities.js";
 
 window.addEventListener('DOMContentLoaded', () => {
-  // 🎥 Liste des caméras disponibles
   listCameras();
-
-  // 🔗 Initialisation PeerJS + Match
   initMatch();
   bindMatchEvents();
 
-  // 🎛️ Sélecteur de caméra
   const select = document.getElementById('cameraSelect');
-  if (select) {
-    select.addEventListener('change', () => {
-      const deviceId = select.value;
-      if (deviceId) {
-        startCamera(deviceId);
-      }
-    });
-  }
+  select.addEventListener('change', () => {
+    const deviceId = select.value;
+    if (deviceId) {
+      startCamera(deviceId);
+    }
+  });
 
   // ✅ Patch terrain : démarrage détection après lecture réelle
   const localVideo = document.getElementById("localVideo");
