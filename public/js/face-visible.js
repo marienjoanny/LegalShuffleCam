@@ -22,6 +22,9 @@ const showTopbarLog = window.showTopbar || ((msg, color) => {
 });
 
 // État global
+if (typeof window.mutualConsentGiven === 'undefined') {
+    window.mutualConsentGiven = false; // valeur par défaut
+}
 window.faceVisible = false;
 
 
@@ -31,7 +34,7 @@ window.faceVisible = false;
 function updateBorder(isVisible) {
     if (!container) return;
 
-    if (window.mutualConsentGiven) {
+    if (window.mutualConsentGiven === true) {
         container.style.border = '4px solid #3498db';
         container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
         return;
@@ -57,21 +60,21 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
 
     const warningIp = document.querySelector('.warning-ip');
     if (warningIp) {
-        const highlight = isVisible && !window.mutualConsentGiven;
+        const highlight = isVisible && window.mutualConsentGiven !== true;
         warningIp.style.backgroundColor = highlight ? 'rgba(255, 0, 0, 0.7)' : 'transparent';
         warningIp.style.transition = 'background-color 0.5s';
         warningIp.style.borderRadius = '5px';
     }
 
-    if (!window.mutualConsentGiven && !isStopped) {
+    if (window.mutualConsentGiven !== true && !isStopped) {
         const message = isVisible
             ? "✅ Visage détecté et au centre. Bouton Suivant actif."
             : "⚠ Visage perdu/trop petit. Bouton Suivant désactivé.";
         showTopbarLog(message, isVisible ? "#1abc9c" : "#e67e22");
-    } else if (window.mutualConsentGiven && !isStopped) {
+    } else if (window.mutualConsentGiven === true && !isStopped) {
         showTopbarLog("Consentement mutuel donné. Visage non masqué.", "#3498db");
     } else if (isStopped) {
-        showTopbarLog("🔴 Détection faciale arrêtée non consentement", "#e74c3c");
+        showTopbarLog("🔴 Détection faciale arrêtée (non consentement)", "#e74c3c");
     }
 }
 
@@ -91,7 +94,7 @@ function startTrackingInternal() {
     showTopbarLog("🟢 Détection faciale activée (ratio min: " + (customOptions.minFaceRatio * 100) + "%)");
 
     tracker.on('track', event => {
-        if (window.mutualConsentGiven) return;
+        if (window.mutualConsentGiven === true) return;
 
         const vw = videoElement.videoWidth || videoElement.clientWidth;
         const vh = videoElement.videoHeight || videoElement.clientHeight;
@@ -126,7 +129,7 @@ function startTrackingInternal() {
     dispatchVisibilityEvent(true);
 
     detectionIntervalId = setInterval(() => {
-        if (window.mutualConsentGiven) {
+        if (window.mutualConsentGiven === true) {
             updateBorder(true);
             if (!window.faceVisible) {
                 window.faceVisible = true;
@@ -242,5 +245,5 @@ export function stopFaceDetection() {
 //  VALIDATION POUR MATCH.JS
 // ----------------------------
 export function isFaceValidated() {
-    return window.faceVisible || window.mutualConsentGiven;
+    return window.faceVisible || window.mutualConsentGiven === true;
 }
