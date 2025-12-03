@@ -113,7 +113,6 @@
     <!-- Scripts externes -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="/js/tracking-min.js"></script>
-    <script src="/js/face-min.js"></script>
 
     <!-- Scripts internes -->
     <script src="/js/utilities.js"></script>
