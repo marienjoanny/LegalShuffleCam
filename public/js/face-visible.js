@@ -96,7 +96,6 @@ function startTrackingInternal() {
             if (ratio >= customOptions.minFaceRatio) validFaceFound = true;
         });
 
-        // Si consentement mutuel ET visage détecté → arrêt
         if (window.mutualConsentGiven === true && validFaceFound) {
             consentTriggeredStop = true;
             stopFaceDetection();
@@ -191,15 +190,10 @@ export function initFaceDetection(video, options = {}) {
     attempts = 0;
     consentTriggeredStop = false;
 
-    if (!videoElement.videoWidth || !videoElement.videoHeight) {
-        // ⚡ Patch : attendre playing au lieu de loadeddata
-        videoElement.addEventListener("playing", () => {
-            checkTrackingReadyAndStart();
-        }, { once: true });
-        return;
-    }
-
-    checkTrackingReadyAndStart();
+    // ✅ Patch : on attend playing sans tester les dimensions
+    videoElement.addEventListener("playing", () => {
+        checkTrackingReadyAndStart();
+    }, { once: true });
 }
 
 // ----------------------------
