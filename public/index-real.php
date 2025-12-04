@@ -57,7 +57,6 @@
 
         <div id="localVideoContainer">
             <video id="localVideo" muted autoplay playsinline></video>
-            <canvas id="faceTrackingCanvas" style="display:none;"></canvas>
         </div>
     </div>
 
@@ -124,6 +123,31 @@
     <script src="/js/face-visible.js"></script>
     <script src="/js/signalement.js"></script>
     <script type="module" src="/app-lite.js"></script>
-    
+
+    <!-- Intégration modals consentement -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const localModal = document.getElementById("localConsentModal");
+        const remoteModal = document.getElementById("remoteConsentModal");
+
+        document.getElementById("localConsentYes").addEventListener("click", () => {
+          window.mutualConsentGiven = true;
+          localModal.style.display = "none";
+        });
+        document.getElementById("localConsentNo").addEventListener("click", () => {
+          window.mutualConsentGiven = false;
+          localModal.style.display = "none";
+        });
+
+        document.getElementById("remoteConsentYes").addEventListener("click", () => {
+          window.mutualConsentGiven = true;
+          remoteModal.style.display = "none";
+        });
+        document.getElementById("remoteConsentNo").addEventListener("click", () => {
+          window.mutualConsentGiven = false;
+          remoteModal.style.display = "none";
+        });
+      });
+    </script>
 </body>
 </html>

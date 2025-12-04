@@ -8,10 +8,12 @@ let videoElement = null;
 let customOptions = {};
 let consentTriggeredStop = false;
 
-const container = document.getElementById('localVideoContainer');
 const showTopbarLog = window.showTopbar || ((msg, color) => {
     const topBar = document.getElementById("topBar");
-    if (topBar) topBar.textContent = msg;
+    if (topBar) {
+        topBar.textContent = msg;
+        if (color) topBar.style.color = color;
+    }
 });
 
 if (typeof window.mutualConsentGiven === 'undefined') {
@@ -22,22 +24,10 @@ window.faceVisible = false;
 // ----------------------------
 //       BORDURE
 // ----------------------------
-function updateBorder(isVisible) {
-    if (!container) return;
-
-    if (window.mutualConsentGiven === true && consentTriggeredStop) {
-        container.style.border = '4px solid #3498db';
-        container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
-        return;
-    }
-
-    if (isVisible) {
-        container.style.border = '4px solid #2ecc71';
-        container.style.boxShadow = '0 0 10px rgba(46, 204, 113, 0.8)';
-    } else {
-        container.style.border = '4px solid #e74c3c';
-        container.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
-    }
+function updateBorder(color) {
+    if (!videoElement) return;
+    videoElement.style.border = `4px solid ${color}`;
+    videoElement.style.boxShadow = `0 0 10px ${color}`;
 }
 
 // ----------------------------
@@ -47,14 +37,6 @@ function dispatchVisibilityEvent(isVisible, isStopped = false) {
     window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
         detail: { isVisible, isStopped }
     }));
-
-    const warningIp = document.querySelector('.warning-ip');
-    if (warningIp) {
-        const highlight = isVisible && !window.mutualConsentGiven;
-        warningIp.style.backgroundColor = highlight ? 'rgba(255, 0, 0, 0.7)' : 'transparent';
-        warningIp.style.transition = 'background-color 0.5s';
-        warningIp.style.borderRadius = '5px';
-    }
 
     if (!window.mutualConsentGiven && !isStopped) {
         const message = isVisible
@@ -76,9 +58,8 @@ function startTrackingInternal() {
 
     tracker = new window.tracking.ObjectTracker('face');
     tracker.setInitialScale(4);
-    tracker.setStepSize(1.0);
+    tracker.setStepSize(2);
     tracker.setEdgesDensity(0.1);
-    tracker.setSkip(10);
 
     showTopbarLog("🟢 Détection faciale activée (ratio min: " + (customOptions.minFaceRatio * 100) + "%)");
 
@@ -89,17 +70,26 @@ function startTrackingInternal() {
 
         let validFaceFound = false;
 
+        // Nombre de visages détectés
+        window.dispatchEvent(new CustomEvent('facesDetected', {
+            detail: { count: event.data.length }
+        }));
+
         event.data.forEach(rect => {
             const faceArea = rect.width * rect.height;
             const videoArea = vw * vh;
             const ratio = faceArea / videoArea;
+
+            const ratioSpan = document.getElementById("ratioValue");
+            if (ratioSpan) ratioSpan.textContent = (ratio * 100).toFixed(1) + "%";
+
             if (ratio >= customOptions.minFaceRatio) validFaceFound = true;
         });
 
         if (window.mutualConsentGiven === true && validFaceFound) {
             consentTriggeredStop = true;
             stopFaceDetection();
-            updateBorder(true);
+            updateBorder("#3498db");
             dispatchVisibilityEvent(true, true);
             return;
         }
@@ -108,22 +98,23 @@ function startTrackingInternal() {
             lastDetectionTime = Date.now();
             if (!window.faceVisible) {
                 window.faceVisible = true;
-                updateBorder(true);
+                updateBorder("#2ecc71");
                 dispatchVisibilityEvent(true);
             }
         }
     });
 
-    trackerTask = window.tracking.track(videoElement, tracker);
+    // ✅ Correctif : utiliser le sélecteur CSS
+    trackerTask = window.tracking.track('#localVideo', tracker);
 
     lastDetectionTime = Date.now();
     window.faceVisible = true;
-    updateBorder(true);
+    updateBorder("#2ecc71");
     dispatchVisibilityEvent(true);
 
     detectionIntervalId = setInterval(() => {
         if (window.mutualConsentGiven === true && consentTriggeredStop) {
-            updateBorder(true);
+            updateBorder("#3498db");
             if (!window.faceVisible) {
                 window.faceVisible = true;
                 dispatchVisibilityEvent(true);
@@ -136,13 +127,13 @@ function startTrackingInternal() {
         if (diff > customOptions.detectionTimeout) {
             if (window.faceVisible) {
                 window.faceVisible = false;
-                updateBorder(false);
+                updateBorder("#e74c3c");
                 dispatchVisibilityEvent(false);
             }
         } else {
             if (!window.faceVisible) {
                 window.faceVisible = true;
-                updateBorder(true);
+                updateBorder("#2ecc71");
                 dispatchVisibilityEvent(true);
             }
         }
@@ -159,10 +150,9 @@ function checkTrackingReadyAndStart() {
         attempts++;
         setTimeout(checkTrackingReadyAndStart, 100); 
     } else {
-        showTopbarLog("❌ Échec de la détection faciale (Tracking.js non chargé après 5s).", "#e74c3c");
-        console.error("Échec du chargement de tracking.js après plusieurs tentatives.");
+        showTopbarLog("❌ Échec de la détection faciale (Tracking.js non chargé)", "#e74c3c");
         stopFaceDetection();
-        updateBorder(false);
+        updateBorder("#e74c3c");
     }
 }
 
@@ -170,27 +160,21 @@ function checkTrackingReadyAndStart() {
 //       INIT PUBLIC
 // ----------------------------
 export function initFaceDetection(video, options = {}) {
-    if (!container) {
-        showTopbarLog("❌ Erreur Face Detection: #localVideoContainer introuvable", "#e74c3c");
-        return;
-    }
-
     stopFaceDetection();
 
     videoElement = video;
     customOptions = {
         detectionTimeout: 3000,
-        minFaceRatio: 0.05,
+        minFaceRatio: 0.01,
         ...options
     };
 
-    container.style.border = '4px solid #95a5a6';
-    container.style.boxShadow = 'none';
+    videoElement.style.border = '4px solid #95a5a6';
+    videoElement.style.boxShadow = 'none';
     
     attempts = 0;
     consentTriggeredStop = false;
 
-    // ✅ Patch : on attend playing sans tester les dimensions
     videoElement.addEventListener("playing", () => {
         checkTrackingReadyAndStart();
     }, { once: true });
@@ -219,9 +203,9 @@ export function stopFaceDetection() {
     window.faceVisible = false;
     lastDetectionTime = 0;
 
-    if (container) {
-        container.style.border = '4px solid #95a5a6';
-        container.style.boxShadow = 'none';
+    if (videoElement) {
+        videoElement.style.border = '4px solid #95a5a6';
+        videoElement.style.boxShadow = 'none';
     }
 
     dispatchVisibilityEvent(false, true);
