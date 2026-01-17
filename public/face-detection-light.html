@@ -2,18 +2,22 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Détection de visage avec Tracking.js (Ratio ≥ 30%)</title>
+  <title>Détection faciale simple (Tracking.js)</title>
   <style>
     body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
     #statusbar { background:#222; color:#fff; padding:8px; font-weight:bold; }
-    video, canvas { display:block; margin:20px auto; border:2px solid #333; border-radius:8px; }
+    video, canvas { display:block; margin:20px auto; border-radius:8px; }
+    #videoContainer { display:inline-block; border:4px solid #e74c3c; box-shadow:0 0 10px rgba(231,76,60,0.8); }
   </style>
 </head>
 <body>
   <div id="statusbar">Initialisation...</div>
-  <h1>Détection de visage avec Tracking.js (Ratio ≥ 30%)</h1>
-  <video id="video" width="640" height="480" autoplay muted></video>
-  <canvas id="canvas" width="640" height="480"></canvas>
+  <h1>Détection faciale simple (ratio ≥ 30%)</h1>
+
+  <div id="videoContainer">
+    <video id="video" width="640" height="480" autoplay muted playsinline></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+  </div>
 
   <script src="/js/tracking-min.js"></script>
   <script src="/js/face-min.js"></script>
@@ -23,18 +27,23 @@
     const canvas = document.getElementById('canvas');
     const context = canvas.getContext('2d');
     const statusbar = document.getElementById('statusbar');
+    const container = document.getElementById('videoContainer');
+
+    const MIN_FACE_RATIO = 0.3;   // seuil de surface ajusté à 30%
+    const MAX_VALID_AGE = 2000;   // ms de tolérance après perte
 
     let lastAcceptedRects = [];
     let lastAcceptedTime = 0;
-    const MIN_FACE_RATIO = 0.3;      // seuil de surface ajusté à 30%
-    const MAX_VALID_AGE = 2000;      // ms de tolérance après perte
 
     navigator.mediaDevices.getUserMedia({ video:true })
-      .then(stream => { video.srcObject = stream; statusbar.textContent="Webcam initialisée ✅"; statusbar.style.color="#0a0"; })
-      .catch(err => { console.error("Erreur webcam:",err); statusbar.textContent="Erreur webcam ❌"; statusbar.style.color="#a00"; });
+      .then(stream => { video.srcObject = stream; statusbar.textContent="Webcam initialisée ✅ "; statusbar.style.color="#0a0"; })
+      .catch(err => { console.error("Erreur webcam:",err); statusbar.textContent="Erreur webcam ❌ "; statusbar.style.color="#a00"; });
 
     const tracker = new tracking.ObjectTracker('face');
-    tracker.setInitialScale(4); tracker.setStepSize(2); tracker.setEdgesDensity(0.1);
+    tracker.setInitialScale(4);
+    tracker.setStepSize(2);
+    tracker.setEdgesDensity(0.1);
+
     tracking.track('#video', tracker);
 
     tracker.on('track', event => {
@@ -63,14 +72,18 @@
           context.lineWidth = 4;
           context.strokeRect(rect.x, rect.y, rect.width, rect.height);
         });
-        statusbar.textContent = "Visage détecté (≥ 30%) ✅";
+        statusbar.textContent = "Visage détecté (≥ 30%) ✅ ";
         statusbar.style.color = "#0a0";
+        container.style.border = '4px solid #2ecc71';
+        container.style.boxShadow = '0 0 10px rgba(46,204,113,0.8)';
       } else {
         context.strokeStyle = 'red';
         context.lineWidth = 4;
         context.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-        statusbar.textContent = "Aucun visage détecté ❌";
+        statusbar.textContent = "Aucun visage détecté ❌ ";
         statusbar.style.color = "#a00";
+        container.style.border = '4px solid #e74c3c';
+        container.style.boxShadow = '0 0 10px rgba(231,76,60,0.8)';
       }
     });
   </script>

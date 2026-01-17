@@ -114,8 +114,8 @@
     </p>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
+  <script src="/js/tracking-min.js"></script>
+  <script src="/js/face-min.js"></script>
   <script>
     const localVideo = document.getElementById('localVideo');
     const topBar = document.getElementById('topBar');

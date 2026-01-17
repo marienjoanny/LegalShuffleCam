@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Détection Faciale (Tolérance 2000ms, Seuil 30%)</title>
+  <style>
+    body { font-family: sans-serif; background: #111; color: #eee; padding: 20px; }
+    #localVideo { width: 640px; height: 480px; border: 4px solid #95a5a6; box-shadow: none; }
+    #topBar { margin-top: 10px; font-weight: bold; font-size: 1.1em; }
+    #controls button { margin: 5px; padding: 10px; font-size: 1em; }
+  </style>
+</head>
+<body>
+
+  <h2>Test Détection Faciale (Tolérance 2000ms, Seuil 30%)</h2>
+
+  <video id="localVideo" autoplay muted playsinline></video>
+  <div id="topBar">Initialisation...</div>
+
+  <div id="controls">
+    <button id="btnConsentOn">👍 Activer Consentement</button>
+    <button id="btnConsentOff">❌ Désactiver Consentement</button>
+    <button id="btnReset">🔄 Reset Détection</button>
+    <button id="btnNext" disabled>➔ Bouton Suivant</button>
+  </div>
+
+  <script src="/js/tracking-min.js"></script>
+  <script src="/js/face-min.js"></script>
+
+  <script>
+    let trackerTask = null;
+    let tracker = null;
+    let lastAcceptedRects = [];
+    let lastAcceptedTime = 0;
+    const MIN_FACE_RATIO = 0.3;
+    const MAX_VALID_AGE = 2000;
+    let videoElement = null;
+
+    function showTopbarLog(msg, color) {
+      const topBar = document.getElementById("topBar");
+      if (topBar) {
+        topBar.textContent = msg;
+        if (color) topBar.style.color = color;
+      }
+    }
+
+    function updateBorder(color) {
+      if (!videoElement) return;
+      videoElement.style.border = `4px solid ${color}`;
+      videoElement.style.boxShadow = `0 0 10px ${color}`;
+    }
+
+    function dispatchVisibilityEvent(isVisible) {
+      window.dispatchEvent(new CustomEvent('faceVisibilityChanged', {
+        detail: { isVisible }
+      }));
+    }
+
+    function startTrackingInternal() {
+      tracker = new tracking.ObjectTracker('face');
+      tracker.setInitialScale(4);
+      tracker.setStepSize(2);
+      tracker.setEdgesDensity(0.1);
+
+      tracker.on('track', event => {
+        const now = Date.now();
+        const videoArea = videoElement.videoWidth * videoElement.videoHeight;
+        let acceptedThisFrame = false;
+
+        if(event.data.length > 0){
+          event.data.forEach(rect => {
+            const faceArea = rect.width * rect.height;
+            const ratio = faceArea / videoArea;
+            if(ratio >= MIN_FACE_RATIO){
+              lastAcceptedRects = [rect];
+              lastAcceptedTime = now;
+              acceptedThisFrame = true;
+            }
+          });
+        }
+
+        const age = now - lastAcceptedTime;
+
+        if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
+          updateBorder("#2ecc71");
+          showTopbarLog("Visage détecté (≥30%) ✅", "#1abc9c");
+          dispatchVisibilityEvent(true);
+        } else {
+          updateBorder("#e74c3c");
+          showTopbarLog("Aucun visage détecté ❌", "#e67e22");
+          dispatchVisibilityEvent(false);
+        }
+      });
+
+      trackerTask = tracking.track('#localVideo', tracker);
+    }
+
+    function initFaceDetection(video) {
+      stopFaceDetection();
+      videoElement = video;
+      videoElement.style.border = '4px solid #95a5a6';
+      videoElement.style.boxShadow = 'none';
+      videoElement.addEventListener("playing", () => {
+        startTrackingInternal();
+      }, { once: true });
+    }
+
+    function stopFaceDetection() {
+      if (trackerTask) {
+        trackerTask.stop();
+        trackerTask = null;
+      }
+      if (tracker) {
+        tracker.removeAllListeners();
+        tracker = null;
+      }
+      videoElement = null;
+      lastAcceptedRects = [];
+      lastAcceptedTime = 0;
+      dispatchVisibilityEvent(false);
+    }
+
+    function isFaceValidated() {
+      const age = Date.now() - lastAcceptedTime;
+      return (lastAcceptedRects.length > 0 && age < MAX_VALID_AGE) || window.mutualConsentGiven === true;
+    }
+
+    // --- UI boutons ---
+    const btnConsentOn = document.getElementById("btnConsentOn");
+    const btnConsentOff = document.getElementById("btnConsentOff");
+    const btnReset = document.getElementById("btnReset");
+    const btnNext = document.getElementById("btnNext");
+
+    window.mutualConsentGiven = false;
+
+    btnConsentOn.addEventListener("click", () => {
+      window.mutualConsentGiven = true;
+      showTopbarLog("Consentement activé manuellement.", "#3498db");
+    });
+
+    btnConsentOff.addEventListener("click", () => {
+      window.mutualConsentGiven = false;
+      showTopbarLog("Consentement désactivé.", "#e67e22");
+    });
+
+    btnReset.addEventListener("click", () => {
+      stopFaceDetection();
+      initFaceDetection(videoElement);
+      showTopbarLog("Détection réinitialisée.", "#95a5a6");
+    });
+
+    window.addEventListener("faceVisibilityChanged", e => {
+      btnNext.disabled = !isFaceValidated();
+    });
+
+    // --- Lancement caméra ---
+    const video = document.getElementById("localVideo");
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+      video.addEventListener("playing", () => {
+        initFaceDetection(video);
+      }, { once: true });
+    }).catch(err => {
+      showTopbarLog("Erreur caméra : " + err.message, "#e74c3c");
+    });
+  </script>
+</body>
+</html>

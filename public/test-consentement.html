@@ -2,107 +2,136 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Test Consentement - Détection faciale</title>
+  <title>Test Consentement + Détection</title>
   <style>
-    body { background:#111; color:#eee; font-family:sans-serif; text-align:center; }
-    video, canvas { display:block; margin:20px auto; border-radius:8px; }
+    body { margin:0; background:#111; color:#eee; font-family:sans-serif; text-align:center; }
     #topBar { background:#222; color:#fff; padding:8px; font-weight:bold; }
+    #localVideo { display:block; margin:20px auto; width:640px; height:480px; border:4px solid #e74c3c; border-radius:8px; }
     button { margin:10px; padding:10px 20px; font-size:16px; }
-    #statusPanel { margin-top:20px; padding:10px; background:#222; border-radius:8px; display:inline-block; }
-    #statusPanel span { display:block; margin:5px 0; font-weight:bold; }
-    #eventLog { margin-top:20px; max-height:200px; overflow-y:auto; background:#222; padding:10px; border-radius:8px; text-align:left; }
-    #eventLog div { margin:4px 0; font-size:14px; }
-    #localVideoContainer { border:4px solid #e74c3c; box-shadow:0 0 10px rgba(231,76,60,0.8); padding:4px; border-radius:8px; display:inline-block; }
+    .statusBox { margin:10px auto; width:320px; background:#222; padding:10px; border-radius:8px; }
+    #eventLog { max-height:200px; overflow-y:auto; background:#000; padding:10px; margin:10px auto; width:640px; text-align:left; font-size:14px; border-radius:8px; }
   </style>
 </head>
 <body>
   <div id="topBar">Initialisation...</div>
+  <h1>Détection de visage avec consentement</h1>
 
-  <div id="localVideoContainer">
-    <video id="localVideo" width="640" height="480" autoplay muted playsinline></video>
-    <canvas id="faceTrackingCanvas" width="640" height="480"></canvas>
-  </div>
+  <video id="localVideo" autoplay muted playsinline></video>
 
   <div>
     <button id="btnConsentTrue">Activer consentement mutuel</button>
     <button id="btnConsentFalse">Désactiver consentement mutuel</button>
   </div>
 
-  <div id="statusPanel">
-    <span>mutualConsentGiven: <span id="consentValue">false</span></span>
-    <span>faceVisible: <span id="faceValue">false</span></span>
+  <div class="statusBox">
+    mutualConsentGiven: <span id="consentValue">false</span><br>
+    faceVisible: <span id="faceValue">false</span><br>
+    faceRatio: <span id="ratioValue">–</span><br>
+    facesDetected: <span id="facesCount">0</span>
   </div>
 
   <div id="eventLog"><strong>Logs des événements :</strong></div>
 
-  <!-- Librairies -->
-  <script src="https://cdn.jsdelivr.net/npm/tracking/build/tracking-min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tracking/build/data/face-min.js"></script>
-
-  <!-- Ton script corrigé -->
-  <script src="/js/face-visible.js"></script>
+  <script src="/js/tracking-min.js"></script>
+  <script src="/js/face-min.js"></script>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const video = document.getElementById('localVideo');
-      const consentValue = document.getElementById('consentValue');
-      const faceValue = document.getElementById('faceValue');
-      const eventLog = document.getElementById('eventLog');
-      const container = document.getElementById('localVideoContainer');
+    const video = document.getElementById('localVideo');
+    const topBar = document.getElementById('topBar');
+    const consentValue = document.getElementById('consentValue');
+    const faceValue = document.getElementById('faceValue');
+    const ratioValue = document.getElementById('ratioValue');
+    const facesCount = document.getElementById('facesCount');
+    const eventLog = document.getElementById('eventLog');
 
-      navigator.mediaDevices.getUserMedia({ video:true })
-        .then(stream => { video.srcObject = stream; })
-        .catch(err => { console.error("Erreur webcam:", err); });
+    let mutualConsentGiven = false;
+    let faceVisible = false;
+    let lastAcceptedTime = 0;
+    const MIN_FACE_RATIO = 0.01;
+    const MAX_VALID_AGE = 2000;
 
-      if (typeof initFaceDetection === 'function') {
-        initFaceDetection(video, { minFaceRatio: 0.05, detectionTimeout: 3000 });
+    function logEvent(msg){
+      const div = document.createElement('div');
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      eventLog.appendChild(div);
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    function updateStatusBar(msg,color){
+      topBar.textContent = msg;
+      topBar.style.color = color;
+    }
+
+    function updateBorder(color){
+      video.style.border = `4px solid ${color}`;
+      video.style.boxShadow = `0 0 10px ${color}`;
+    }
+
+    navigator.mediaDevices.getUserMedia({
+      video: { width:{ideal:640}, height:{ideal:480} }
+    })
+    .then(stream => {
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        updateStatusBar(`🎥 Webcam initialisée ✅ (${video.videoWidth}×${video.videoHeight})`,"#0a0");
+        logEvent(`Webcam initialisée avec résolution ${video.videoWidth}×${video.videoHeight}`);
+      };
+    })
+    .catch(err => {
+      updateStatusBar("❌ Erreur webcam: "+err.message,"#a00");
+      logEvent("Erreur webcam: "+err.message);
+    });
+
+    const tracker = new tracking.ObjectTracker('face');
+    tracker.setInitialScale(4);
+    tracker.setStepSize(2);
+    tracker.setEdgesDensity(0.1);
+
+    tracking.track('#localVideo', tracker);
+
+    tracker.on('track', event => {
+      const now = Date.now();
+      const videoArea = video.videoWidth * video.videoHeight;
+      let acceptedThisFrame = false;
+
+      facesCount.textContent = event.data.length;
+
+      if(event.data.length > 0){
+        event.data.forEach(rect => {
+          const faceArea = rect.width * rect.height;
+          const ratio = faceArea / videoArea;
+          ratioValue.textContent = (ratio*100).toFixed(1)+"%";
+          if(ratio >= MIN_FACE_RATIO){
+            lastAcceptedTime = now;
+            acceptedThisFrame = true;
+          }
+        });
       }
 
-      document.getElementById('btnConsentTrue').addEventListener('click', () => {
-        window.mutualConsentGiven = true;
-        consentValue.textContent = "true";
-        updateBorder();
-        logEvent("Consentement mutuel activé");
-      });
+      const age = now - lastAcceptedTime;
 
-      document.getElementById('btnConsentFalse').addEventListener('click', () => {
-        window.mutualConsentGiven = false;
-        consentValue.textContent = "false";
-        updateBorder();
-        logEvent("Consentement mutuel désactivé");
-      });
-
-      setInterval(() => {
-        consentValue.textContent = window.mutualConsentGiven ? "true" : "false";
-        faceValue.textContent = window.faceVisible ? "true" : "false";
-        updateBorder();
-      }, 500);
-
-      window.addEventListener('faceVisibilityChanged', e => {
-        const { isVisible, isStopped } = e.detail;
-        logEvent(`faceVisibilityChanged → visible=${isVisible}, stopped=${isStopped}`);
-      });
-
-      function updateBorder() {
-        if (!container) return;
-        if (window.mutualConsentGiven === true) {
-          container.style.border = '4px solid #3498db';
-          container.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.8)';
-        } else if (window.faceVisible === true) {
-          container.style.border = '4px solid #2ecc71';
-          container.style.boxShadow = '0 0 10px rgba(46, 204, 113, 0.8)';
-        } else {
-          container.style.border = '4px solid #e74c3c';
-          container.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
-        }
+      if(acceptedThisFrame || age < MAX_VALID_AGE){
+        faceVisible = true;
+        faceValue.textContent = "true";
+        updateBorder(mutualConsentGiven ? "#3498db" : "#2ecc71");
+        updateStatusBar(mutualConsentGiven ? "Consentement mutuel donné ✅" : "Visage détecté ✅","#0a0");
+      } else {
+        faceVisible = false;
+        faceValue.textContent = "false";
+        updateBorder("#e74c3c");
+        updateStatusBar("Aucun visage détecté ❌","#a00");
       }
+    });
 
-      function logEvent(msg) {
-        const div = document.createElement('div');
-        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        eventLog.appendChild(div);
-        eventLog.scrollTop = eventLog.scrollHeight;
-      }
+    document.getElementById('btnConsentTrue').addEventListener('click',()=>{
+      mutualConsentGiven = true;
+      consentValue.textContent = "true";
+      logEvent("Consentement mutuel activé");
+    });
+    document.getElementById('btnConsentFalse').addEventListener('click',()=>{
+      mutualConsentGiven = false;
+      consentValue.textContent = "false";
+      logEvent("Consentement mutuel désactivé");
     });
   </script>
 </body>

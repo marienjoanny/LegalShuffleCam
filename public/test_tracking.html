@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TEST ISOLÉ - Détection Faciale</title>
+    <style>
+        /* Styles nécessaires pour visualiser l'état */
+        body { margin: 0; padding: 0; background-color: #1a1a1a; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
+        #topBar { width: 100%; padding: 10px; color: white; text-align: center; font-weight: bold; background-color: #e74c3c; position: fixed; top: 0; left: 0; z-index: 10000; }
+        #localVideo { 
+            width: 320px; 
+            height: 240px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            border: 4px solid #e74c3c; 
+            box-shadow: 0 0 10px #e74c3c; 
+            margin-top: 20px;
+        }
+        .btn-control { padding: 10px 20px; margin: 5px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+
+    <script src="/js/tracking-min.js"></script>
+    <script src="/js/face-min.js"></script>
+</head>
+<body>
+    <div id="topBar">Initialisation...</div>
+    <video id="localVideo" muted autoplay playsinline></video>
+    
+    <div style="margin-top: 20px;">
+        <button id="btnNextPeer" class="btn-control" style="background-color: #2ecc71; color: white;" disabled>Bouton Suivant</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const localVideo = document.getElementById('localVideo');
+            const topBar = document.getElementById('topBar');
+            const btnNext = document.getElementById('btnNextPeer'); 
+
+            let lastAcceptedTime = 0;
+            let lastAcceptedRects = [];
+            const MIN_FACE_RATIO = 0.3;
+            const MAX_VALID_AGE = 2000;
+            // On désactive le consentement pour ce test
+            window.mutualConsentGiven = false; 
+
+            function showTopbarLog(msg, color) {
+                topBar.textContent = msg;
+                if(color) topBar.style.color = color;
+            }
+
+            function updateBorder(color) {
+                localVideo.style.border = `4px solid ${color}`;
+                localVideo.style.boxShadow = `0 0 10px ${color}`;
+                topBar.style.backgroundColor = color; 
+            }
+
+            const tracker = new tracking.ObjectTracker('face');
+            tracker.setInitialScale(4);
+            tracker.setStepSize(2);
+            tracker.setEdgesDensity(0.1);
+            tracking.track('#localVideo', tracker);
+
+            tracker.on('track', event => {
+                const now = Date.now();
+                const videoArea = localVideo.videoWidth * localVideo.videoHeight;
+                lastAcceptedRects = [];
+
+                if(event.data.length > 0){
+                    event.data.forEach(rect => {
+                        const faceArea = rect.width * rect.height;
+                        const ratio = faceArea / videoArea;
+                        if(ratio >= MIN_FACE_RATIO){
+                            lastAcceptedRects = [rect];
+                            lastAcceptedTime = now;
+                        }
+                    });
+                }
+
+                const age = now - lastAcceptedTime;
+
+                // On ne teste que la détection du visage
+                if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
+                    updateBorder("#2ecc71");
+                    showTopbarLog("Visage détecté (≥30%) ✅ ", "white");
+                    btnNext.disabled = false;
+                } else {
+                    updateBorder("#e74c3c");
+                    showTopbarLog("Aucun visage détecté ❌ ", "white");
+                    btnNext.disabled = true;
+                }
+            });
+
+            navigator.mediaDevices.getUserMedia({ video:true })
+                .then(stream => { 
+                    localVideo.srcObject = stream; 
+                    showTopbarLog("Webcam initialisée (Détection en cours)","#0a0");
+                    updateBorder("#e74c3c"); 
+                })
+                .catch(err => { 
+                    showTopbarLog("Erreur webcam ❌  " + err.message,"#a00");
+                    updateBorder("#a00");
+                    btnNext.disabled = true;
+                });
+        });
+    </script>
+</body>
+</html>
