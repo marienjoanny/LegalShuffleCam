@@ -1,0 +1,31 @@
+/* --- Gestion des flux vidéo --- */
+#localVideo, #remoteVideo {
+    width: 100%;
+    border-radius: 8px;
+    background: #000;
+    transition: all 0.4s ease-in-out;
+}
+
+/* --- Système de Protection LegalShuffle --- */
+.video-protected {
+    filter: blur(50px) brightness(0.6) grayscale(0.5) !important;
+}
+
+/* --- Verrouillage UI --- */
+.btn-locked {
+    opacity: 0.3 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+/* --- Sélecteur de source --- */
+#videoSource {
+    background: #2c3e50;
+    color: white;
+    width: 100%;
+    margin-bottom: 10px;
+    border: 1px solid #34495e;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
