@@ -45,8 +45,8 @@ function dispatchVisibilityEvent(isVisible) {
     // Gère la mise à jour de la barre de statut (TopBar)
     if (!window.mutualConsentGiven) {
         const message = isVisible
-            ? "✅  Visage détecté (≥30%). Bouton Suivant actif."
-            : "❌  Visage perdu/trop petit (<30%). Bouton Suivant désactivé.";
+            ? "✅  Visage détecté (≥${Math.round(customOptions.minFaceRatio * 100)}%). Bouton Suivant actif."
+            : "❌  Visage perdu/trop petit (<${Math.round(customOptions.minFaceRatio * 100)}%). Bouton Suivant désactivé.";
         showTopbarLog(message, isVisible ? "#1abc9c" : "#e67e22");
     } else if (window.mutualConsentGiven === true) {
         // Le consentement est donné, on affiche le statut Bleu
@@ -60,8 +60,8 @@ function dispatchVisibilityEvent(isVisible) {
 function startTrackingInternal() {
     // 1. Initialisation du Tracker
     tracker = new tracking.ObjectTracker('face');
-    tracker.setInitialScale(4);
-    tracker.setStepSize(2);
+    tracker.setInitialScale(2.5);
+    tracker.setStepSize(1.2);
     tracker.setEdgesDensity(0.1);
 
     // 2. Événement de détection
@@ -157,9 +157,9 @@ function checkTrackingReadyAndStart() {
 export function initFaceDetection(video, options = {}) {
     stopFaceDetection();
 
-    videoElement = video;
+    videoElement = video; videoElement.style.filter = "contrast(1.2) brightness(1.1)";
     customOptions = {
-        detectionTimeout: 2000,   // tolérance
+        detectionTimeout: 4000,   // tolérance
         minFaceRatio: 0.3,        // ratio min
         ...options
     };
