@@ -1,16 +1,16 @@
 <?php
-// index-real.php - Version Officielle Stable
+// index-real.php - Version Design Clean + Moteur Stable
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>LegalShuffleCam - Stable</title>
+  <title>LegalShuffleCam - Version Stable</title>
   <link rel="stylesheet" href="/css/styletest.css?v=debug">
   <link rel="stylesheet" href="/css/camera.css?v=1.1">
   <link rel="stylesheet" href="/css/modal.css?v=1.1">
   <style>
-    #topBar { position: fixed; top: 0; left: 0; width: 100%; padding: 10px; color: white; text-align: center; font-weight: bold; background-color: #e74c3c; z-index: 10000; }
+    #topBar { position: fixed; top: 0; left: 0; width: 100%; padding: 10px; color: white; text-align: center; font-weight: bold; background-color: #e74c3c; z-index: 10000; transition: background 0.3s; }
   </style>
 </head>
 <body>
@@ -26,13 +26,17 @@
   <div id="bottomLayout">
     <div id="controls">
       <div class="control-row">
-        <select id="videoSource"><option value="">Caméra...</option></select>
+        <select id="videoSource"><option value="">Chargement caméras...</option></select>
       </div>
       <div class="control-row">
         <button class="control-button green" id="btnConsentement">👍 Consentement</button>
         <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
       </div>
-      <button id="btnNextPeer" disabled class="control-button blue btn-locked">➔ Suivant</button>
+      <div class="control-row full-width-row">
+        <button id="btnNextPeer" disabled class="control-button blue btn-locked">
+          ➔ Interlocuteur suivant
+        </button>
+      </div>
     </div>
     <div id="localVideoContainer">
       <video id="localVideo" muted autoplay playsinline></video>
@@ -41,8 +45,10 @@
 
   <div id="consentModal" class="modal-overlay">
     <div class="modal-content">
-      <h3>Consentement</h3>
-      <p>Lever la protection ?</p>
+      <h3>Consentement mutuel</h3>
+      <p style="text-align: justify; font-size: 0.9em; margin-bottom: 15px;">
+        ⚠️ En cliquant sur « Oui », vous acceptez de lever le flou de protection mutuel.
+      </p>
       <div class="modal-buttons">
         <button id="btnConsentYes" class="btn-yes">Oui</button>
         <button id="btnConsentNo" class="btn-no">Non</button>
@@ -58,45 +64,64 @@
     const localVideo = document.getElementById('localVideo');
     const topBar = document.getElementById('topBar');
     const btnNext = document.getElementById('btnNextPeer');
+    const videoSelect = document.getElementById('videoSource');
     const consentModal = document.getElementById('consentModal');
 
-    // On branche l'écouteur d'événements que face-visible.js va envoyer
+    // ÉCOUTEUR DU MOTEUR STABLE (face-visible.js)
     window.addEventListener('faceStatusUpdate', (e) => {
         const { isValid, ratio } = e.detail;
-        const ratioDisplay = (ratio * 100).toFixed(1);
+        const ratioPct = (ratio * 100).toFixed(1);
 
         if(window.mutualConsentGiven || isValid) {
-            topBar.textContent = window.mutualConsentGiven ? "Consentement OK ✅" : `Visage OK (${ratioDisplay}%) ✅`;
+            topBar.textContent = window.mutualConsentGiven ? "Consentement OK ✅" : `Visage OK (${ratioPct}%) ✅`;
             topBar.style.backgroundColor = "#1abc9c";
             btnNext.disabled = false;
             btnNext.classList.remove('btn-locked');
-            document.getElementById('remoteVideo').classList.remove('video-protected');
+            if(document.getElementById('remoteVideo')) document.getElementById('remoteVideo').classList.remove('video-protected');
         } else {
-            topBar.textContent = `Ratio: ${ratioDisplay}% / Requis: 30% ❌`;
+            topBar.textContent = `Ratio: ${ratioPct}% / Requis: 30% ❌`;
             topBar.style.backgroundColor = "#e67e22";
             btnNext.disabled = true;
             btnNext.classList.add('btn-locked');
-            document.getElementById('remoteVideo').classList.add('video-protected');
+            if(document.getElementById('remoteVideo')) document.getElementById('remoteVideo').classList.add('video-protected');
         }
     });
 
-    // Caméra et Initialisation
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => { 
-          localVideo.srcObject = stream;
-          localVideo.onplaying = () => {
-              if(typeof window.initFaceDetection === 'function') {
-                  window.initFaceDetection(localVideo);
-              }
-          };
-      })
-      .catch(err => { topBar.textContent = "Erreur Caméra"; });
+    async function initDevices() {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        videoSelect.innerHTML = '';
+        devices.filter(d => d.kind === 'videoinput').forEach(device => {
+            const opt = document.createElement('option');
+            opt.value = device.deviceId;
+            opt.text = device.label || `Caméra ${videoSelect.length + 1}`;
+            videoSelect.appendChild(opt);
+        });
+    }
+
+    async function startCamera(id = null) {
+        if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: id ? { deviceId: { exact: id } } : true, audio: true
+            });
+            window.localStream = stream;
+            localVideo.srcObject = stream;
+            
+            // On lance la détection une fois la vidéo lancée
+            localVideo.onloadedmetadata = () => {
+                if(typeof window.initFaceDetection === 'function') {
+                    window.initFaceDetection(localVideo);
+                }
+            };
+        } catch (err) { topBar.textContent = "Erreur Caméra"; }
+    }
+
+    videoSelect.onchange = () => startCamera(videoSelect.value);
+    initDevices().then(() => startCamera());
 
     document.getElementById('btnConsentement').onclick = () => consentModal.style.display = "flex";
-    document.getElementById('btnConsentYes').onclick = () => { 
-        window.mutualConsentGiven = true; 
-        consentModal.style.display = "none"; 
-    };
+    document.getElementById('btnConsentYes').onclick = () => { window.mutualConsentGiven = true; consentModal.style.display = "none"; };
+    document.getElementById('btnConsentNo').onclick = () => { window.mutualConsentGiven = false; consentModal.style.display = "none"; };
   </script>
 </body>
 </html>
