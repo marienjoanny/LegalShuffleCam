@@ -178,7 +178,7 @@
         btnNext.disabled = false;
       } else {
         updateBorder("#e74c3c");
-        showTopbarLog("Aucun visage détecté ❌", "#e67e22");
+        showTopbarLog("Rapprochez votre visage (min 30%) ❌ ");
         btnNext.disabled = true;
       }
     });
