@@ -4,3 +4,16 @@
 .btn-yes { background-color: #27ae60; color: #fff; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 .btn-no { background-color: #c0392b; color: #fff; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 #topBar { position: fixed; top: 0; left: 0; width: 100%; padding: 10px; color: white; text-align: center; font-weight: bold; background-color: #e74c3c; z-index: 10000; }
+.full-width-row {
+    width: 100%;
+    margin-top: 10px;
+}
+.btn-next-big {
+    width: 100%;
+    padding: 15px !important;
+    font-size: 1.2em !important;
+    font-weight: bold !important;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border: 2px solid #2980b9 !important;
+}
