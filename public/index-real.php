@@ -150,7 +150,7 @@
 
     tracker.on('track', event => {
       const now = Date.now();
-      const videoArea = localVideo.videoWidth * localVideo.videoHeight;
+      const videoArea = (localVideo.videoWidth * localVideo.videoHeight) || 1;
 
       if(event.data.length > 0){
         event.data.forEach(rect => {
