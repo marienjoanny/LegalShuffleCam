@@ -2,6 +2,7 @@ const localVideo = document.getElementById('localVideo');
 const topBar = document.getElementById('topBar');
 const btnNext = document.getElementById('btnNextPeer');
 const btnConsentement = document.getElementById('btnConsentement');
+const cameraSelect = document.getElementById('cameraSelect');
 const videoObscuredMessage = document.getElementById('videoObscuredMessage');
 const consentModal = document.getElementById('consentModal');
 const btnConsentYes = document.getElementById('btnConsentYes');
@@ -12,6 +13,7 @@ let lastAcceptedRects = [];
 const MIN_FACE_RATIO = 0.3;
 const MAX_VALID_AGE = 2000;
 window.mutualConsentGiven = false;
+window.localStream = null;
 
 function showTopbarLog(msg, color) {
   topBar.textContent = msg;
@@ -23,6 +25,7 @@ function updateBorder(color) {
   localVideo.style.boxShadow = "0 0 10px " + color;
 }
 
+// Initialisation du Tracker
 const tracker = new tracking.ObjectTracker('face');
 tracker.setInitialScale(4);
 tracker.setStepSize(1.2);
@@ -59,10 +62,40 @@ tracker.on('track', event => {
   }
 });
 
-navigator.mediaDevices.getUserMedia({ video:true })
-  .then(stream => { localVideo.srcObject = stream; showTopbarLog("Webcam initialisée ✅","#0a0"); })
-  .catch(err => { showTopbarLog("Erreur webcam ❌ " + err.message,"#a00"); });
+// --- Gestion des caméras ---
+async function setupCamera(deviceId = null) {
+  if (window.localStream) {
+    window.localStream.getTracks().forEach(track => track.stop());
+  }
+  const constraints = {
+    video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" },
+    audio: false
+  };
+  try {
+    window.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    localVideo.srcObject = window.localStream;
+    showTopbarLog("Caméra active ✅", "#2ecc71");
+  } catch (err) {
+    showTopbarLog("Erreur caméra ❌ " + err.message, "#e74c3c");
+  }
+}
 
+async function listCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    cameraSelect.innerHTML = '';
+    videoDevices.forEach((device, i) => {
+      const opt = document.createElement('option');
+      opt.value = device.deviceId;
+      opt.text = device.label || `Caméra ${i + 1}`;
+      cameraSelect.appendChild(opt);
+    });
+  } catch (e) { console.error(e); }
+}
+
+// Événements UI
+cameraSelect.addEventListener('change', () => setupCamera(cameraSelect.value));
 btnConsentement.addEventListener("click", () => { consentModal.style.display = "flex"; });
 btnConsentYes.addEventListener("click", () => {
   window.mutualConsentGiven = true;
@@ -77,6 +110,10 @@ btnConsentNo.addEventListener("click", () => {
   btnNext.disabled = true;
   consentModal.style.display = "none";
 });
+
+// Lancement initial
+listCameras().then(() => setupCamera());
+
 document.addEventListener("visibilitychange", () => {
   videoObscuredMessage.style.display = document.hidden ? "block" : "none";
 });
