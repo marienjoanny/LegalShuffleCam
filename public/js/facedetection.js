@@ -19,8 +19,8 @@ function showTopbarLog(msg, color) {
 }
 
 function updateBorder(color) {
-  localVideo.style.border = \`4px solid \${color}\`;
-  localVideo.style.boxShadow = \`0 0 10px \${color}\`;
+  localVideo.style.border = "4px solid " + color;
+  localVideo.style.boxShadow = "0 0 10px " + color;
 }
 
 const tracker = new tracking.ObjectTracker('face');
@@ -32,27 +32,22 @@ tracking.track('#localVideo', tracker);
 tracker.on('track', event => {
   const now = Date.now();
   const videoArea = (localVideo.videoWidth * localVideo.videoHeight) || 1;
-
   if(event.data.length > 0){
     event.data.forEach(rect => {
       const faceArea = rect.width * rect.height;
-      const ratio = faceArea / videoArea;
-      if(ratio >= MIN_FACE_RATIO){
+      if((faceArea / videoArea) >= MIN_FACE_RATIO){
         lastAcceptedRects = [rect];
         lastAcceptedTime = now;
       }
     });
   }
-
   const age = now - lastAcceptedTime;
-
   if(window.mutualConsentGiven){
     updateBorder("#3498db");
     showTopbarLog("Consentement mutuel donné ✅", "#3498db");
     btnNext.disabled = false;
     return;
   }
-
   if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
     updateBorder("#2ecc71"); localVideo.style.filter = "none";
     showTopbarLog("Visage détecté (≥30%) ✅", "#1abc9c");
@@ -68,29 +63,20 @@ navigator.mediaDevices.getUserMedia({ video:true })
   .then(stream => { localVideo.srcObject = stream; showTopbarLog("Webcam initialisée ✅","#0a0"); })
   .catch(err => { showTopbarLog("Erreur webcam ❌ " + err.message,"#a00"); });
 
-btnConsentement.addEventListener("click", () => {
-  consentModal.style.display = "flex";
-});
-
+btnConsentement.addEventListener("click", () => { consentModal.style.display = "flex"; });
 btnConsentYes.addEventListener("click", () => {
   window.mutualConsentGiven = true;
   updateBorder("#3498db");
-  showTopbarLog("Consentement activé via modal ✅", "#3498db");
+  showTopbarLog("Consentement activé ✅", "#3498db");
   btnNext.disabled = false;
   consentModal.style.display = "none";
 });
-
 btnConsentNo.addEventListener("click", () => {
   window.mutualConsentGiven = false;
   showTopbarLog("Consentement refusé ❌", "#e67e22");
   btnNext.disabled = true;
   consentModal.style.display = "none";
 });
-
 document.addEventListener("visibilitychange", () => {
-  if(document.hidden){
-    videoObscuredMessage.style.display = "block";
-  } else {
-    videoObscuredMessage.style.display = "none";
-  }
+  videoObscuredMessage.style.display = document.hidden ? "block" : "none";
 });
