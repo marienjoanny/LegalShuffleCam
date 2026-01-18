@@ -173,11 +173,11 @@
       }
 
       if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
-        updateBorder("#2ecc71");
+        updateBorder("#2ecc71"); localVideo.style.filter = "none";
         showTopbarLog("Visage détecté (≥30%) ✅", "#1abc9c");
         btnNext.disabled = false;
       } else {
-        updateBorder("#e74c3c");
+        updateBorder("#e74c3c"); localVideo.style.filter = "blur(50px)";
         showTopbarLog("Rapprochez votre visage (min 30%) ❌ ");
         btnNext.disabled = true;
       }
