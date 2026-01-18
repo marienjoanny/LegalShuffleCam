@@ -27,7 +27,9 @@
       </div>
       <div class="control-row full-width-row">
         <select id="cameraSelect" class="control-button yellow" style="width: 100%; margin-bottom: 5px; color: black; font-weight: bold; text-align: center; border: 2px solid #f1c40f;"></select>
-        <button id="btnNextPeer" disabled class="control-button blue">
+      <div class="control-row" style="width:100%;">
+        <button id="btnNextPeer" disabled class="control-button blue" style="width: 100%; margin-top: 8px; height: 50px; font-weight: bold;">➔ INTERLOCUTEUR SUIVANT</button>
+      </div>
           ➔ Interlocuteur suivant
         </button>
       </div>
