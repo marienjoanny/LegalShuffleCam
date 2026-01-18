@@ -144,7 +144,7 @@
 
     const tracker = new tracking.ObjectTracker('face');
     tracker.setInitialScale(4);
-    tracker.setStepSize(2);
+    tracker.setStepSize(1.2);
     tracker.setEdgesDensity(0.1);
     tracking.track('#localVideo', tracker);
 
