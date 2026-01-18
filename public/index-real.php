@@ -7,54 +7,7 @@
   <meta charset="UTF-8">
   <title>Index Real Test - Détection Faciale Debug + Consentement CGU</title>
   <link rel="stylesheet" href="/css/styletest.css?v=debug"> 
-  <style>
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 20000;
-    }
-    .modal-content {
-      background: #2c3e50;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 500px;
-      color: #fff;
-      text-align: center;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
-    }
-    .modal-buttons {
-      margin-top: 20px;
-      display: flex;
-      justify-content: space-around;
-    }
-    .btn-yes {
-      background-color: #27ae60;
-      color: #fff;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn-no {
-      background-color: #c0392b;
-      color: #fff;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    /* Ajout du style topBar pour que le feedback s'affiche correctement */
-    #topBar {
-        position: fixed; top: 0; left: 0; width: 100%; padding: 10px; color: white; text-align: center; font-weight: bold; background-color: #e74c3c; z-index: 10000;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/facestyle.css?v=1768744570">
 </head>
 <body>
   <div id="topBar">Initialisation...</div>
