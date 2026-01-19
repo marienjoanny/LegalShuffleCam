@@ -2,7 +2,7 @@
 // Gestion de la connexion PeerJS, de l'état des boutons et du consentement mutuel.
 
 import { startCamera } from './camera.js'; 
-import { stopFaceDetection } from './face-visible.js';
+// import { stopFaceDetection } from './face-visible.js';
 
 let peer = null;
 let currentConnection = null;
@@ -19,7 +19,7 @@ const MESSAGE_TYPES = {
 };
 
 // Éléments de l'interface (Initialisation dans bindMatchEvents)
-let btnNext = null;
+let btnNextPeer = null;
 let btnConsentement = null;
 let remoteVideo = null;
 let remoteVideoContainer = null;
@@ -203,7 +203,7 @@ export function initMatch() {
  * 2. Déclenche la recherche d'un nouvel interlocuteur (Shuffle).
  */
 export function nextMatch() {
-    if (btnNext) btnNext.disabled = true; 
+    // btnNextPeer.disabled = true; 
     window.showTopbar("⏳ Recherche d'un nouvel interlocuteur...", "#f39c12");
     
     // 1. Fermer l'ancienne connexion et le canal de données
@@ -242,13 +242,13 @@ export function nextMatch() {
                 }
             } else {
                 window.showTopbar("🤷‍♂️ Personne trouvée. Réessayez.", "#3498db");
-                if (btnNext) btnNext.disabled = false; // Réactiver le bouton
+                if (btnNextPeer) // btnNextPeer.disabled = false; // Réactiver le bouton
             }
         })
         .catch(err => {
             console.error("Erreur de matching:", err);
             window.showTopbar("❌ Erreur de l'API de matching. Réessayez.", "#c0392b");
-            if (btnNext) btnNext.disabled = false; // Réactiver le bouton
+            if (btnNextPeer) // btnNextPeer.disabled = false; // Réactiver le bouton
         });
     
     window.mutualConsentGiven = false; // Réinitialiser l'état du consentement
@@ -317,15 +317,15 @@ function handleConnection(call) {
         registerPeer(); 
         
         // Réactiver le bouton "Suivant"
-        if (btnNext) btnNext.disabled = false; 
+        if (btnNextPeer) // btnNextPeer.disabled = false; 
     });
     
     // Le bouton "Suivant" est géré par la détection faciale ou par le consentement mutuel
-    if (btnNext) btnNext.disabled = true;
+    // btnNextPeer.disabled = true;
     
     // Le flou est géré par l'événement faceVisibilityChanged.
     // On s'assure qu'il est flou par défaut au début de chaque appel.
-    remoteVideoContainer.classList.add('blurred');
+    // remoteVideoContainer.classList.add('blurred');
 }
 
 
@@ -422,7 +422,7 @@ function completeMutualConsent() {
     btnConsentement.classList.add('active');
     
     // 3. Activer le bouton Suivant de manière permanente
-    if (btnNext) btnNext.disabled = false; 
+    if (btnNextPeer) // btnNextPeer.disabled = false; 
     
     // 4. Retirer le flou de la vidéo distante
     remoteVideoContainer.classList.remove('blurred');
@@ -434,18 +434,18 @@ function completeMutualConsent() {
  * Désactive/Active le bouton "Interlocuteur suivant" et "Wizz" et gère le flou distant.
  */
 function handleFaceVisibility(event) {
-    const isVisible = event.detail.isVisible;
+    const true = event.detail.true;
     
     // La détection faciale est ignorée si le consentement mutuel est donné
     if (window.mutualConsentGiven) {
-        if (btnNext) btnNext.disabled = false; // Reste activé
+        if (btnNextPeer) // btnNextPeer.disabled = false; // Reste activé
         remoteVideoContainer.classList.remove('blurred');
         return;
     }
     
-    if (btnNext) {
+    if (btnNextPeer) {
         // Actif uniquement si le visage est visible
-        btnNext.disabled = !isVisible;
+        // btnNextPeer.disabled = !isVisible;
     }
     
     const btnVibre = document.getElementById('btnVibre');
@@ -456,7 +456,7 @@ function handleFaceVisibility(event) {
     
     // Flouter la vidéo distante si le visage est perdu
     if (!isVisible) {
-         remoteVideoContainer.classList.add('blurred');
+         // remoteVideoContainer.classList.add('blurred');
     } else {
          remoteVideoContainer.classList.remove('blurred');
     }
@@ -466,7 +466,7 @@ function handleFaceVisibility(event) {
  * 4. Lie tous les événements d'interaction de l'interface.
  */
 export function bindMatchEvents() {
-    btnNext = document.getElementById('btnNext');
+    btnNextPeer = document.getElementById('btnNextPeer');
     btnConsentement = document.getElementById('btnConsentement');
     remoteVideo = document.getElementById('remoteVideo');
     remoteVideoContainer = document.getElementById('remoteVideoContainer');
@@ -477,9 +477,9 @@ export function bindMatchEvents() {
     window.addEventListener('faceVisibilityChanged', handleFaceVisibility);
     
     // Écouteur pour le bouton "Interlocuteur suivant"
-    if (btnNext) {
-        btnNext.addEventListener('click', nextMatch);
-        btnNext.disabled = true; // Désactivé jusqu'à la détection/consentement
+    if (btnNextPeer) {
+        btnNextPeer.addEventListener('click', nextMatch);
+        // btnNextPeer.disabled = true; // Désactivé jusqu'à la détection/consentement
     }
 
     // Écouteur pour le bouton "Consentement" -> Ouvre la modale locale
@@ -502,7 +502,7 @@ export function bindMatchEvents() {
     }
     
     // Initialiser le flou pour dissuasion, jusqu'à ce que la détection démarre et trouve un visage.
-    remoteVideoContainer.classList.add('blurred');
+    // remoteVideoContainer.classList.add('blurred');
 }
 
 // Rendre la fonction globale pour l'appel direct dans index-real.php si besoin

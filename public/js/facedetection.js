@@ -49,7 +49,7 @@ tracker.on('track', event => {
     updateBorder("#3498db");
     showTopbarLog("Consentement mutuel donné ✅", "#3498db");
     btnNext.disabled = false;
-    return;
+    localVideo.style.filter = "none"; return;
   }
   if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
     updateBorder("#2ecc71"); localVideo.style.filter = "none";
@@ -115,5 +115,5 @@ btnConsentNo.addEventListener("click", () => {
 listCameras().then(() => setupCamera());
 
 document.addEventListener("visibilitychange", () => {
-  videoObscuredMessage.style.display = document.hidden ? "block" : "none";
+  if(typeof videoObscuredMessage !== "undefined" && videoObscuredMessage) videoObscuredMessage.style.display = document.hidden ? "block" : "none";
 });
