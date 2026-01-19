@@ -50,5 +50,6 @@
   <script src="/js/face-min.js"></script>
   <script src="/js/facedetection.js?v=1768745806"></script>
   <script src="/js/match.js?v=1768827510"></script>
+<script>document.addEventListener("DOMContentLoaded", () => { if(typeof bindMatchEvents === "function") bindMatchEvents(); if(typeof initMatch === "function") initMatch(); });</script>
 </body>
 </html>
