@@ -1,157 +1,44 @@
-// LegalShuffleCam • camera.js (Module ES)
-// Gestion de la liste des caméras et du démarrage du flux local.
+// camera.js - Gestion du flux et changement de caméra (Version Globale)
+console.log("camera.js (Global) chargé");
 
-import { initFaceDetection, stopFaceDetection } from "/js/face-visible.js"; 
+window.startCamera = async function(deviceId) {
+    console.log("Démarrage caméra ID:", deviceId || "default");
 
-function showTopbarLog(message, color) {
-    if (typeof showTopbar === 'function') {
-        showTopbar(message, color);
-    } else {
-        const topBar = document.getElementById("topBar");
-        if (topBar) {
-            topBar.textContent = message;
-            if (color) topBar.style.backgroundColor = color;
-        } else {
-            console.log(`[TOPBAR-LOG] ${message}`); 
-        }
-    }
-}
-showTopbarLog("✅ Module camera.js chargé.");
-
-export async function listCameras() {
-    showTopbarLog("🔎 Recherche des caméras disponibles...");
-    const select = document.getElementById('cameraSelect');
-    if (!select) return;
-    
-    select.innerHTML = '';
-    
     try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-
-        if (videoDevices.length === 0) {
-            select.innerHTML = '<option value="">Aucune caméra trouvée</option>';
-            select.disabled = true;
-            showTopbarLog("❌ Aucune caméra vidéo détectée.");
-            return;
-        }
-
-        let firstDeviceId = null; 
-        
-        videoDevices.forEach((device, index) => {
-            const option = document.createElement('option');
-            option.value = device.deviceId || ""; // fallback vide
-            option.textContent = device.label || `Caméra ${index + 1}`; 
-            select.appendChild(option);
-            
-            if (index === 0) {
-                option.selected = true;
-                firstDeviceId = device.deviceId || null;
-            }
-        });
-        
-        select.disabled = false;
-        showTopbarLog(`✅ ${videoDevices.length} caméras détectées.`);
-
-        // 🚦 Démarrage automatique sur la première caméra si ID valide
-        if (firstDeviceId) {
-            await startCamera(firstDeviceId); 
-        } else {
-            showTopbarLog("⚠ Aucun deviceId valide, utilisation caméra par défaut...");
-            await startCamera(null); 
-        }
-
-    } catch (err) {
-        console.error("Erreur lors de l'énumération des périphériques:", err);
-        select.innerHTML = '<option value="">Erreur de liste</option>';
-        select.disabled = true;
-        showTopbarLog("❌ Échec de l'énumération des caméras (permission requise).", "#c0392b");
-    }
-}
-
-export async function startCamera(deviceId) {
-    showTopbarLog(`🎥 Démarrage de la caméra ID: ${deviceId || "default"}...`);
-    
-    try {
+        // 1. On arrête l'ancien flux si il existe
         if (window.localStream) {
-            stopFaceDetection(); 
+            if (typeof window.stopFaceDetection === 'function') window.stopFaceDetection();
             window.localStream.getTracks().forEach(track => track.stop());
         }
 
         const constraints = {
-            audio: true, 
-            video: deviceId ? {
-                deviceId: { exact: deviceId },
-                width: { ideal: 1280, min: 640 },
-                height: { ideal: 720, min: 480 }
-            } : true // fallback : caméra par défaut
+            audio: true,
+            video: deviceId ? { deviceId: { exact: deviceId } } : true
         };
 
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-
         window.localStream = newStream;
-        const localVideo = document.getElementById("localVideo");
-        if (localVideo) { 
-            localVideo.srcObject = newStream;
 
-            localVideo.play().catch(e => {
-                console.warn("Échec de la lecture automatique de la vidéo locale:", e);
-            });
-
-            // ✅ Patch terrain : démarrage détection après lecture réelle
-            localVideo.addEventListener('playing', () => {
-                showTopbarLog("📺 Vidéo en lecture, démarrage détection forcée", "#2ecc71");
-                initFaceDetection(localVideo, { detectionTimeout: 3000 });
-            }, { once: true });
-        }
-        
-        // 🔄 Mise à jour flux P2P si appel actif
-        if (window.currentCall && window.currentCall.peerConnection) {
-            const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
-            if (sender) {
-                const newVideoTrack = newStream.getVideoTracks()[0];
-                if (newVideoTrack) {
-                    sender.replaceTrack(newVideoTrack)
-                        .then(() => showTopbarLog("✅ Flux P2P mis à jour."))
-                        .catch(err => console.error("Échec de remplacement de piste P2P:", err));
-                }
-            } else {
-                 showTopbarLog("⚠ Appel actif, mais pas de sender vidéo trouvé pour la mise à jour.");
-            }
-        }
-        
-        showTopbarLog(`✅ Caméra changée avec succès vers ${deviceId || "default"}.`);
-
-    } catch (err) {
-        console.error(`Erreur critique lors du démarrage/changement de caméra vers ${deviceId}:`, err);
-        
-        let errorMsg = "Erreur inconnue (Vérifiez Console & Permissions !)";
-        if (err.name) {
-            errorMsg = `${err.name}: ${err.message || 'Problème de périphérique ou de permission.'}`;
-        } else if (err.toString() !== 'Error: Error') {
-            errorMsg = err.toString();
-        }
-        
-        showTopbarLog(`❌ ÉCHEC DÉMARRAGE CAMÉRA: ${errorMsg}`, "#c0392b");
-    }
-}
-
-export function stopCamera() {
-    if (window.localStream) {
-        window.localStream.getTracks().forEach(track => track.stop());
-        window.localStream = null;
-        
         const localVideo = document.getElementById("localVideo");
         if (localVideo) {
-             localVideo.srcObject = null;
+            localVideo.srcObject = newStream;
+            
+            // On attend que la vidéo tourne pour lancer la détection
+            localVideo.onplaying = () => {
+                if (typeof window.initFaceDetection === 'function') {
+                    window.initFaceDetection(localVideo, { detectionTimeout: 3000 });
+                }
+            };
         }
 
-        stopFaceDetection();
-        
-        showTopbarLog("Caméra et détection faciale arrêtées.", "#3498db");
+        // Mise à jour PeerJS si un appel est en cours
+        if (window.currentCall && window.currentCall.peerConnection) {
+            const sender = window.currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+            if (sender && newStream.getVideoTracks()[0]) {
+                sender.replaceTrack(newStream.getVideoTracks()[0]);
+            }
+        }
+    } catch (err) {
+        console.error("Erreur startCamera:", err);
     }
-}
-
-export function getLocalStream() {
-    return window.localStream;
-}
+};
