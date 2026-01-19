@@ -48,17 +48,17 @@ tracker.on('track', event => {
   if(window.mutualConsentGiven){
     updateBorder("#3498db");
     showTopbarLog("Consentement mutuel donné ✅", "#3498db");
-    btnNext.disabled = false;
+    window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: true } }));
     localVideo.style.filter = "none"; return;
   }
   if(lastAcceptedRects.length > 0 && age < MAX_VALID_AGE){
     updateBorder("#2ecc71"); localVideo.style.filter = "none";
     showTopbarLog("Visage détecté (≥30%) ✅", "#1abc9c");
-    btnNext.disabled = false;
+    window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: true } }));
   } else {
     updateBorder("#e74c3c"); localVideo.style.filter = "blur(50px)";
     showTopbarLog("Rapprochez votre visage (min 30%) ❌ ");
-    btnNext.disabled = true;
+    window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: false } }));
   }
 });
 
@@ -101,13 +101,13 @@ btnConsentYes.addEventListener("click", () => {
   window.mutualConsentGiven = true;
   updateBorder("#3498db");
   showTopbarLog("Consentement activé ✅", "#3498db");
-  btnNext.disabled = false;
+  window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: true } }));
   consentModal.style.display = "none";
 });
 btnConsentNo.addEventListener("click", () => {
   window.mutualConsentGiven = false;
   showTopbarLog("Consentement refusé ❌", "#e67e22");
-  btnNext.disabled = true;
+  window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: false } }));
   consentModal.style.display = "none";
 });
 
