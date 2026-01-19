@@ -1,5 +1,5 @@
 <?php
-// index-real.php - Version RESTAURÉE ET PROPRE
+// index-real.php - Version SYNCHRONISÉE ET PROPRE
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -35,13 +35,24 @@
     </div>
   </div>
 
-  <div id="consentModal" class="modal-overlay">
+  <div id="localConsentModal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
       <h3>Consentement mutuel</h3>
       <p>⚠️ Attention : en cliquant sur « Oui », je consens à désactiver le blocage visage.</p>
       <div class="modal-buttons">
-        <button id="btnConsentYes" class="btn-yes">Oui</button>
-        <button id="btnConsentNo" class="btn-no">Non</button>
+        <button id="localConsentYes" class="btn-yes">Oui</button>
+        <button id="localConsentNo" class="btn-no">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="remoteConsentModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3>Demande de consentement</h3>
+      <p>Votre partenaire <span id="consentPartnerMessage"></span> souhaite désactiver le flou.</p>
+      <div class="modal-buttons">
+        <button id="remoteConsentYes" class="btn-yes">Accepter</button>
+        <button id="remoteConsentNo" class="btn-no">Refuser</button>
       </div>
     </div>
   </div>
@@ -49,7 +60,12 @@
   <script src="/js/tracking-min.js"></script>
   <script src="/js/face-min.js"></script>
   <script src="/js/facedetection.js?v=1768745806"></script>
-  <script src="/js/match.js?v=1768827510"></script>
-<script>document.addEventListener("DOMContentLoaded", () => { if(typeof bindMatchEvents === "function") bindMatchEvents(); if(typeof initMatch === "function") initMatch(); });</script>
+  <script src="/js/match.js?v=<?php echo time(); ?>"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => { 
+      if(typeof bindMatchEvents === "function") bindMatchEvents(); 
+      if(typeof initMatch === "function") initMatch(); 
+    });
+  </script>
 </body>
 </html>
