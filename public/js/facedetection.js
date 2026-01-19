@@ -12,7 +12,7 @@ let lastAcceptedTime = 0;
 let lastAcceptedRects = [];
 const MIN_FACE_RATIO = 0.3;
 const MAX_VALID_AGE = 2000;
-window.mutualConsentGiven = false;
+window.mutualConsentGiven = false; window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: false } }));
 window.localStream = null;
 
 function showTopbarLog(msg, color) {
@@ -105,7 +105,7 @@ btnConsentYes.addEventListener("click", () => {
   consentModal.style.display = "none";
 });
 btnConsentNo.addEventListener("click", () => {
-  window.mutualConsentGiven = false;
+  window.mutualConsentGiven = false; window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: false } }));
   showTopbarLog("Consentement refusé ❌", "#e67e22");
   window.dispatchEvent(new CustomEvent("faceVisibilityChanged", { detail: { isVisible: false } }));
   consentModal.style.display = "none";

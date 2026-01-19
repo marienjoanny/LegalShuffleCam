@@ -470,7 +470,7 @@ function bindMatchEvents() {
     btnConsentement = document.getElementById('btnConsentement');
     remoteVideo = document.getElementById('remoteVideo');
     remoteVideoContainer = document.getElementById('remoteVideoContainer');
-    localConsentModal = document.getElementById('localConsentModal');
+    localConsentModal = document.getElementById('consentModal');
     remoteConsentModal = document.getElementById('remoteConsentModal');
 
     // Écouteur pour la détection faciale (Cœur de la modération)
@@ -479,7 +479,7 @@ function bindMatchEvents() {
     // Écouteur pour le bouton "Interlocuteur suivant"
     if (btnNextPeer) {
         btnNextPeer.addEventListener('click', nextMatch);
-        btnNextPeer.disabled = false; // Activé par défaut jusqu'à la détection/consentement
+        btnNextPeer.disabled = true; // Désactivé par défaut jusqu'à la détection/consentement
     }
 
     // Écouteur pour le bouton "Consentement" -> Ouvre la modale locale
