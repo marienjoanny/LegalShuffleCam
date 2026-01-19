@@ -1,51 +1,54 @@
 <?php
 // /public/api/get-peer.php
-/**
- * Récupère les informations détaillées (IP, SessionId, Timestamp) pour un PeerID donné.
- * Principalement utilisé par les outils d'administration ou les scripts côté serveur.
- */
 header('Content-Type: application/json');
-
-// Inclure la constante PEER_IP_ANNUAIRE
 require_once __DIR__ . '/log_activity.php';
 
-// --- Récupération des données ---
+$excludeId = $_GET['exclude'] ?? null;
 $peerId = $_GET['peerId'] ?? null;
+$annuairePath = PEER_IP_ANNUAIRE; 
 
-if (!$peerId) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Missing peerId']);
+$peersData = [];
+if (file_exists($annuairePath)) {
+    $content = @file_get_contents($annuairePath);
+    $peersData = json_decode($content, true) ?: [];
+}
+
+$now = time();
+
+// --- LOGIQUE DE MATCHMAKING (Bouton Suivant) ---
+if ($excludeId) {
+    $potentialMatches = [];
+    foreach ($peersData as $id => $data) {
+        // Supporte les deux formats de clés pour éviter les conflits
+        $lastSeen = $data['timestamp'] ?? $data['ts'] ?? 0;
+        
+        // Critère : Pas moi-même ET actif depuis moins de 10 minutes (600s)
+        if ($id !== $excludeId && ($now - $lastSeen < 600)) {
+            $potentialMatches[] = $id;
+        }
+    }
+
+    if (!empty($potentialMatches)) {
+        $randomId = $potentialMatches[array_rand($potentialMatches)];
+        echo json_encode([
+            'status' => 'found',
+            'peerIdToCall' => $randomId 
+        ]);
+    } else {
+        echo json_encode(['status' => 'empty', 'message' => 'Aucun partenaire disponible']);
+    }
     exit;
 }
 
-$annuairePath = PEER_IP_ANNUAIRE;
-$peersData = [];
-
-// ----------------------------------------------------
-// 1. Lecture de l'annuaire IP
-// ----------------------------------------------------
-if (file_exists($annuairePath)) {
-    $content = @file_get_contents($annuairePath);
-    if ($content !== false) {
-        $decoded = json_decode($content, true);
-        if (is_array($decoded)) {
-            $peersData = $decoded;
-        }
+// --- LOGIQUE DE CONSULTATION (Appel direct / Admin) ---
+if ($peerId) {
+    if (isset($peersData[$peerId])) {
+        echo json_encode(array_merge(['status' => 'found', 'peerId' => $peerId], $peersData[$peerId]));
+    } else {
+        http_response_code(404);
+        echo json_encode(['status' => 'not_found']);
     }
+    exit;
 }
 
-// ----------------------------------------------------
-// 2. Vérification et Réponse
-// ----------------------------------------------------
-if (isset($peersData[$peerId])) {
-    // Le pair est trouvé, inclut l'ID dans la réponse
-    $response = array_merge(['status' => 'found', 'peerId' => $peerId], $peersData[$peerId]);
-    echo json_encode($response);
-} else {
-    // Pair non trouvé
-    http_response_code(404);
-    echo json_encode(['status' => 'not_found', 'peerId' => $peerId, 'message' => 'Peer ID not found in temporary annuaire.']);
-}
-
-// Note: Pas de logActivity ici, c'est une opération de lecture
-?>
+echo json_encode(['status' => 'error', 'message' => 'Parametre manquant']);
