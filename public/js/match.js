@@ -1,7 +1,7 @@
 // LegalShuffleCam • match.js
 // Gestion de la connexion PeerJS, de l'état des boutons et du consentement mutuel.
 
-import { startCamera } from './camera.js'; 
+// import { startCamera } from './camera.js'; 
 // import { stopFaceDetection } from './face-visible.js';
 
 let peer = null;
@@ -143,7 +143,7 @@ function unregisterPeer(reason = 'disconnect') {
 /**
  * 1. Initialise la connexion PeerJS et récupère le flux média.
  */
-export function initMatch() {
+function initMatch() {
     window.showTopbar("⏳ Initialisation PeerJS...", "#3498db");
     
     // Initialiser Peer - CORRECTION CRITIQUE HOST ET PATH
@@ -202,7 +202,7 @@ export function initMatch() {
 /**
  * 2. Déclenche la recherche d'un nouvel interlocuteur (Shuffle).
  */
-export function nextMatch() {
+function nextMatch() {
     // btnNextPeer.disabled = true; 
     window.showTopbar("⏳ Recherche d'un nouvel interlocuteur...", "#f39c12");
     
@@ -465,7 +465,7 @@ function handleFaceVisibility(event) {
 /**
  * 4. Lie tous les événements d'interaction de l'interface.
  */
-export function bindMatchEvents() {
+function bindMatchEvents() {
     btnNextPeer = document.getElementById('btnNextPeer');
     btnConsentement = document.getElementById('btnConsentement');
     remoteVideo = document.getElementById('remoteVideo');
