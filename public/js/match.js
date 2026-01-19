@@ -242,13 +242,13 @@ function nextMatch() {
                 }
             } else {
                 window.showTopbar("🤷‍♂️ Personne trouvée. Réessayez.", "#3498db");
-                if (btnNextPeer) // btnNextPeer.disabled = false; // Réactiver le bouton
+                btnNextPeer.disabled = false; // Réactiver le bouton
             }
         })
         .catch(err => {
             console.error("Erreur de matching:", err);
             window.showTopbar("❌ Erreur de l'API de matching. Réessayez.", "#c0392b");
-            if (btnNextPeer) // btnNextPeer.disabled = false; // Réactiver le bouton
+            btnNextPeer.disabled = false; // Réactiver le bouton
         });
     
     window.mutualConsentGiven = false; // Réinitialiser l'état du consentement
@@ -317,7 +317,7 @@ function handleConnection(call) {
         registerPeer(); 
         
         // Réactiver le bouton "Suivant"
-        if (btnNextPeer) // btnNextPeer.disabled = false; 
+        btnNextPeer.disabled = false; 
     });
     
     // Le bouton "Suivant" est géré par la détection faciale ou par le consentement mutuel
@@ -422,7 +422,7 @@ function completeMutualConsent() {
     btnConsentement.classList.add('active');
     
     // 3. Activer le bouton Suivant de manière permanente
-    if (btnNextPeer) // btnNextPeer.disabled = false; 
+    btnNextPeer.disabled = false; 
     
     // 4. Retirer le flou de la vidéo distante
     remoteVideoContainer.classList.remove('blurred');
@@ -434,18 +434,18 @@ function completeMutualConsent() {
  * Désactive/Active le bouton "Interlocuteur suivant" et "Wizz" et gère le flou distant.
  */
 function handleFaceVisibility(event) {
-    const true = event.detail.true;
+    const isVisible = event.detail.isVisible;
     
     // La détection faciale est ignorée si le consentement mutuel est donné
     if (window.mutualConsentGiven) {
-        if (btnNextPeer) // btnNextPeer.disabled = false; // Reste activé
+        btnNextPeer.disabled = false; // Reste activé
         remoteVideoContainer.classList.remove('blurred');
         return;
     }
     
     if (btnNextPeer) {
         // Actif uniquement si le visage est visible
-        // btnNextPeer.disabled = !isVisible;
+        if (btnNextPeer) btnNextPeer.disabled = !isVisible;
     }
     
     const btnVibre = document.getElementById('btnVibre');
@@ -479,7 +479,7 @@ function bindMatchEvents() {
     // Écouteur pour le bouton "Interlocuteur suivant"
     if (btnNextPeer) {
         btnNextPeer.addEventListener('click', nextMatch);
-        // btnNextPeer.disabled = true; // Désactivé jusqu'à la détection/consentement
+        btnNextPeer.disabled = false; // Activé par défaut jusqu'à la détection/consentement
     }
 
     // Écouteur pour le bouton "Consentement" -> Ouvre la modale locale
