@@ -1,0 +1,51 @@
+/* Fichier: /public/css/base.css */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- Barres de Feedback et d'Alerte --- */
+#topBar {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    background-color: #2980b9; 
+    z-index: 10000;
+    transition: background-color 0.3s;
+}
+
+/* Styles du footer */
+#footer {
+    margin-top: auto; 
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 0.8em;
+    background-color: #1a1a1a;
+    border-top: 1px solid #34495e;
+}
+
+#footer p {
+    margin: 5px 0;
+}
+
+#footer a {
+    color: #f1c40f; 
+    font-weight: bold;
+    text-decoration: none;
+    margin: 0 8px;
+}
+#footer a:hover {
+    text-decoration: underline;
+}

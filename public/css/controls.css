@@ -1,0 +1,73 @@
+/* Fichier: /public/css/controls.css */
+
+.control-row {
+    display: flex;
+    justify-content: flex-start; 
+    gap: 5px;
+    margin-bottom: 5px;
+    width: 100%; 
+}
+
+.control-row:nth-child(1) .control-button {
+    flex-basis: 50%; 
+    max-width: 50%;
+}
+
+.control-button, .control-select {
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.75em;
+    flex-grow: 1;
+    text-align: center;
+    box-sizing: border-box;
+    min-width: 0; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#btnMute {
+    flex-grow: 0;
+    width: 35px;
+    padding: 6px;
+}
+
+/* Couleurs des boutons */
+.green { background-color: #2ecc71; color: #1a1a1a; }
+.green:hover { background-color: #27ae60; }
+
+.purple { background-color: #9b59b6; color: white; }
+.purple:hover { background-color: #8e44ad; }
+
+.red { background-color: #e74c3c; color: white; }
+.red:hover { background-color: #c0392b; }
+
+.yellow {
+    background-color: #f1c40f;
+    color: #1a1a1a;
+    /* Reset des styles de select par défaut */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+.yellow:hover { background-color: #f39c12; }
+
+.blue { background-color: #3498db; color: white; }
+.blue:hover { background-color: #2980b9; }
+
+/* Média Queries pour la réactivité */
+@media (max-width: 600px) {
+    .control-row {
+        gap: 3px; 
+        margin-bottom: 3px; 
+    }
+    
+    .control-button, .control-select {
+        padding: 5px 3px; 
+        font-size: 0.7em; 
+    }
+}
