@@ -1,5 +1,5 @@
 <?php
-// index-real.php - Version RESTAURÉE ET PROPRE
+// index-real.php - Version Intégrale Corrigée
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -12,7 +12,7 @@
 <body>
   <div id="topBar">Initialisation...</div>
 
-  <div id="remoteVideoContainer">
+  <div id="remoteVideoContainer" class="blurred">
     <video id="remoteVideo" autoplay playsinline></video>
   </div>
 
@@ -23,10 +23,10 @@
         <button class="control-button purple" id="btnVibre">🔔 Wizz</button>
       </div>
       <div class="control-row">
-        <select id="cameraSelect" class="control-button yellow" style="width: 100%; color: black; font-weight: bold; text-align: center; border: 2px solid #f1c40f;"></select>
+        <select id="cameraSelect" class="control-button yellow" style="width: 100%; color: black;"></select>
       </div>
       <div class="control-row">
-        <button id="btnNextPeer" disabled class="control-button blue" style="width: 100%; height: 55px; font-weight: bold; margin-top: 5px;">➔ INTERLOCUTEUR SUIVANT</button>
+        <button id="btnNextPeer" disabled class="control-button blue" style="width: 100%; height: 55px; font-weight: bold;">➔ INTERLOCUTEUR SUIVANT</button>
       </div>
     </div>
 
@@ -35,10 +35,10 @@
     </div>
   </div>
 
-  <div id="consentModal" class="modal-overlay">
+  <div id="consentModal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
       <h3>Consentement mutuel</h3>
-      <p>⚠️ Attention : en cliquant sur « Oui », je consens à désactiver le blocage visage.</p>
+      <p>⚠️ En cliquant sur « Oui », vous désactivez le flou automatique.</p>
       <div class="modal-buttons">
         <button id="btnConsentYes" class="btn-yes">Oui</button>
         <button id="btnConsentNo" class="btn-no">Non</button>
@@ -46,14 +46,26 @@
     </div>
   </div>
 
+  <div id="remoteConsentModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3>Demande reçue</h3>
+      <p id="consentPartnerMessage">Le partenaire demande le consentement mutuel.</p>
+      <div class="modal-buttons">
+        <button id="remoteConsentYes" class="btn-yes">Accepter</button>
+        <button id="remoteConsentNo" class="btn-no">Refuser</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="/js/tracking-min.js"></script>
   <script src="/js/face-min.js"></script>
-  <script src="/js/facedetection.js?v=1768745806"></script>
+  <script src="/js/facedetection.js?v=debug"></script>
   <script src="/js/match.js?v=<?php echo time(); ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      if(typeof bindMatchEvents === "function") bindMatchEvents();
-      if(typeof initMatch === "function") initMatch();
+      if(window.bindMatchEvents) window.bindMatchEvents();
+      if(window.initMatch) window.initMatch();
     });
   </script>
 </body>
