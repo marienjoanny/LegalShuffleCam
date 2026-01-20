@@ -9,27 +9,26 @@ if ($peers === null) {
 
 $now = time();
 
-// 1. CORRECTION: Nettoyer l'annuaire : Filtrer pour ne garder que les sessions actives en utilisant la clé 'ts'
+// 1. CORRECTION: Nettoyer l'annuaire en utilisant 'timestamp' (clé définie dans log_activity.php)
 $activePeers = array_filter($peers, function($peerData) use ($now) {
-    // Vérifie si la clé 'ts' existe et si le timestamp est actif (< 600s)
-    return isset($peerData['ts']) && ($now - $peerData['ts'] < 600);
+    // Vérifie si la clé 'timestamp' existe et si elle est active (< 600s)
+    return isset($peerData['timestamp']) && ($now - $peerData['timestamp'] < 600);
 });
 
 // 2. Mettre à jour le fichier peers.json avec la liste nettoyée
 file_put_contents($peersFile, json_encode($activePeers));
 
-// 3. Trier les IDs pour l'affichage (trie sur la clé Peer ID)
+// 3. Trier les IDs pour l'affichage
 ksort($activePeers);
 
 $count = count($activePeers);
 
-// 4. Préparer les données pour l'affichage du tableau
-// On extrait le Peer ID, le timestamp et l'IP pour le tableau.
+// 4. Préparer les données pour l'affichage
 $peersForDisplay = [];
 foreach ($activePeers as $id => $data) {
     $peersForDisplay[$id] = [
-        'ts' => $data['ts'],
-        'ip' => $data['ip'] ?? 'N/D' // Sécurité si l'IP manque
+        'timestamp' => $data['timestamp'],
+        'ip' => $data['ip'] ?? 'N/D'
     ];
 }
 ?>
@@ -118,10 +117,10 @@ foreach ($activePeers as $id => $data) {
 <?php else: ?>
   <table>
     <tr><th>Peer ID</th><th>Âge (sec)</th><th>IP</th><th>Appeler</th><th>Supprimer</th></tr>
-    <?php foreach ($peersForDisplay as $id => $data): // Utiliser $peersForDisplay ?>
+    <?php foreach ($peersForDisplay as $id => $data): ?>
       <tr>
         <td><?= htmlspecialchars($id) ?></td>
-        <td><?= $now - $data['ts'] ?></td>
+        <td><?= $now - $data['timestamp'] ?></td>
         <td><?= htmlspecialchars($data['ip']) ?></td>
         <td><a class="call" href="javascript:void(0)" onclick="openCall('<?= htmlspecialchars($id) ?>')">Appeler</a></td>
         <td><button class="delete" onclick="deletePeer(this)">🚮</button></td>
@@ -146,7 +145,6 @@ function openCall(partnerId) {
       if (json.status === "alive") {
         const url = "/index-real.php?partnerId=" + encodeURIComponent(partnerId);
         showTopbar("📞 Ouverture de la session avec " + partnerId);
-        // Ouvre la nouvelle page pour déclencher l'appel direct
         window.open(url, "_blank"); 
       } else {
         showTopbar("⛔ Ce peerId n’est plus actif.", "#a00");
@@ -156,7 +154,6 @@ function openCall(partnerId) {
 
 function deletePeer(btn) {
   const tr = btn.closest("tr");
-  // Sélectionne le texte du premier <td> qui est le Peer ID
   const peerId = tr.querySelector("td").textContent.trim(); 
   showTopbar("🧪 Suppression de : " + peerId);
 
