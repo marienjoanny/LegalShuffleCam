@@ -1,24 +1,22 @@
 // LegalShuffleCam • match.js
 // Gestion de la connexion PeerJS, de l'état des boutons et du consentement mutuel.
 
-// import { startCamera } from './camera.js'; 
-// import { stopFaceDetection } from './face-visible.js';
-
 let peer = null;
 let currentConnection = null;
-let dataConnection = null; // Canal de données PeerJS
-let heartbeatInterval = null; // Pour le ping périodique
-window.myPeerId = null; // Notre ID de pair, doit être global
-window.currentSessionId = crypto.randomUUID(); // Session ID généré au démarrage
-window.mutualConsentGiven = false; // État initial du consentement
+let dataConnection = null;
+let heartbeatInterval = null;
+window.myPeerId = null;
+window.currentSessionId = crypto.randomUUID();
+window.mutualConsentGiven = false;
 
 // Définition des types de messages pour le canal de données
 const MESSAGE_TYPES = {
     CONSENT_REQUEST: 'CONSENT_REQUEST',
-    CONSENT_RESPONSE: 'CONSENT_RESPONSE'
+    CONSENT_RESPONSE: 'CONSENT_RESPONSE',
+    WIZZ: 'WIZZ'
 };
 
-// Éléments de l'interface (Initialisation dans bindMatchEvents)
+// Éléments de l'interface
 let btnNextPeer = null;
 let btnConsentement = null;
 let remoteVideo = null;
@@ -29,13 +27,7 @@ let remoteConsentModal = null;
 
 // --- UTILS DATA CHANNEL ---
 
-/**
- * Envoie des données au partenaire via le canal de données PeerJS.
- * @param {string} type - Le type de message (voir MESSAGE_TYPES).
- * @param {object} [payload={}] - Les données spécifiques à inclure.
- */
 function sendData(type, payload = {}) {
-    // Vérifie si la connexion de données est ouverte
     if (!dataConnection || dataConnection.readyState !== 'open') {
         console.warn(`[DATA] Impossible d'envoyer le message ${type}: Canal non ouvert ou non prêt.`);
         return;
@@ -49,37 +41,54 @@ function sendData(type, payload = {}) {
     console.log(`[DATA] Message envoyé: ${type}`, message);
 }
 
-
-// --- UTILS API SERVER (Corrigé : POST et chemin d'URL) ---
-
 /**
- * Fonction générique pour appeler les APIs PHP (register, unregister, ping).
- * @param {string} endpoint L'URL de l'API (ex: 'register-peer.php')
- * @param {object} data Données à envoyer (peerId, sessionId, etc.)
+ * Gère les messages DATA reçus du partenaire
  */
-function callPeerApi(endpoint, data = {}) {
-    // CORRECTION 1: Retirer /public/ car Nginx est configuré pour rooter à /public
-    const url = `/api/${endpoint}`; 
+function handleDataMessage(data) {
+    console.log("[DATA] Message reçu:", data);
+    
+    if (!data || !data.type) return;
+    
+    switch(data.type) {
+        case MESSAGE_TYPES.CONSENT_REQUEST:
+            showRemoteConsentModal(data.payload.requesterId);
+            break;
+            
+        case MESSAGE_TYPES.CONSENT_RESPONSE:
+            handlePartnerConsentResponse(data.payload.response);
+            break;
+            
+        case MESSAGE_TYPES.WIZZ:
+            if (window.showTopbar) window.showTopbar("🔔 Votre partenaire vous a envoyé un Wizz !", "#9b59b6");
+            if (navigator.vibrate) navigator.vibrate(200);
+            break;
+            
+        default:
+            console.warn("[DATA] Type de message inconnu:", data.type);
+    }
+}
 
-    // Préparer les données pour le corps POST
+
+// --- UTILS API SERVER ---
+
+function callPeerApi(endpoint, data = {}) {
+    const url = `/api/${endpoint}`;
+
     const bodyParams = new URLSearchParams({ 
         peerId: window.myPeerId, 
         sessionId: window.currentSessionId, 
         ...data 
     });
 
-    // CORRECTION 2: Utiliser la méthode POST pour envoyer les données dans le corps
     return fetch(url, {
         method: 'POST', 
         headers: {
-            // Indiquer au serveur que le corps est encodé en formulaire
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: bodyParams.toString() 
     })
         .then(response => {
             if (!response.ok) {
-                 // Si le statut HTTP n'est pas 200, lever une erreur
                  throw new Error(`API ${endpoint} Erreur HTTP ${response.status}`);
             }
             return response.json();
@@ -90,21 +99,15 @@ function callPeerApi(endpoint, data = {}) {
         })
         .catch(error => {
             console.error(`[API] ${endpoint} Error:`, error.message);
-            // Rejeter la promesse pour permettre aux fonctions appelantes de gérer l'échec
             throw error; 
         });
 }
 
-/**
- * Démarre le ping périodique pour garder l'entrée du pair fraîche dans l'annuaire.
- */
 function startHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-    // Ping toutes les 30 secondes (inférieur au timeout de purge de 10 minutes)
     heartbeatInterval = setInterval(() => {
         if (window.myPeerId) {
-            // Utiliser un catch pour ne pas interrompre l'intervalle en cas d'erreur ponctuelle
             callPeerApi('ping-peer.php', { action: 'HEARTBEAT' }).catch(e => {
                 console.warn("[HEARTBEAT] Échec du ping API:", e.message);
             });
@@ -113,23 +116,18 @@ function startHeartbeat() {
     console.log("[HEARTBEAT] Démarré (intervalle 30s).");
 }
 
-/**
- * Appelle l'API pour enregistrer notre ID de pair.
- */
 function registerPeer() {
     callPeerApi('register-peer.php')
         .then(() => {
-            // Après l'enregistrement réussi, démarrer le heartbeat
             startHeartbeat(); 
         })
         .catch(() => {
-             window.showTopbar("❌ Erreur d'enregistrement API. Vérifiez votre backend.", "#e74c3c");
+             if (window.showTopbar) {
+                 window.showTopbar("❌ Erreur d'enregistrement API. Vérifiez votre backend.", "#e74c3c");
+             }
         });
 }
 
-/**
- * Appelle l'API pour désenregistrer notre ID de pair.
- */
 function unregisterPeer(reason = 'disconnect') {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     heartbeatInterval = null;
@@ -138,45 +136,47 @@ function unregisterPeer(reason = 'disconnect') {
     });
 }
 
-// --- LOGIQUE PEERJS (Correction Critique du Host) ---
 
-/**
- * 1. Initialise la connexion PeerJS et récupère le flux média.
- */
+// --- LOGIQUE PEERJS ---
+
 function initMatch() {
-    window.showTopbar("⏳ Initialisation PeerJS...", "#3498db");
+    if (window.showTopbar) {
+        window.showTopbar("⏳ Initialisation PeerJS...", "#3498db");
+    }
     
-    // Initialiser Peer - CORRECTION CRITIQUE HOST ET PATH
     peer = new Peer(null, {
-        host: 'legalshufflecam.ovh', // <--- Mettez votre domaine réel ici
-        port: 443, // Le port HTTPS exposé par Nginx
-        path: '/peerjs', // <--- CHEMIN OBLIGATOIRE pour le reverse proxy Nginx
-        secure: true // Nécessaire car nous utilisons HTTPS (port 443)
+        host: 'legalshufflecam.ovh',
+        port: 443,
+        path: '/peerjs',
+        secure: true
     });
 
     peer.on('open', (id) => {
-        window.myPeerId = id; // Stocker l'ID globalement
-        window.updatePeerIdDisplay(id);
-        window.showTopbar(`✅ PeerJS OK. ID: ${id.substring(0, 8)}... En attente de la caméra.`, "#2ecc71");
+        window.myPeerId = id;
+        if (window.updatePeerIdDisplay) {
+            window.updatePeerIdDisplay(id);
+        }
+        if (window.showTopbar) {
+            window.showTopbar(`✅ PeerJS OK. ID: ${id.substring(0, 8)}... En attente de la caméra.`, "#2ecc71");
+        }
         
         registerPeer(); 
         
-        // Démarrer la caméra pour obtenir le flux local et lancer la détection faciale
-        startCamera(); 
+        if (typeof startCamera === 'function') {
+            startCamera();
+        } else if (typeof window.startCamera === 'function') {
+            window.startCamera();
+        } else {
+            console.error("[INIT] La fonction startCamera() n'est pas définie !");
+        }
     });
 
     peer.on('error', (err) => {
         console.error("[PEER] Erreur PeerJS:", err);
         let msg = `❌ Erreur PeerJS: ${err.type}. `;
-        if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'peer-unavailable') {
-             msg += "Vérifiez le service Node.js/PeerJS Server et la configuration Nginx (Host/Path/Reverse Proxy).";
-        } else {
-             msg += "Rechargez.";
-        }
-        window.showTopbar(msg, "#c0392b");
+        if (window.showTopbar) window.showTopbar(msg, "#c0392b");
     });
     
-    // Écouter les appels entrants
     peer.on('call', (call) => {
         const localStream = window.localStream; 
         if (!localStream) {
@@ -188,25 +188,20 @@ function initMatch() {
         handleConnection(call);
     });
 
-    // Écouter les connexions de données entrantes (pour la messagerie)
     peer.on('connection', (conn) => {
         setupDataConnection(conn);
     });
     
-    // S'assurer de désenregistrer le pair à la fermeture de la fenêtre
     window.addEventListener('beforeunload', () => {
          unregisterPeer('window_close');
     });
 }
 
-/**
- * 2. Déclenche la recherche d'un nouvel interlocuteur (Shuffle).
- */
 function nextMatch() {
-    // btnNextPeer.disabled = true; 
-    window.showTopbar("⏳ Recherche d'un nouvel interlocuteur...", "#f39c12");
+    if (window.showTopbar) {
+        window.showTopbar("⏳ Recherche d'un nouvel interlocuteur...", "#f39c12");
+    }
     
-    // 1. Fermer l'ancienne connexion et le canal de données
     if (currentConnection) {
         currentConnection.close();
         currentConnection = null;
@@ -216,12 +211,9 @@ function nextMatch() {
         dataConnection = null;
     }
     
-    // 2. Tenter de se désenregistrer puis se réenregistrer immédiatement (pour rafraîchir le statut)
     unregisterPeer('next_match');
     registerPeer(); 
 
-    // 3. Logique de matching via l'API
-    // CORRECTION: Retirer /public/ ici aussi, mais utiliser GET est acceptable pour get-peer
     fetch('/api/get-peer.php?exclude=' + window.myPeerId) 
         .then(res => {
             if (!res.ok) throw new Error(`API get-peer.php Erreur HTTP ${res.status}`);
@@ -229,164 +221,104 @@ function nextMatch() {
         })
         .then(data => {
             if (data.peerIdToCall && data.peerIdToCall !== window.myPeerId) {
-                // Si un pair est trouvé, initier l'appel
                 const localStream = window.localStream; 
                 if (localStream) {
                     const call = peer.call(data.peerIdToCall, localStream);
-                    // Créer le canal de données manuellement si on est l'appelant
                     const conn = peer.connect(data.peerIdToCall);
                     setupDataConnection(conn);
                     handleConnection(call);
                 } else {
-                    window.showTopbar("❌ Erreur: Caméra non initialisée pour l'appel.", "#c0392b");
+                    if (window.showTopbar) window.showTopbar("❌ Erreur: Caméra non initialisée.", "#c0392b");
                 }
             } else {
-                window.showTopbar("🤷‍♂️ Personne trouvée. Réessayez.", "#3498db");
-                btnNextPeer.disabled = false; // Réactiver le bouton
+                if (window.showTopbar) window.showTopbar("🤷‍♂️ Personne trouvée. Réessayez.", "#3498db");
+                if (btnNextPeer) btnNextPeer.disabled = false;
             }
         })
         .catch(err => {
             console.error("Erreur de matching:", err);
-            window.showTopbar("❌ Erreur de l'API de matching. Réessayez.", "#c0392b");
-            btnNextPeer.disabled = false; // Réactiver le bouton
+            if (btnNextPeer) btnNextPeer.disabled = false;
         });
     
-    window.mutualConsentGiven = false; // Réinitialiser l'état du consentement
+    window.mutualConsentGiven = false;
 }
 
-/**
- * 3. Gère l'établissement du canal de données et des écouteurs.
- */
 function setupDataConnection(conn) {
     dataConnection = conn;
-    
-    dataConnection.on('open', () => {
-        console.log("[DATA] Canal de données ouvert avec le partenaire.");
-    });
-    
+    dataConnection.on('open', () => console.log("[DATA] Canal ouvert."));
     dataConnection.on('data', handleDataMessage);
-
-    dataConnection.on('close', () => {
-        console.log("[DATA] Canal de données fermé.");
-        dataConnection = null;
-        // Optionnel: Gérer la déconnexion vidéo ici si le canal de données se ferme seul
-    });
-
-    dataConnection.on('error', (err) => {
-        console.error("[DATA] Erreur du canal de données:", err);
-    });
+    dataConnection.on('close', () => dataConnection = null);
 }
 
-
-/**
- * 4. Gère la connexion vidéo et l'ouverture du canal de données si initiateur.
- */
 function handleConnection(call) {
     if (currentConnection) currentConnection.close(); 
     currentConnection = call;
     window.currentPartnerId = call.peer;
     
-    window.showTopbar(`🤝 Connecté à ${call.peer.substring(0, 8)}... !`, "#2ecc71");
-    window.updateLastPeers(call.peer); 
+    if (window.showTopbar) window.showTopbar(`🤝 Connecté !`, "#2ecc71");
+    if (window.updateLastPeers) window.updateLastPeers(call.peer);
     
-    // Si nous sommes l'initiateur de l'appel, on s'assure que le canal de données est initié
     if (!dataConnection || dataConnection.peer !== call.peer) {
          const conn = peer.connect(call.peer);
          setupDataConnection(conn);
     }
     
-    // Rétablir l'interface comme "non-consenti"
-    btnConsentement.textContent = "👍 Consentement";
-    btnConsentement.classList.remove('active');
+    if (btnConsentement) {
+        btnConsentement.textContent = "👍 Consentement";
+        btnConsentement.classList.remove('active');
+    }
     
     call.on('stream', (stream) => {
-        remoteVideo.srcObject = stream;
-        remoteVideo.onloadedmetadata = () => remoteVideo.play();
+        if (remoteVideo) {
+            remoteVideo.srcObject = stream;
+            remoteVideo.onloadedmetadata = () => remoteVideo.play();
+        }
     });
 
     call.on('close', () => {
-        console.log("[PEER] Connexion fermée.");
         unregisterPeer('call_close'); 
-        
-        remoteVideo.srcObject = null;
+        if (remoteVideo) remoteVideo.srcObject = null;
         window.currentPartnerId = null;
-        window.mutualConsentGiven = false; 
-        window.showTopbar("Déconnecté. Cliquez sur 'Suivant' pour recommencer.", "#e74c3c");
-        
-        // Relancer l'enregistrement pour pouvoir être rappelé
-        registerPeer(); 
-        
-        // Réactiver le bouton "Suivant"
-        btnNextPeer.disabled = false; 
+        window.mutualConsentGiven = false;
+        if (btnNextPeer) btnNextPeer.disabled = false;
     });
-    
-    // Le bouton "Suivant" est géré par la détection faciale ou par le consentement mutuel
-    // btnNextPeer.disabled = true;
-    
-    // Le flou est géré par l'événement faceVisibilityChanged.
-    // On s'assure qu'il est flou par défaut au début de chaque appel.
-    // remoteVideoContainer.classList.add('blurred');
 }
 
-
-// --- GESTION DES CONTRÔLES ET MODALES DE CONSENTEMENT ---
-
-/**
- * Envoie le log de consentement au serveur.
- */
 function logMutualConsent(status) {
     callPeerApi('report-handler.php', {
         action: 'log_consent',
-        consentStatus: status, // 'ACCORDED' ou 'REFUSED'
+        consentStatus: status,
         partnerId: window.currentPartnerId || 'N/A'
     });
 }
 
-
-/**
- * Affiche la modale de consentement locale et attache les écouteurs.
- */
 function showLocalConsentModal() {
-    if (!window.currentPartnerId) {
-        window.showTopbar("⚠ Vous n'êtes pas connecté à un partenaire.", "#f39c12");
-        return;
-    }
-    
-    localConsentModal.style.display = 'flex';
+    if (!window.currentPartnerId) return;
+    if (localConsentModal) localConsentModal.style.display = 'flex';
 
-    document.getElementById('localConsentYes').onclick = () => {
-        localConsentModal.style.display = 'none';
-        
-        // Envoi de la requête de consentement au partenaire
-        window.showTopbar("⏳ Attente du consentement du partenaire...", "#3498db");
+    document.getElementById('btnConsentYes').onclick = () => {
+        if (localConsentModal) localConsentModal.style.display = 'none';
         sendData(MESSAGE_TYPES.CONSENT_REQUEST, { requesterId: window.myPeerId });
     };
 
-    document.getElementById('localConsentNo').onclick = () => {
-        localConsentModal.style.display = 'none';
-        logMutualConsent('LOCAL_REFUSED_REQUESTED'); // Log le refus de la demande locale
-        window.showTopbar("Consentement local refusé. La détection reste active.", "#2980b9");
+    document.getElementById('btnConsentNo').onclick = () => {
+        if (localConsentModal) localConsentModal.style.display = 'none';
     };
 }
 
-/**
- * Affiche la modale reçue du partenaire et gère la réponse.
- */
 function showRemoteConsentModal(partnerId) {
+    if (!remoteConsentModal) return;
     remoteConsentModal.style.display = 'flex';
-    document.getElementById('consentPartnerMessage').textContent = `ID: ${partnerId.substring(0, 8)}...`;
+    
+    const messageEl = document.getElementById('consentPartnerMessage');
+    if (messageEl) messageEl.textContent = `ID: ${partnerId.substring(0, 8)}...`;
     
     const sendResponse = (response) => {
         remoteConsentModal.style.display = 'none';
         sendData(MESSAGE_TYPES.CONSENT_RESPONSE, { response: response });
-        
         if (response === 'yes') {
-            logMutualConsent('ACCORDED_VIA_RESPONSE'); // Log l'accord suite à une demande
+            logMutualConsent('ACCORDED_VIA_RESPONSE');
             completeMutualConsent();
-            window.showTopbar("✅ Consentement mutuel (Vous avez accepté la demande). Détection désactivée et loguée.", "#10b981");
-        } else {
-            logMutualConsent('REFUSED_VIA_RESPONSE'); // Log le refus suite à une demande
-            window.showTopbar("🚫 Vous avez refusé le consentement. Détection maintenue.", "#e74c3c");
         }
     };
 
@@ -394,77 +326,34 @@ function showRemoteConsentModal(partnerId) {
     document.getElementById('remoteConsentNo').onclick = () => sendResponse('no');
 }
 
-
-/**
- * Gère la réponse reçue du partenaire à NOTRE demande.
- */
 function handlePartnerConsentResponse(response) {
     if (response === 'yes') {
-        logMutualConsent('ACCORDED_VIA_REQUEST'); // Log l'accord à notre demande
+        logMutualConsent('ACCORDED_VIA_REQUEST');
         completeMutualConsent();
-        window.showTopbar("🥳 Consentement mutuel (Partenaire accepté) ! Détection désactivée et loguée.", "#10b981");
-    } else {
-        logMutualConsent('REFUSED_VIA_REQUEST'); // Log le refus à notre demande
-        window.showTopbar("🚫 Le partenaire a refusé le consentement. La détection reste active.", "#e74c3c");
     }
 }
 
-/**
- * Finalise l'action : désactivation de la détection faciale, log, et MAJ de l'UI.
- */
 function completeMutualConsent() {
-    // 1. Désactiver la détection faciale (car le filtre n'est plus requis)
-    stopFaceDetection(); 
-
-    // 2. Mettre à jour l'état global et l'UI du bouton
+    if (typeof stopFaceDetection === 'function') stopFaceDetection();
     window.mutualConsentGiven = true;
-    btnConsentement.textContent = "✅ Consentement OK";
-    btnConsentement.classList.add('active');
-    
-    // 3. Activer le bouton Suivant de manière permanente
-    btnNextPeer.disabled = false; 
-    
-    // 4. Retirer le flou de la vidéo distante
-    remoteVideoContainer.classList.remove('blurred');
+    if (btnConsentement) {
+        btnConsentement.textContent = "✅ Consentement OK";
+        btnConsentement.classList.add('active');
+    }
+    if (btnNextPeer) btnNextPeer.disabled = false;
+    if (remoteVideoContainer) remoteVideoContainer.classList.remove('blurred');
 }
 
-
-/**
- * Gère le changement de visibilité du visage (via l'événement faceVisibilityChanged).
- * Désactive/Active le bouton "Interlocuteur suivant" et "Wizz" et gère le flou distant.
- */
 function handleFaceVisibility(event) {
     const isVisible = event.detail.isVisible;
+    if (window.mutualConsentGiven) return;
     
-    // La détection faciale est ignorée si le consentement mutuel est donné
-    if (window.mutualConsentGiven) {
-        btnNextPeer.disabled = false; // Reste activé
-        remoteVideoContainer.classList.remove('blurred');
-        return;
-    }
-    
-    if (btnNextPeer) {
-        // Actif uniquement si le visage est visible
-        if (btnNextPeer) btnNextPeer.disabled = !isVisible;
-    }
-    
-    const btnVibre = document.getElementById('btnVibre');
-    if (btnVibre) {
-         // Le Wizz est désactivé si le visage n'est pas détecté (mesure anti-spam)
-         btnVibre.disabled = !isVisible; 
-    }
-    
-    // Flouter la vidéo distante si le visage est perdu
-    if (!isVisible) {
-         // remoteVideoContainer.classList.add('blurred');
-    } else {
-         remoteVideoContainer.classList.remove('blurred');
+    if (btnNextPeer) btnNextPeer.disabled = !isVisible;
+    if (remoteVideoContainer) {
+        isVisible ? remoteVideoContainer.classList.remove('blurred') : remoteVideoContainer.classList.add('blurred');
     }
 }
 
-/**
- * 4. Lie tous les événements d'interaction de l'interface.
- */
 function bindMatchEvents() {
     btnNextPeer = document.getElementById('btnNextPeer');
     btnConsentement = document.getElementById('btnConsentement');
@@ -473,37 +362,22 @@ function bindMatchEvents() {
     localConsentModal = document.getElementById('consentModal');
     remoteConsentModal = document.getElementById('remoteConsentModal');
 
-    // Écouteur pour la détection faciale (Cœur de la modération)
     window.addEventListener('faceVisibilityChanged', handleFaceVisibility);
     
-    // Écouteur pour le bouton "Interlocuteur suivant"
     if (btnNextPeer) {
         btnNextPeer.addEventListener('click', nextMatch);
-        btnNextPeer.disabled = true; // Désactivé par défaut jusqu'à la détection/consentement
+        btnNextPeer.disabled = true;
     }
-
-    // Écouteur pour le bouton "Consentement" -> Ouvre la modale locale
-    if (btnConsentement) {
-        btnConsentement.addEventListener('click', showLocalConsentModal);
-    }
+    if (btnConsentement) btnConsentement.addEventListener('click', showLocalConsentModal);
     
-    // Écouteur pour le bouton "Wizz"
     const btnVibre = document.getElementById('btnVibre');
     if (btnVibre) {
         btnVibre.addEventListener('click', () => {
-            if (window.currentPartnerId) {
-                window.showTopbar("🔔 Wizz envoyé ! Votre interlocuteur a été notifié.", "#9b59b6");
-                sendData('WIZZ'); // Envoyer un message WIZZ via le canal de données
-            } else {
-                 window.showTopbar("⚠ Connectez-vous d'abord à quelqu'un pour envoyer un Wizz.", "#f39c12");
-            }
+            if (window.currentPartnerId) sendData(MESSAGE_TYPES.WIZZ);
         });
-        btnVibre.disabled = true; 
     }
-    
-    // Initialiser le flou pour dissuasion, jusqu'à ce que la détection démarre et trouve un visage.
-    // remoteVideoContainer.classList.add('blurred');
 }
 
-// Rendre la fonction globale pour l'appel direct dans index-real.php si besoin
 window.nextMatch = nextMatch;
+window.bindMatchEvents = bindMatchEvents;
+window.initMatch = initMatch;
