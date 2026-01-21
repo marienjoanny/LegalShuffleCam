@@ -41,12 +41,12 @@ function initPeer() {
     });
 }
 
-async function registerPeer(peerId) {
+async function registerPeer(window.myPeerId) {
     try {
-        await fetch('/api/register-peer.php', {
+        await fetch('https://legalshufflecam.ovh/api/register-peer.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'peerId=' + encodeURIComponent(peerId)
+            body: 'peerId=' + encodeURIComponent(window.myPeerId)
         });
     } catch (err) {
         console.error("Erreur Register API:", err);
@@ -60,7 +60,7 @@ async function nextMatch() {
     
     try {
         // Recherche d'un partenaire disponible dans la BDD
-        const response = await fetch('/api/get-peer.php?exclude=' + window.myPeerId);
+        const response = await fetch('https://legalshufflecam.ovh/api/get-peer.php?exclude=' + window.myPeerId);
         const data = await response.json();
 
         if (data.peerId && data.peerId !== window.myPeerId) {
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 setInterval(async () => {
     if (window.myPeerId) {
         try {
-            await fetch('/api/ping-peer.php', {
+            await fetch('https://legalshufflecam.ovh/api/ping-peer.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'peerId=' + encodeURIComponent(window.myPeerId)
