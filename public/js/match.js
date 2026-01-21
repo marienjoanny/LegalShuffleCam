@@ -2,15 +2,8 @@ let peer = null;
 let localStream = null;
 let currentCall = null;
 window.myPeerId = null;
-
-// Extraction de l'ID généré par PHP pour synchroniser avec la BDD
-const idDisplay = document.getElementById('peer-id-display');
-const phpPeerId = idDisplay ? idDisplay.textContent.replace('ID: ', '').trim() : null;
-
-async function startLocalVideo() {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('local-video').srcObject = localStream;
+        localStream = window.localStream || await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('localVideo').srcObject = localStream;
         initPeer();
     } catch (err) {
         console.error("Erreur caméra:", err);
@@ -19,6 +12,8 @@ async function startLocalVideo() {
 }
 
 function initPeer() {
+    const idDisplay = document.getElementById("peer-id-display");
+    const phpPeerId = idDisplay ? idDisplay.textContent.replace("ID: ", "").trim() : null;
     // Utilisation de l'ID PHP pour que l'annuaire soit correct
     peer = new Peer(phpPeerId, {
         host: 'legalshufflecam.ovh',
@@ -31,6 +26,7 @@ function initPeer() {
     peer.on('open', (id) => {
         window.myPeerId = id;
         console.log('Connecté à PeerJS avec ID:', id);
+        const nb = document.getElementById('btnNextPeer'); if(nb) nb.disabled = false;
         registerPeer(id);
     });
 
@@ -49,8 +45,8 @@ async function registerPeer(peerId) {
     try {
         await fetch('/api/register-peer.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ peerId: peerId })
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'peerId=' + encodeURIComponent(peerId)
         });
     } catch (err) {
         console.error("Erreur Register API:", err);
@@ -64,7 +60,7 @@ async function nextMatch() {
     
     try {
         // Recherche d'un partenaire disponible dans la BDD
-        const response = await fetch('/api/get-peer.php');
+        const response = await fetch('/api/get-peer.php?exclude=' + window.myPeerId);
         const data = await response.json();
 
         if (data.peerId && data.peerId !== window.myPeerId) {
@@ -82,7 +78,7 @@ async function nextMatch() {
 function handleCall(call) {
     currentCall = call;
     call.on('stream', (remoteStream) => {
-        const remoteVideo = document.getElementById('remote-video');
+        const remoteVideo = document.getElementById('remoteVideo');
         if (remoteVideo) {
             remoteVideo.srcObject = remoteStream;
         }
@@ -92,7 +88,7 @@ function handleCall(call) {
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     startLocalVideo();
-    const nextBtn = document.getElementById('next-btn');
+    const nextBtn = document.getElementById('btnNextPeer');
     if (nextBtn) {
         nextBtn.addEventListener('click', nextMatch);
     }
@@ -104,8 +100,8 @@ setInterval(async () => {
         try {
             await fetch('/api/ping-peer.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ peerId: window.myPeerId })
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'peerId=' + encodeURIComponent(window.myPeerId)
             });
         } catch (e) {}
     }
