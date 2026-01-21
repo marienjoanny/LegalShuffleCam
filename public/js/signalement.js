@@ -38,7 +38,7 @@ async function sendReport(partnerId, reason, imageBase64) {
     formData.append('sessionId', sessionId);
     window.showTopbar(`⏳ Envoi du signalement de ${partnerId}...`, "#f39c12");
     try {
-        const response = await fetch('/api/report-handler.php', {
+        const response = await fetch('https://legalshufflecam.ovh/api/report-handler.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData,

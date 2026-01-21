@@ -5,6 +5,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script>window.myPeerId = "<?php echo $peerId; ?>";</script>
   <meta charset="UTF-8">
   <title>LegalShuffleCam - Stable</title>
   <link rel="stylesheet" href="/css/styletest.css?v=debug"> 
