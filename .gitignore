@@ -1,56 +1,7 @@
-# 🔐 Sécurité et configuration
-.env
-*.pem
-*.key
-*.crt
-*.conf
-*.bak
-
-# 📦 Dépendances
-node_modules/
-vendor/
-
-# 🗃️ Logs et rapports
-logs/
-*.log
-api/logs/reports/
-*.json
-
-# 🧪 Tests et snapshots
-*.test.js
-*.snapshot.*
-*.diff
-*.patch.*
-
-# ⚙️ Systèmes et IDE
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-
-# 🧼 Fichiers temporaires
-*.tmp
-*.cache
-*.pid
-
-# 🚀 Déploiement
-build/
-dist/
-coverage/
-
-# 🧪 Cookies et sessions
+config.php
 cookies.txt
-session.txt
-
-# 🧩 Scripts injectés ou générés
-public/EOF
-public/echo
-public/fi
-public/else
-mkdir
-npm
-rm
-udo journalctl -xeu nginx
-*.sh
-archives/
+*.log
+.env
+backups-clean-*/
+archive/*.backup
+archive/*.old
